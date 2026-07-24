@@ -13,6 +13,7 @@ Usage:
 Supported: .pdf .pptx .ppsx .docx .xlsx .csv .png .jpg .jpeg
 Dependencies are imported lazily; a missing one degrades that format with a clear message
 rather than crashing. Install as needed: pip install pymupdf python-pptx python-docx openpyxl
+(PEP-668/Homebrew Python: add --user --break-system-packages, or use a venv.)
 """
 import argparse
 import hashlib
@@ -55,7 +56,7 @@ def convert_pdf(src, images_dir):
     try:
         import fitz  # pymupdf
     except ImportError:
-        return None, "pymupdf not installed — run: pip install pymupdf"
+        return None, "pymupdf not installed — run: pip install pymupdf (PEP-668: add --user --break-system-packages)"
     doc = fitz.open(src)
     out = [header(src, f"> **Pages:** {doc.page_count}  ")]
     images = []
@@ -81,7 +82,7 @@ def convert_pptx(src, images_dir):
     try:
         from pptx import Presentation
     except ImportError:
-        return None, "python-pptx not installed — run: pip install python-pptx"
+        return None, "python-pptx not installed — run: pip install python-pptx (PEP-668: add --user --break-system-packages)"
     prs = Presentation(src)
     out = [header(src, f"> **Slides:** {len(prs.slides)}  ")]
     images = []
@@ -115,7 +116,7 @@ def convert_docx(src, images_dir):
     try:
         import docx  # python-docx
     except ImportError:
-        return None, "python-docx not installed — run: pip install python-docx (or use the docx skill)"
+        return None, "python-docx not installed — run: pip install python-docx (or use the docx skill; PEP-668: add --user --break-system-packages)"
     d = docx.Document(src)
     out = [header(src)]
     for para in d.paragraphs:
@@ -139,7 +140,7 @@ def convert_xlsx(src, images_dir):
     try:
         import openpyxl
     except ImportError:
-        return None, "openpyxl not installed — run: pip install openpyxl (or use the xlsx skill)"
+        return None, "openpyxl not installed — run: pip install openpyxl (or use the xlsx skill; PEP-668: add --user --break-system-packages)"
     wb = openpyxl.load_workbook(src, data_only=True, read_only=True)
     out = [header(src, f"> **Sheets:** {len(wb.sheetnames)}  ")]
     for name in wb.sheetnames:

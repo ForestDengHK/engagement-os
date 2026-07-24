@@ -20,6 +20,7 @@ Hosted in the `engagement-os` marketplace (this repo):
 
 Optional parser dependencies for `convert_source.py`:
 `pip install pymupdf python-pptx python-docx openpyxl`
+(Homebrew / PEP-668 Python: `pip install --user --break-system-packages pymupdf python-pptx python-docx openpyxl`, or use a venv.)
 
 After install the skills appear under the `engagement-os:eng-*` namespace. The Panel
 Framework (`/panel-*`) is a companion review module, maintained separately.
