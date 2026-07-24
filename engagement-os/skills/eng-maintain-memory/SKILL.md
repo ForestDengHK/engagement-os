@@ -16,6 +16,7 @@ Method rationale + the five-file division of labour: `eng-os` → `${CLAUDE_PLUG
 | A canonical project fact (stack, stakeholder, scope, pre-decision) | `.claude/project-context.md` (bump `Last updated:`) | CLAUDE.md |
 | A deliverable version | `DELIVERABLES.md` | CLAUDE.md (it points here) |
 | A working-session detail | `_pm/engagement_log.md` (full narrative) | CLAUDE.md |
+| A risk / assumption / issue / dependency, or a closed decision | `_pm/raid_and_decisions.md` (RAID tables / Decision Log) | CLAUDE.md |
 | A phase/week milestone | CLAUDE.md "Engagement Progress" (one compact line) + the log | — |
 | Navigation / a new SSOT file | CLAUDE.md pointer table | anywhere else |
 
@@ -36,6 +37,11 @@ the bridge from per-session memory to project-permanent doctrine.
 
 **Log a milestone.** Full narrative → `engagement_log.md`; a compact one-liner → CLAUDE.md
 "Engagement Progress" **only** if it's a phase/week milestone.
+
+**Log a risk / decision.** A new risk / assumption / issue / dependency → the matching RAID
+table in `_pm/raid_and_decisions.md`; a *closed* decision → the Decision Log (with rationale +
+who made it + what it supersedes). Findings and deliverables cite decisions by `DEC-n` ID so a
+choice is never silently re-litigated.
 
 **Anti-rot audit** (`claude-md-prune`). Scan CLAUDE.md for: hardcoded version numbers (→ replace
 with a pointer to `DELIVERABLES.md`), facts duplicated from an SSOT file, dead links, and
