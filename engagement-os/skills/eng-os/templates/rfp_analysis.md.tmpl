@@ -1,0 +1,49 @@
+# RFP Analysis — <CLIENT> <ENG-ID>
+
+> Score-driven, multi-role analysis of the tender. Every claim cites the RFP clause (`[RFP §x]`)
+> or a source; nothing fabricated. Companion artefact: `compliance_matrix.md` (requirement rows).
+> Method: `rfp-analysis.md`.
+
+**RFP:** <tender name / ref> · **Issued by:** <buyer> · **Submission deadline:** <date/time>
+**Analysed:** <DATE> · **Source:** `1_received/_md/<rfp>.md`
+
+## 1. Executive read
+<!-- 3–5 sentences: what they're buying, why, and the one thing that wins it. -->
+
+## 2. Evaluation criteria & weights (score map)
+| Criterion | Weight | Maps to Req IDs | Where we earn the points |
+|---|---|---|---|
+| <criterion> | <%> | R-00x | <our angle> |
+<!-- If weights aren't published, infer and mark [⚠VERIFY]. -->
+
+## 3. Multi-role analysis
+<!-- Each role's read against the requirements. Record conflicts; don't smooth them. -->
+- **Evaluator's eye:** <what actually wins the points; what the buyer fears>
+- **Solution architect:** <feasibility, solution shape, NFRs>
+- **Engagement partner / commercial:** <margin, pricing exposure, resourcing>
+- **Legal / contracts:** <onerous terms → §6>
+- **Delivery lead:** <staffability, timeline realism>
+- **Sector / domain SME:** <domain & regulatory obligations>
+
+## 4. Win-themes & differentiators (evidence-backed)
+| # | Win-theme (buyer benefit) | Proof (named engagement / metric / credential) | Scores against |
+|---|---|---|---|
+| 1 | | | <criterion> |
+<!-- No proof → not a win-theme; send to §7 materials-needed. -->
+
+## 5. Risks / red-flags / deal-breakers
+| # | Risk | Type (term/scope/timeline/qual/IP) | Owner | Mitigation or clarification-question |
+|---|---|---|---|---|
+| 1 | | | | |
+
+## 6. Materials needed
+**We research (→ eng-bid-research):**
+- <specific external topic tied to a Req ID / win-theme>
+
+**You upload (firm-held):**
+- <specific case study / named-staff CV / past-bid text / cert / referee / pricing input>
+
+## 7. Go / No-Go recommendation
+**Recommendation:** <go / no-go / go-if> — <conditions>.
+<!-- Synthesise: best-practice fit · win probability given weights+differentiators · deliverability
+     · commercial attractiveness · deal-breakers. Evidence-based, not a vote. -->

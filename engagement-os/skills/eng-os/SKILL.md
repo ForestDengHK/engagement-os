@@ -1,6 +1,6 @@
 ---
 name: eng-os
-description: Use when starting or running a document-heavy consulting / advisory engagement (data strategy, assessment, target architecture, roadmap, cost model, exec summary); when you need the pipeline map, the shared conventions (finding schema, source-precedence, directory rules, memory discipline), or a composed multi-stage playbook (new source, post-workshop, deliverable sprint, new engagement); or when deciding which eng-* stage skill applies.
+description: Use when starting or running a document-heavy consulting / advisory engagement across both the pursuit/bid side (analyse an RFP, research, write a tender response) and the delivery side (assessment, target architecture, roadmap, cost model, exec summary); when you need the pipeline map, the shared conventions (finding schema, source-precedence, directory rules, memory discipline), or a composed multi-stage playbook (new source, post-workshop, deliverable sprint, new engagement, RFP-arrived); or when deciding which eng-* stage skill applies (pursuit: rfp-analyze / bid-research / bid-respond; delivery: scaffold / ingest / canonicalize / findings / validate / build).
 ---
 
 # Engagement OS
@@ -35,6 +35,23 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 | **Memory** | `eng-maintain-memory` | Keep CLAUDE.md / project-context / DELIVERABLES / cross-session memory canonical and lean (anti-rot). Runs throughout. |
 | **Review** | Panel Framework (companion) | `panel-discuss` locks a deliverable's structure; `panel-review` is the hard red-line gate before anything ships; `panel-debrief` after workshops. |
 
+## The pursuit pipeline (bid side — win the work first)
+
+Before delivery there's the bid. Same document-and-provenance discipline, aimed at a compliant,
+winning tender. Runs in `01_pursuit/<ENG-ID>/`.
+
+```
+ingest RFP ─► analyse ─► research gaps ─► write response ─► panel red-team gate ─► submit
+```
+
+| Stage | Skill | What it does |
+|---|---|---|
+| **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, materials-needed list, go/no-go. |
+| **Research** | `eng-bid-research` | Close the analysis gaps with comprehensive, cited, zero-fabrication research (external `[T3:OWN]` + firm-held uploads). |
+| **Respond** | `eng-bid-respond` | Assemble the response from the matrix, matching the RFP's mandated format; compliance-first, proof-backed win-themes, every claim traceable; red-team before submit. |
+
+(RFP intake reuses `eng-ingest-source`; the RFP is the pursuit-side source of record — tag facts `[RFP §x]`.)
+
 ## The five load-bearing principles
 
 Everything in this pack exists to protect these. If a choice conflicts with one, the principle wins.
@@ -55,10 +72,13 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Source precedence (T1/T2/T3), `[⚠VERIFY]`/V-n register, conflict clusters** → [references/provenance-and-precedence.md](references/provenance-and-precedence.md)
 - **As-is / to-be assembly, versioning, the panel gate** → [references/deliverable-build.md](references/deliverable-build.md)
 - **CLAUDE.md / project-context / DELIVERABLES / memory discipline (incl. AGENTS.md)** → [references/memory-discipline.md](references/memory-discipline.md)
+- **RFP decomposition — compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
+- **Bid research — depth+breadth, source discipline, zero-fabrication, the [⚠VERIFY] gate** → [references/bid-research.md](references/bid-research.md)
+- **Bid response — requirement-driven assembly, format-match, traceability, red-team gate** → [references/bid-response.md](references/bid-response.md)
 
 ## Templates and scripts
 
-- **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants into a new repo: `CLAUDE.md.tmpl`, `project-context.md.tmpl`, `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, the `_md/` reference-pack trio, `engagement_log.md.tmpl`, `source_precedence_register.md.tmpl`, `discovery_questions.md.tmpl`, `finding.md.tmpl`, `MEMORY.md.tmpl`.
+- **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants into a new repo: `CLAUDE.md.tmpl`, `project-context.md.tmpl`, `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, the `_md/` reference-pack trio, `engagement_log.md.tmpl`, `source_precedence_register.md.tmpl`, `raid_and_decisions.md.tmpl`, `discovery_questions.md.tmpl`, `finding.md.tmpl`, `MEMORY.md.tmpl`. The pursuit/bid artefacts are filled on demand by the RFP skills: `compliance_matrix.md.tmpl`, `rfp_analysis.md.tmpl`, `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: create the folder tree and plant templates with placeholder substitution.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` anchors + image extraction for triage.
@@ -81,6 +101,7 @@ of these four recurring situations, open the playbook and run the chain:
 | A workshop / discovery session just ended | [references/playbooks/post-workshop.md](references/playbooks/post-workshop.md) | held-notes → findings → canonical deltas → backlog → log |
 | Findings are ready, deliverable due | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index |
 | Day 1 of a new engagement | [references/playbooks/new-engagement.md](references/playbooks/new-engagement.md) | scaffold → context → panel-init → first ingest batch |
+| An RFP / tender arrived (bid it) | [references/playbooks/rfp-arrived.md](references/playbooks/rfp-arrived.md) | ingest RFP → analyse → go/no-go → research → respond → red-team |
 
 Anything that doesn't match a playbook: use the pipeline table above and invoke the
 one stage skill that owns your task.
