@@ -22,8 +22,15 @@ Optional parser dependencies for `convert_source.py`:
 `pip install pymupdf python-pptx python-docx openpyxl`
 (Homebrew / PEP-668 Python: `pip install --user --break-system-packages pymupdf python-pptx python-docx openpyxl`, or use a venv.)
 
-After install the skills appear under the `engagement-os:eng-*` namespace. The Panel
-Framework (`/panel-*`) is a companion review module, maintained separately.
+After install the skills appear under the `engagement-os:eng-*` namespace.
+
+**Recommended companion:** the Panel Framework (red-line review gate, `/panel-*` skills):
+```
+/plugin marketplace add ForestDengHK/panel-framework
+/plugin install panel-framework@panel-framework
+```
+engagement-os delegates to it when present and falls back to a documented manual
+multi-lens review when it is not.
 
 ## 2. What this is
 
