@@ -1,0 +1,27 @@
+# Source precedence & conflict register — {{CLIENT}} {{ENG_ID}}
+
+> When two sources disagree, this says which one drives. Precedence: **T1 (system-measured) >
+> T2 (held workshop) > T3 (reference/vendor/RFP)**. Nothing is deleted — the loser is stamped
+> `⚠ superseded-by`. Method: `eng-os` → `references/provenance-and-precedence.md`.
+
+**Running header — updates by wave:**
+- {{DATE}} — register created.
+
+## 1. Tier labels for this engagement
+- **T1** = <system of record, e.g. the warehouse / ERP data dictionary> — `[T1:<LABEL> §x]`
+- **T2** = held workshops — `[T2:WS <Wn> <date>]`
+- **T3** = reference/vendor/RFP — `[T3:REF <source> <loc>]`
+
+## 2. Decision rules
+1. System-measurement beats the room. 2. The room beats the deck. 3. Evidence beats the proposed fix.
+
+## 3. Conflict clusters
+<!-- One underlying fact recurring across files → one cluster row. -->
+| CL | Underlying fact | Truth verdict | Kept-as-REF | Files to tag | Confidence |
+|---|---|---|---|---|---|
+| CL-A | | | | | |
+
+## 4. Verification needed (`[⚠VERIFY]` / V-n)
+| # | Item | Check against | Owner | Blocks | Status |
+|---|---|---|---|---|---|
+| V-1 | | | | | OPEN {{DATE}} |

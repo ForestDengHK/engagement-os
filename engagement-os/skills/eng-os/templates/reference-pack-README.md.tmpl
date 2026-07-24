@@ -1,0 +1,31 @@
+# {{CLIENT}} reference pack — `_md/`
+
+Derived markdown conversion of the raw client-supplied materials. Originals live one level up
+in their own folders and are **never edited**; everything here is generated.
+
+**Read order:** this README → `00_REFERENCE_SUMMARY.md` (facts) → `01_REFERENCE_INSIGHTS.md`
+(interpretation) → the per-topic source MD (only when you need to quote).
+
+## Conversion conventions
+- **One MD per source file**, in the matching `NN_<topic>/` folder, with `## Page N:` /
+  `## Slide N:` anchors so any claim downstream can cite `file.md §Page 12`.
+- **Header on each MD:** source path, page/slide count, date shared, author/origin if known,
+  CONFIDENTIAL marker if applicable.
+- **Tables** rendered as markdown tables; captions written from surrounding text.
+
+## Image / OCR rule (lossless)
+Every image triaged into one bucket:
+- `[decorative]` → deleted (logos, borders, backgrounds).
+- `[content]` → kept as a captioned PNG under `images/<topic>/`.
+- `[uncertain]` → OCR'd inline into a `<details><summary>OCR extracted text</summary>…</details>`
+  block, then retagged `[ocr-done]`. Never delete an `[uncertain]` image before its text is captured.
+
+## Manifest
+
+| Source file | → MD | Pages/Slides | Topic | Notes |
+|---|---|---|---|---|
+| | | | | |
+
+## What was NOT converted
+<!-- Duplicates (byte-identical md5), superseded versions, our-own-analysis docs. Record so
+     nobody re-converts. -->

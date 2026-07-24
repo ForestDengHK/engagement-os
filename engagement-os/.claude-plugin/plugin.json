@@ -1,0 +1,18 @@
+{
+  "name": "engagement-os",
+  "version": "1.0.0",
+  "description": "A repeatable operating model for document-heavy consulting engagements: scaffold the repo, ingest client materials to citable markdown, maintain a canonical fact base, write and validate findings, build deliverables through a panel review gate, and keep agent memory lean. 8 skills (eng-*) plus playbooks, templates, and deterministic scripts.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "keywords": [
+    "consulting",
+    "advisory",
+    "engagement",
+    "discovery",
+    "findings",
+    "provenance",
+    "deliverables"
+  ]
+}

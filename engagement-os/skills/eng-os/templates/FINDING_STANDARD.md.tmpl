@@ -1,0 +1,53 @@
+# _FINDING_STANDARD — the finding-file schema for {{CLIENT}} {{ENG_ID}}
+
+The single authority for what a finding looks like on this engagement. Every file under
+`3_findings/<area>/` conforms to this. (Method rationale: the `eng-os` skill,
+`references/finding-standard.md`.)
+
+## A finding is a fact baseline, not a recommendation
+It records what *is*, so every deliverable can cite the same fact with its own so-what.
+Observation and interpretation stay visibly separate: assertive language for observed,
+hedged for inferred. One coherent topic per file; cross-reference rather than duplicate.
+
+## Fixed header block (exact order)
+```markdown
+# Finding — <one-line topic>
+**Area:** <Data · Platform · Reporting/BI · Compliance · Governance · Operations · Integration>
+**Backbone item(s) mapped:** #<n> (<label>) · #<n> (<label>)
+**Severity:** <Critical|High|Medium|Low|N/A> — <one-line rationale>
+**Priority:** <High|Medium|Low> — <one-line rationale>
+**Status:** <confirmed-vs-open in ONE line, with open-question IDs>
+**Feeds:** <applicable D-items only, ·-separated>
+```
+
+## Two orthogonal rating axes — never collapse them
+- **Severity** = intrinsic badness (Likelihood × Impact), on evidence alone, BEFORE priority.
+- **Priority** = engagement relevance (in scope? central? client-flagged?), set AFTER severity.
+A Critical item can be Low priority and vice-versa. If severity maps straight to priority, stop.
+
+## Evidence tag on every factual claim
+`[Observed]` verified directly · `[Reported]` a person said it (attribute speaker+session+line;
+corroborate before treating as established) · `[Assumed]` our inference (hedged, `⚐` marker) ·
+`[RFP]` from the brief. Contested facts also carry a precedence tag `[T1]/[T2]/[T3]` and, if
+unsupported by a higher tier, `[⚠VERIFY vs <source>]` + a register row.
+
+## Body: multi-finding (preferred, per-item severity) or single-finding. Quantify everything.
+
+## Source evidence block — at least one concrete locator, by source type
+```markdown
+## Source evidence
+- Workshop:  Held-notes <path> · transcript lines <n–m> · question ID(s)
+- Document:  Source-md <pack>/_md/<topic>/<slug>.md §Page/Slide N
+- Query:     <script/pack> → <result file>
+```
+Evidence tags (how you know) and precedence tags (which source wins) are orthogonal — a claim
+can carry both, e.g. `[Observed][T1:SYS]` or `[Reported][T2:WS]`.
+
+## Three fixed closing sections (in order)
+1. **Remediation direction** — a forward-looking cause-tag, NOT a solution.
+2. **Cross-references** — links to related findings.
+3. **Gaps still owed** — unverified / not-yet-elicited items, matched to open-question IDs.
+
+## The signature move
+Separate what the client *said* from what the *evidence* shows; record the contradiction,
+don't smooth it; re-point the remediation at the real cause.

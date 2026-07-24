@@ -1,0 +1,17 @@
+{
+  "name": "engagement-os",
+  "version": "1.0.0",
+  "description": "Engagement OS — a delivery operating system for document-heavy consulting engagements (8 eng-* skills + playbooks + templates + scripts)",
+  "owner": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "plugins": [
+    {
+      "name": "engagement-os",
+      "description": "Delivery operating system for document-heavy consulting engagements: scaffold → ingest → canonicalize → findings → validate → build, with panel review gate. 8 skills + playbooks + templates + scripts.",
+      "source": "./engagement-os",
+      "category": "productivity"
+    }
+  ]
+}

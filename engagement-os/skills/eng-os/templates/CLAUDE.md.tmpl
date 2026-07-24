@@ -1,0 +1,57 @@
+# CLAUDE.md
+
+> **Lean-by-design.** This file is the navigation index. **Stable facts live in dedicated
+> single-source-of-truth files** (see the pointer table). Update those directly; update
+> CLAUDE.md ONLY when navigation changes or a phase/deliverable milestone lands.
+
+## Project Type
+
+<!-- 1–3 sentences: what this engagement is ({{CLIENT}} {{ENG_ID}} — {{ENGAGEMENT_NAME}}),
+     its phases, and which top-level folder holds what. -->
+
+## Client-facing content rules (ALWAYS apply — bake in recurring corrections)
+
+<!-- Promote each recurring client-facing correction here so it is never re-litigated.
+     End each with → pointer to its memory/feedback file. Start with the generic four;
+     grow as corrections recur on THIS engagement. -->
+1. **Frame risk/mitigation from the CLIENT's outcome**, never pointed at a named delivery partner. → `feedback_<slug>`
+2. **No internal scaffolding on the slide face** — no transcripts, register names, raw counts, internal codes, or source-tier tags. Provenance goes in a footer / sources back-up. → `feedback_<slug>`
+3. **Plain language, not insider jargon** — spell out or cut any acronym a sponsor won't know; every figure self-contained. → `feedback_<slug>`
+4. **Match the host-deck template** when redrawing a slide — keep the deck's chrome. → `feedback_<slug>`
+
+## Pointers to single-source-of-truth files
+
+| Topic | Source-of-truth file | Use when |
+|---|---|---|
+| Current deliverable versions | `02_delivery/DELIVERABLES.md` | Before opening any deliverable — never grep for the newest file |
+| Canonical project facts (stack, stakeholders, scope, pre-decisions) | `.claude/project-context.md` | You need a fact about the engagement |
+| Comprehensive factual client reference | `02_delivery/_shared/{{CLIENT_LOWER}}_reference/_md/00_REFERENCE_SUMMARY.md` | You need the raw factual baseline — read first |
+| Interpretive deltas / gaps | `02_delivery/_shared/{{CLIENT_LOWER}}_reference/_md/01_REFERENCE_INSIGHTS.md` | You need interpretation, not raw fact |
+| Open-question backlog | `02_delivery/0_mobilisation/discovery_questions.md` | You need what's still owed / answered |
+| Source precedence & conflict register | `02_delivery/_pm/source_precedence_and_conflict_register.md` | Two sources disagree — which one drives |
+| Engagement narrative journal | `02_delivery/_pm/engagement_log.md` | You need detail behind a session/finding |
+
+## Common Commands
+
+- **Word (.docx):** use the `docx` skill. **Excel (.xlsx):** `xlsx`. **PowerPoint (.pptx):** `pptx`. **PDF:** `pdf`.
+- **Engagement pipeline skills:** `eng-scaffold` · `eng-ingest-source` · `eng-update-canonical` · `eng-write-findings` · `eng-validate-findings` · `eng-build-deliverable` · `eng-maintain-memory` (map: `eng-os`).
+
+## Project Architecture
+
+<!-- The reusable folder skeleton (tree) + one-line purpose per top-level dir.
+     See the eng-os directory-conventions reference for the canonical tree. -->
+
+## Engagement Progress (live — update here)
+
+<!-- Compact skim only. Full narrative → _pm/engagement_log.md. Update on phase/week milestones. -->
+**Phase:** {{PHASE}}
+**Sessions held:** <compact list>
+**Owed:** <compact list of open threads>
+
+## Key Contacts
+
+<!-- Client side + our side; full roster → .claude/project-context.md. -->
+
+## Panel Framework (if used)
+
+<!-- One line + slash-command list; full docs → .claude/framework-docs/. -->

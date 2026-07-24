@@ -1,0 +1,39 @@
+# DELIVERABLES — live-file index
+
+> **Authoritative answer to "which file is the current version of each deliverable."**
+> Decks rev fast and folders hold multiple versions + skeletons + build fragments.
+> Do NOT grep the tree and grab the newest-looking file — look here. Update this table the
+> moment a new version is produced.
+
+**Last reconciled:** {{DATE}}
+
+## 1. Live deliverables
+
+| # | Deliverable | Current file (live path) | Format |
+|---|---|---|---|
+| D1 | Current-State Assessment | `02_delivery/2_assessment/…` | .pptx |
+| D2 | Target Architecture | `02_delivery/3_target_architecture/…` | .pptx |
+| D3 | Roadmap | `02_delivery/4_roadmap/…` | .pptx |
+| D4 | Cost Model | `02_delivery/5_cost_model/…` | .xlsx |
+| D5 | Executive Summary | `02_delivery/6_executive_summary/…` | .pptx |
+
+<!-- Rename rows to this engagement's actual deliverable slots. Keep the D-number map fixed. -->
+
+## 2. Distinct annexes / historical decks kept in place
+
+<!-- Near-duplicates that are NOT the current answer — list so nobody mistakes them. -->
+
+## 3. Where to search (and where NOT to)
+
+| Pattern | Status |
+|---|---|
+| `*_SKELETON.*` | structure-only — NOT a live deliverable |
+| `_deck_build/`, `_model_build/`, `slide_redesign/`, `figures/`, `diagrams/` | build intermediates — NOT deliverables |
+| `archived/superseded_decks_<DATE>/` | superseded — NOT current |
+| files without a `v<X.Y>` suffix inside a deliverable folder | working notes — not the deck |
+
+## 4. Superseded (archived)
+
+| Was | Moved to | When |
+|---|---|---|
+| | `archived/superseded_decks_<DATE>/` | |
