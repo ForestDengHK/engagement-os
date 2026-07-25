@@ -147,6 +147,22 @@ Follow the RFP's mandated response structure, volume split, page/word limits, an
 — non-compliance with format is a common auto-reject. If the RFP gives a response template, use it;
 don't impose our own structure (the pursuit-side version of the "match the host-deck template" rule).
 
+### Assembling
+
+Concatenate the section files in the buyer's order, **stripping what is internal**: the scoring
+notes (`>` blocks), the traceability line, and the review log. Those exist to make the draft
+checkable; shipping them tells the evaluator how the sausage was made.
+
+```bash
+pandoc volume2.md -o volume2.docx --resource-path=..:../figures \
+  --metadata mainfont=Arial --metadata fontsize=10pt
+soffice --headless --convert-to pdf volume2.docx && pdfinfo volume2.pdf | grep Pages
+```
+
+**A missing figure renders silently.** Pandoc degrades a missing image to its alt text, so the
+document builds and the figure is simply absent — found for real on two sections that referenced
+figures never built. `eng_lint`'s `figure-missing` rule catches this before the render does.
+
 Rendering mechanics: the `docx` / `pptx` skills own the output artefact. Figures go in as the PNG
 rendered from their SVG source, never as a screenshot; the SVG stays in `figures/` so the next
 version regenerates rather than being redrawn. Re-check the page count **after** rendering — a
