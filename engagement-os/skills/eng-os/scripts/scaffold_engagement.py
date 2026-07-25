@@ -176,6 +176,16 @@ DELIVERY_FILES = [
 DIR_BLOCKS = {"research": RESEARCH_DIRS, "pursuit": PURSUIT_DIRS, "delivery": DELIVERY_DIRS}
 FILE_BLOCKS = {"research": RESEARCH_FILES, "pursuit": PURSUIT_FILES, "delivery": DELIVERY_FILES}
 
+#: What each procurement route changes about the pursuit loop. Planted into the analysis
+#: header via {{VARIANT_NOTE}} so the gates are adjusted where the work happens, not assumed.
+VARIANT_NOTES = {
+    "full-rfp": ("full open competition — clarification window, full go/no-go, and format "
+                 "compliance all apply"),
+    "mini-comp": ("framework mini-competition — pre-qualified, so the go/no-go shrinks to "
+                  "capacity + conflict; call-off terms are pre-agreed; there may be NO "
+                  "clarification window — check the call-off before relying on one"),
+}
+
 
 def parse_mode(raw):
     """'full' / comma-list of blocks → the set of blocks to build."""
@@ -252,6 +262,10 @@ def main():
         "comma-separated to combine (e.g. 'pursuit,delivery')",
     )
     ap.add_argument("--phase", default="Mobilisation", help="starting phase label")
+    ap.add_argument("--variant", default="full-rfp", choices=["full-rfp", "mini-comp"],
+                    help="procurement route for the pursuit block: full open RFP (default) "
+                    "or a framework mini-competition — recorded in the planted analysis so "
+                    "the pursuit loop applies the right gates")
     args = ap.parse_args()
 
     try:
@@ -267,6 +281,8 @@ def main():
         "DATE": _dt.date.today().isoformat(),
         "PHASE": args.phase,
         "MODE": ", ".join(b for b in BLOCKS if b in selected),
+        "VARIANT": args.variant,
+        "VARIANT_NOTE": VARIANT_NOTES[args.variant],
     }
 
     buckets = buckets_for(selected)

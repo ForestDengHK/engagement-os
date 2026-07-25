@@ -40,8 +40,9 @@ a client-supplied source. It carries the same "kept, superseded-not-deleted" dis
 
 - Each finding carries a `## Source evidence` block: held-notes path + transcript line-range
   + canonical open-question ID(s).
-- Each factual claim carries an evidence tag (`[Observed]/[Reported]/[Assumed]/[RFP]`) and,
-  where contested, a precedence tag (`[T1]/[T2]/[T3]`).
+- Each factual claim carries an evidence tag from the closed set (defined in
+  `finding-standard.md` — do not re-enumerate it here) and, where contested, a precedence tag
+  (`[T1]/[T2]/[T3]`).
 - New information enters as a *tagged* update (e.g. `[T2:WS W4.1 10-Jun]`), logged in the
   register's running header per wave — never as a silent overwrite.
 

@@ -1,6 +1,6 @@
 ---
 name: eng-bid-respond
-description: Use when a validated RFP analysis + sourced research are ready and the bid response must be written, or the user says "draft the bid", "write the tender response", "assemble the submission", or "answer the RFP". Requirement-driven from the compliance matrix, matches the RFP's mandated format exactly, compliance-first with proof-backed win-themes, every claim traceable to an RFP clause or a cited research finding, through a panel red-team gate before submission — no unsupported claim, no fabricated credential.
+description: Use when a validated RFP analysis + sourced research are ready and the bid response must be written, or the user says "draft the bid", "write the tender response", or "answer the RFP". Requirement-driven from the compliance matrix, matches the RFP's mandated format exactly, compliance-first with proof-backed win-themes, every claim traceable to an RFP clause or a cited research finding, through a panel red-team gate before submission — no unsupported claim, no fabricated credential. (Turning the finished sections into the submission FILE is eng-render.)
 ---
 
 # Writing the bid response
@@ -14,6 +14,10 @@ Build only from a closed analysis (`compliance_matrix.md`) and a cited research 
 (`bid_research_log.md`). Draft in `01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`.
 Start the section map from `bid_response_outline.md.tmpl`, and each section file from
 `bid_section.md.tmpl` — both in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
+
+**If missing:** the matrix isn't closed (mandatory rows still `open`) or there is no research
+log → go back to `eng-rfp-analyze` / `eng-bid-research`. Drafting from an open analysis writes
+chapters the go/no-go may throw away, and claims without a cited source cannot survive here.
 
 ## Workflow
 

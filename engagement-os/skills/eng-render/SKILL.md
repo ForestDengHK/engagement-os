@@ -1,6 +1,6 @@
 ---
 name: eng-render
-description: Use when a set of written markdown sections (plus their figures) must become the delivered artefact — a Word/PDF document or a slide deck. Triggers on "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT from these sections", "make the submission file", "what would this build into". Works standalone on ANY directory of markdown; needs no engagement scaffold, no compliance matrix, no prior eng-* step.
+description: Use when a set of written markdown sections (plus their figures) must become the delivered artefact — a Word/PDF document or a slide deck. Triggers on FORMAT verbs only: "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT from these sections", "export these sections to docx/pdf", "what would this build into". (Writing or assembling the CONTENT is eng-bid-respond / eng-build-deliverable — this skill never drafts.) Works standalone on ANY directory of markdown; needs no engagement scaffold, no compliance matrix, no prior eng-* step.
 ---
 
 # Rendering written sections into the delivered artefact
@@ -11,6 +11,11 @@ argument — if any of that is still open, this is the wrong skill.
 
 **Standalone by design.** Point it at a directory. It does not care how the markdown got there,
 which phase produced it, or whether an engagement repo exists around it.
+
+**Dependency (packaging note).** The engine is
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/render_document.py` — this skill is the facade;
+the script lives with the eng-os kernel alongside `eng_lint.py` and the scaffolder. Installing
+or pruning skills individually must keep `eng-os` for this one to run.
 
 ## What this owns, and what it hands off
 
@@ -38,10 +43,14 @@ converter written here would be a worse pandoc.
 - [ ] 3. Pick the route from what the *recipient* requires — not from what is easiest:
           a document (page limits, a mandated template, a submission portal)  → step 4
           a presentation (a meeting, a defence, a steering committee)          → step 5
-- [ ] 4. DOCUMENT: same script, --to docx|pdf|both. Re-check the PAGE COUNT it prints
-        against the budgets — a word estimate is an estimate.
-- [ ] 5. DECK: --to deck-manifest, then invoke the `presentation-builder` skill with the
-        manifest. Tell it the audience and the decision the deck must produce.
+- [ ] 4. DOCUMENT: same script, --to docx|pdf|both. Typography: --font/--size are
+        enforced through a generated pandoc reference.docx (the docx writer ignores
+        pandoc's mainfont/fontsize metadata — that mechanism never worked); if the
+        buyer mandates a template, pass it as --reference-doc instead. Re-check the
+        PAGE COUNT the build prints against the budgets — a word estimate is an estimate.
+- [ ] 5. DECK: --to deck-manifest --audience "..." --decision "...", then invoke the
+        `presentation-builder` skill with the manifest. Audience and decision are
+        recorded IN the manifest so the handoff survives being re-run from the file.
 - [ ] 6. Verify the artefact, not the log. Open the file. Confirm every figure is
         present and every internal marking is gone.
 ```
@@ -67,6 +76,11 @@ Sections are written to be *checkable*; that scaffolding must not reach a reader
 (`>` blocks), the traceability line, the review log. The strip is mechanical and lives in the
 script, because doing it by hand is how internal scaffolding reaches an evaluator.
 
+Stripping happens **only under `bid`/`deliverable`** — the blockquote = scoring-note convention
+is part of the section contract, and applied to arbitrary markdown it would silently delete
+legitimate quotations. `plain` renders what is there. Under a stripping profile, every stripped
+blockquote run is reported on stderr by file and line count — visible, never silent.
+
 `[⚠VERIFY]` is **not** stripped. It is body prose, so removing it would ship the unsupported
 claim silently; the gate blocks instead.
 
@@ -75,6 +89,10 @@ claim silently; the gate blocks instead.
 Prose sized to a page budget does not become slides by pagination — it overflows onto untitled
 continuation slides and orphans figure captions. That is why the deck route emits a *manifest*
 and hands off: `presentation-builder` re-cuts the argument into one message per slide.
+
+Housekeeping: `presentation-builder` may leave its working artefact (a storyline draft such as
+`<name>_readthrough.md`) beside the deck. It is an intermediate, safe to delete; the manifest
+and the deck are the contract.
 
 ## Guardrails
 

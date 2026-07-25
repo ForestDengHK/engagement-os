@@ -1,12 +1,16 @@
 ---
 name: eng-maintain-memory
-description: Use when a recurring correction emerges, a canonical fact shifts, a deliverable revs, a phase closes, CLAUDE.md is drifting stale, or the user says "update CLAUDE.md / AGENTS.md", "record this as a memory", "re-index the deliverables", or "log this milestone".
+description: Use when a recurring correction emerges, a project-context fact (stack, stakeholder, scope, pre-decision) shifts, a deliverable revs, a phase closes, CLAUDE.md is drifting stale, or the user says "update CLAUDE.md / AGENTS.md", "record this as a memory", "re-index the deliverables", or "log this milestone". Owns CLAUDE.md / `.claude/project-context.md` / `DELIVERABLES.md` / `_pm/` — the `_sources/` canonical summaries (00_REFERENCE_SUMMARY/01_REFERENCE_INSIGHTS) belong to eng-update-canonical, not here.
 ---
 
 # Maintaining engagement memory
 
 Route each kind of durable state to the one file that owns it, and keep the top-level index lean.
 Method rationale + the five-file division of labour: `eng-os` → `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/memory-discipline.md`.
+
+**If missing:** the owning file for the change doesn't exist (no CLAUDE.md /
+`.claude/project-context.md` / `DELIVERABLES.md` in this repo) → the repo hasn't been
+scaffolded; run `eng-scaffold` first rather than creating memory files by hand.
 
 ## Route by what changed
 

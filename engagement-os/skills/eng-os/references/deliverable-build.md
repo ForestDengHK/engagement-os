@@ -1,12 +1,14 @@
 # Building deliverables from findings
 
-How an as-is assessment and the to-be / recommendation deliverables get assembled from
-validated findings — without re-pasting evidence and without losing provenance.
+How deliverables get assembled from validated findings — without re-pasting evidence and
+without losing provenance.
 
 ## Contents
 - The core move: findings are deliverable-neutral
-- As-is (D1) assembly
-- To-be (D2/D3/D4) derivation
+- The mode table (pick the method by deliverable KIND, not by habit)
+- Assembly
+- Derivation
+- Curation
 - Versioning and the current-file index
 - The panel gate
 - Cross-cutting guardrails
@@ -18,17 +20,31 @@ findings it needs and adds its *own* so-what. The evidence lives once, in the fi
 deliverable adds narrative and interpretation on top. Findings declare `Feeds: D1 · D2 …`
 so a deliverable can assemble itself by pulling every finding tagged for it.
 
-## As-is (D1) assembly
+## The mode table
 
-1. Pull every finding with `Feeds: D1`; group by backbone item.
-2. For each, lift its headline paragraph + severity; add D1's own cross-finding so-what.
+The D-numbers below are EXAMPLES of each kind — the kind is what picks the method, and a new
+deliverable slots in by kind without editing this file's structure.
+
+| Deliverable kind | Examples | Method | Core move |
+|---|---|---|---|
+| As-is / assessment / current-state | D1 | **Assembly** | pull the findings, synthesize, add the cross-finding so-what — no new analysis |
+| To-be / target architecture / roadmap / cost model | D2, D3, D4 | **Derivation** | start from each finding's Remediation-direction cause-tag + external research, tethered to the same fact base |
+| Exec summary / handover / enablement | D5, D6 | **Curation** | re-cut what the earlier deliverables already proved for the audience that must DECIDE or SUSTAIN — nothing new except the ask |
+
+A deliverable that fits no row (a genuinely different kind of work) gets a new row — with its
+own core move — not a forced fit into the nearest one.
+
+## Assembly (as-is class)
+
+1. Pull every finding with `Feeds: D<n>`; group by backbone item.
+2. For each, lift its headline paragraph + severity; add the deliverable's own cross-finding so-what.
 3. Admit **only validated** facts into client-facing text. Keep `[⚠VERIFY]` items out of
    headlines — carry them as "open / pending" if at all.
 4. Preserve cross-finding reconciliations (e.g. two conflicting maturity scores) as explicit
    narrative, not a silent choice.
 5. The assessment is a *synthesis* of validated findings, not new analysis.
 
-## To-be (D2/D3/D4) derivation
+## Derivation (to-be class)
 
 To-be docs derive from as-is **+ external research + prior-engagement experience**, but stay
 tethered to the same fact base and precedence tags.
@@ -44,6 +60,21 @@ tethered to the same fact base and precedence tags.
 Where research is needed (e.g. a target platform's replication options, a regulatory matrix),
 run it as a scoped research pass and record sources — the same provenance discipline applies
 to *our* research as to client material.
+
+## Curation (exec-summary / handover class)
+
+A curation deliverable argues nothing new. Its raw material is the *already-proven* content of
+the earlier deliverables; its craft is selection and sequence for an audience that will not
+read the underlying documents.
+
+1. Start from the recommendation/ask, not the findings — what must the audience decide or
+   sustain, and what is the minimum evidence that carries it?
+2. Lift only claims that survived the earlier deliverables' own review gates; a curation deck
+   is where an unvalidated claim does the most damage per word.
+3. Do-nothing and risk content is framed as exposure, not headline; vendor comparisons never
+   appear (our own work only).
+4. Every figure must earn its slide — the audience self-selects depth from the appendix tabs,
+   not from the spine.
 
 ## Versioning and the current-file index
 

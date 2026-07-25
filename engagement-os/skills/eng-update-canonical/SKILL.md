@@ -1,6 +1,6 @@
 ---
 name: eng-update-canonical
-description: Use after eng-ingest-source runs, when facts change, or when the user says "update the canonical", "fold this into the summary", "refresh the reference summary/insights", or "roll up the new doc".
+description: Use after eng-ingest-source runs, when source-derived facts in a `_sources/` bucket change, or when the user says "update the canonical", "fold this into the summary", "refresh the reference summary/insights", or "roll up the new doc". Owns ONLY `_sources/<bucket>/_md/00_REFERENCE_SUMMARY.md` + `01_REFERENCE_INSIGHTS.md` — a "canonical project fact" about the engagement itself (stack, stakeholder, scope) belongs to `.claude/project-context.md` via eng-maintain-memory, not here.
 ---
 
 # Updating canonical
@@ -8,6 +8,10 @@ description: Use after eng-ingest-source runs, when facts change, or when the us
 Consolidate the facts and interpretation from newly-ingested markdown into the canonical set so
 a reader can trust "read the summary once, don't re-read the sources." This is the **only** skill
 allowed to edit the canonical summaries.
+
+**If missing:** nothing has been ingested yet (no `_sources/<bucket>/_md/` content beyond the
+planted trio) → run `eng-ingest-source` first; this skill consolidates ingested markdown, it
+does not fetch or convert sources.
 
 ## The two canonical files — per bucket
 Each `_sources/` bucket (`public/` · `pre_award/` · `engagement/`) keeps its **own** pair:

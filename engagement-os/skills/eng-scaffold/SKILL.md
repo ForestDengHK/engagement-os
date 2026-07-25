@@ -110,8 +110,9 @@ front, which is exactly why the user should be reviewing a proposal rather than 
 
 **Step 7 — [delivery only] align deliverable slots.** The scaffolder plants the generic
 `2_assessment … 6_executive_summary` folders + a D1–D5 `DELIVERABLES.md`. **Prune/rename** these
-to *this* engagement's actual deliverables (a small engagement may have one; a big one may add
-D6+). Keep the numeric-prefix + fixed D-number map, and update the `DELIVERABLES.md` rows to
+to *this* engagement's actual deliverables (a small engagement may have one; a handover D6 is
+bundled into `6_executive_summary` by default — split it out only for a large programme). Keep
+the numeric-prefix + fixed D-number map, and update the `DELIVERABLES.md` rows to
 match — don't leave half-empty folders and index rows for deliverables that don't exist.
 
 **Step 8 — stand up the review panel (if the Panel Framework is installed).** Do NOT rebuild it —

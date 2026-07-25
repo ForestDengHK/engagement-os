@@ -20,6 +20,12 @@ eng-ingest-source ─► reuse + assets ─► eng-rfp-analyze ─► clarify �
    Convert the RFP and every appendix/schedule to anchored markdown into
    `01_pursuit/<ENG-ID>/1_received/_md/` (pass the pursuit path to `--out`). Lossless image rule applies.
    Verify: every RFP document is converted and citable by clause/page.
+1a. **Check the procurement route** (planted in `rfp_analysis.md` by the scaffolder's `--variant`).
+   The default is a full open RFP. A **framework mini-competition** changes the loop: the buyer
+   is pre-qualified, so the go/no-go shrinks to capacity + conflict of interest; call-off terms
+   are pre-agreed (commercial risk review is narrower, not absent); and there may be **no
+   clarification window** — check the call-off before planning step 2b. The human stop at the
+   go/no-go still applies either way.
 1b. **Check for a prior bid FIRST — before drafting anything.** A re-issue, a follow-on, or the
    same buyer asking again means most of the answer already exists and already survived an
    evaluation. Convert the prior response (`eng-ingest-source` → `01_pursuit/archive-<PRIOR-ID>/`)
