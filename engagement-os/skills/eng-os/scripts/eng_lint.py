@@ -48,12 +48,19 @@ def text_files(root, *rel):
 
 # ── rules ────────────────────────────────────────────────────────────────────────
 
+#: A leak cites a FILE inside the bucket; a guardrail only names the bucket. Requiring a path
+#: segment after `engagement/` separates them, which matters because the pack's own reuse-analysis
+#: template ends with "Nothing in `_sources/engagement/` is [reusable]" — a prohibition that the
+#: naive substring check reported as the very violation it warns against.
+LEAK_RE = re.compile(r"_sources/engagement/\S*[\w.-]")
+
+
 def rule_bucket_leak(root, r):
     """engagement/ material must never be cited from a bid. The most expensive failure here."""
     r.ran()
     for p in text_files(root, "01_pursuit"):
         for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            if "_sources/engagement/" in line:
+            if LEAK_RE.search(line):
                 r.error("bucket-leak", f"{p.relative_to(root)}:{i}",
                         "bid document cites engagement-bound material — "
                         "source it independently or drop the claim")
