@@ -106,7 +106,7 @@ Keep these one level away; read the specific file when the stage needs it.
 
 - **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants, by block:
   - *core* — `CLAUDE.md.tmpl` (mode-aware: `<!--IF:block-->` fences), `project-context.md.tmpl`, `sources-README.md.tmpl`, the per-bucket source trio (`SOURCES_GO_HERE` + `reference-pack-README` + `REFERENCE_SUMMARY` + `REFERENCE_INSIGHTS`, planted once per bucket), `engagement_log.md.tmpl`, `raid_and_decisions.md.tmpl`, `source_precedence_register.md.tmpl`, `MEMORY.md.tmpl`.
-  - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`. (`bid_research_log.md.tmpl` and `bid_response_outline.md.tmpl` stay on-demand — the research log opens when research starts, the outline only after a go decision.)
+  - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`, `clarification_log.md.tmpl` (the query deadline lands before the submission deadline, so this one is needed from day 1). On demand: `bid_reuse_analysis.md.tmpl` (only when a prior bid exists — but **check whether one does before drafting**), `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
   - *delivery* — `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, `finding.md.tmpl`, `discovery_questions.md.tmpl`.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.

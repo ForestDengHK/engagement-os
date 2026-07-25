@@ -161,6 +161,7 @@ RESEARCH_FILES = [
 PURSUIT_FILES = [
     ("rfp_analysis.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/rfp_analysis.md", {}),
     ("compliance_matrix.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/compliance_matrix.md", {}),
+    ("clarification_log.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/clarification_log.md", {}),
 ]
 
 DELIVERY_FILES = [

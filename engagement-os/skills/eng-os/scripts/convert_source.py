@@ -274,10 +274,37 @@ def convert_docx(src, images_dir):
     # walk gets wrong, and all things pandoc settled years ago. We add only what pandoc has no
     # reason to know about: the provenance header and the citable section numbering.
     if _tool("pandoc"):
-        md = _run(["pandoc", "-t", "gfm", "--wrap=none", src])
+        # --extract-media makes pandoc write the embedded images out; without it a docx's
+        # diagrams are silently dropped, which no amount of good text extraction makes up for.
+        # Pandoc has no view on which of them matter, so its output goes through the same
+        # decorative filter as every other format.
+        import shutil
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="engos-media-")
+        md = _run(["pandoc", "-t", "gfm", "--wrap=none", f"--extract-media={tmp}", src])
         if md:
+            coll = ImageCollector(images_dir)
+            for root, _dirs, files in os.walk(tmp):
+                for fn in sorted(files):
+                    src_img = os.path.join(root, fn)
+                    try:
+                        with open(src_img, "rb") as fh:
+                            coll.add(fh.read(), fn, fn)
+                    except OSError:
+                        continue
+            shutil.rmtree(tmp, ignore_errors=True)
+            # pandoc points at its own temp dir; repoint at the pack's images dir, and drop
+            # the links to images the filter removed so the markdown has no dead references.
+            kept_names = {os.path.basename(rel) for rel, _u in coll.kept}
+            rel_dir = os.path.basename(images_dir.rstrip("/"))
+
+            def _fix(m):
+                name = os.path.basename(m.group(2))
+                return f"![{m.group(1)}]({rel_dir}/{name})" if name in kept_names else ""
+            md = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _fix, md)
             body, n = number_headings(md, "Section")
-            return header(src, f"> **Sections:** {n}  \n> **Extractor:** pandoc  ") + body, None
+            head = header(src, f"> **Sections:** {n}  \n> **Extractor:** pandoc  ")
+            return head + body + img_section(coll), None
 
     # Fallback: no pandoc on this machine. Order is lost (python-docx exposes paragraphs and
     # tables as two separate sequences) — the header says so rather than pretending otherwise.
