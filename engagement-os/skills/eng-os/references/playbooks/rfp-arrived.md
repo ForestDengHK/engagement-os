@@ -11,19 +11,34 @@ Sources: the tender pack lives in `1_received/`; pre-award background we gather 
 ## Chain
 
 ```
-eng-ingest-source ─► eng-rfp-analyze ─► eng-bid-research ─► eng-bid-respond ─► panel red-team gate
-   RFP → md            2_analysis          close the gaps      3_drafting → 4_final
+eng-ingest-source ─► reuse check ─► eng-rfp-analyze ─► clarify ─► eng-bid-research ─► eng-bid-respond ─► red-team
+   RFP → md          prior bid?      2_analysis        by the      close the gaps     3_drafting → 4_final
+                                                       deadline
 ```
 
 1. **Ingest the RFP pack** → `eng-ingest-source`.
    Convert the RFP and every appendix/schedule to anchored markdown into
    `01_pursuit/<ENG-ID>/1_received/_md/` (pass the pursuit path to `--out`). Lossless image rule applies.
    Verify: every RFP document is converted and citable by clause/page.
+1b. **Check for a prior bid FIRST — before drafting anything.** A re-issue, a follow-on, or the
+   same buyer asking again means most of the answer already exists and already survived an
+   evaluation. Convert the prior response (`eng-ingest-source` → `01_pursuit/archive-<PRIOR-ID>/`)
+   and fill `bid_reuse_analysis.md`: section by section, FULL REUSABLE / PARTIAL / REQUIRES
+   UPDATE / NEW, with a field-level diff of the old clause against the new one.
+   Verify: every section of the prior response has a verdict; every scope delta is named.
+   Skip only when there genuinely is no prior bid — say so rather than assuming.
 2. **Analyse the RFP** → `eng-rfp-analyze`.
    Extract every requirement (ID + clause cite), build the `compliance_matrix.md`, map evaluation
    weights, run the multi-role read, derive evidence-backed win-themes, flag risks/deal-breakers,
    and produce the **materials-needed list** (research vs upload) and a go/no-go.
    Verify: every requirement has a matrix row; every mandatory is flagged; go/no-go stated.
+2b. **Raise clarifications before the query deadline** → `clarification_log.md`.
+   The query deadline is **earlier than the submission deadline** and it is hard: after it, an
+   ambiguity can only be handled by stating an assumption, which scores worse than an answer.
+   Sweep every `[⚠VERIFY]` and every matrix `gap` — anything the buyer could resolve becomes a
+   question. Log buyer-circulated answers as they arrive: they form part of the tender documents.
+   Verify: query deadline recorded; every load-bearing ambiguity either asked or given a settled
+   reading with a named consequence.
 3. **Go/No-Go gate — human decision.** If no-go, stop and log the rationale. If go-if, resolve the
    conditions first. Only proceed to research/response on a go.
 4. **Research the gaps** → `eng-bid-research`.

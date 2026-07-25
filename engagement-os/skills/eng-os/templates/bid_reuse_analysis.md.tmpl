@@ -1,0 +1,64 @@
+# Bid Reuse Analysis — {{CLIENT}} {{ENG_ID}}
+
+> Most tenders are a variant of one already answered — a re-issue, a follow-on, or the same buyer
+> asking again. Starting from a blank response wastes the strongest asset available: text that
+> already survived an evaluation. This decides, **section by section**, what carries over and what
+> the delta actually is. Do it BEFORE drafting anything. Method: `bid-response.md`.
+
+**Prior bid:** <ref + name> · **Its outcome:** won / lost / withdrawn — *and why, if known*
+**Prior response converted to:** `01_pursuit/archive-<PRIOR-ID>/…` (via `eng-ingest-source`)
+**This bid:** {{ENG_ID}} · **Assessed:** {{DATE}}
+
+## 1. Summary
+
+| Assessment | Sections |
+|---|---|
+| **FULL REUSABLE** — carries over as-is | |
+| **PARTIAL** — structure holds, content shifts | |
+| **REQUIRES UPDATE** — facts/dates/figures only | |
+| **NEW** — no prior equivalent, write from scratch | |
+
+## 2. Section-by-section
+
+Repeat per section. The value is in the **field-level diff**, not the verdict: "same requirement"
+is only trustworthy when you can see the two clauses side by side.
+
+### <section ref + title>
+**Status:** FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW
+**Maps to:** R-0xx *(compliance-matrix row — reuse and compliance must agree)*
+
+| Element | Prior (`<PRIOR-ID>`) | Current ({{ENG_ID}}) | Status |
+|---|---|---|---|
+| <e.g. turnover requirement> | <old value> | <new value> `[RFP §x]` | Same / **CHANGED** / CHECK |
+
+**Action required:**
+- <the specific edit, not "review">
+
+## 3. Scope deltas that change the whole response
+
+Where the *shape* of the ask moved, not just a figure — a widened title, an added workstream, a
+new deliverable. These invalidate reuse even in sections whose wording looks unchanged.
+
+| # | Delta | Evidence (old → new) | Consequence for the response |
+|---|---|---|---|
+| 1 | | `[RFP §x]` | |
+
+## 4. Update sequence
+
+Order the rewrite by dependency, not by document number: whatever sets the structure others
+reference goes first, and anything quoting a figure follows the document that fixes it.
+
+| Order | Document / section | Why here | Depends on |
+|---|---|---|---|
+| 1 | | sets structure the rest reference | — |
+
+## Guardrails
+
+- **Reuse is not recycling.** A section marked FULL REUSABLE still gets read against the current
+  clause before it ships. The evaluator is scoring *this* tender.
+- **A lost prior bid is evidence too** — if the debrief said why, the weak sections are named for
+  you. Reusing them unchanged repeats the loss.
+- **Never carry a claim across without re-checking its window.** Reference projects, certifications
+  and financials expire; "it was true last time" is how a bid fails a minimum requirement.
+- **Confidentiality still binds.** A prior bid for *another* client is our own material and reusable;
+  anything in `_sources/engagement/` from a delivery engagement is not — see `_sources/README.md`.

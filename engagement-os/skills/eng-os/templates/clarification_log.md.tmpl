@@ -1,0 +1,64 @@
+# Clarification Log — {{CLIENT}} {{ENG_ID}}
+
+> Two jobs in one file: the **questions we put to the buyer** through the tender's formal query
+> process, and our **settled reading** of every clause that could be read more than one way.
+> Both matter because a misread requirement is scored as a missed one, and an unasked question is
+> a guess shipped as an answer. Method: `rfp-analysis.md`.
+
+**Query deadline:** <date/time — usually earlier than the submission deadline; §cite>
+**Submission deadline:** <date/time — §cite>
+**How queries are submitted:** <portal / email; verbal queries are typically not accepted — §cite>
+**Updated:** {{DATE}}
+
+## 1. Questions to the buyer
+
+Raise anything that changes what we write or what we price. A clause that is merely unusual is
+not a question; a clause we would answer differently depending on its reading is.
+
+| # | Clause | Question | Why it matters (what changes with the answer) | Raised | Answer received | Effect on the response |
+|---|---|---|---|---|---|---|
+| Q1 | `[RFP §x]` | | | <date / not yet> | | |
+
+**Before the deadline passes**, check every `[⚠VERIFY]` in `rfp_analysis.md` and every `gap` in
+`compliance_matrix.md`: if the buyer could resolve it, it should be a question here. After the
+deadline the only remaining option is to state an assumption in the response, which scores worse.
+
+## 2. Our settled reading
+
+For each clause that is ambiguous but not worth a query — or where the buyer's answer still needs
+interpreting. Quote the text; a reading not anchored to the words is an opinion.
+
+### C1 — <the clause, in plain words>
+
+**Context.** <what makes it ambiguous>
+
+**Evidence.**
+
+| Location | Text | Reading |
+|---|---|---|
+| `[RFP §x]` | "<verbatim>" | |
+
+**Settled reading.** <what we take it to mean>
+
+**Therefore the response must** — <the concrete consequence: a section, a piece of evidence, a
+number. If there is no consequence, this entry does not need to exist.>
+
+**Maps to:** R-0xx *(compliance-matrix rows this reading governs)*
+
+## 3. Buyer-issued amendments and circulated answers
+
+Tenders usually circulate every query response to all bidders, and those responses **form part of
+the tender documents**. Log them here as they arrive and treat them as `[RFP §…]`-equivalent.
+
+| # | Issued | What changed | Documents affected | Actioned |
+|---|---|---|---|---|
+| A1 | | | | |
+
+## Guardrails
+
+- **A settled reading is a decision, not a note.** It gets an owner and a consequence, or it is
+  not settled.
+- **Never let a reading contradict the matrix.** If C-n changes what a requirement asks for, the
+  matrix row changes with it, in the same pass.
+- **An amendment can invalidate finished work.** When one lands, re-check the sections it touches
+  before submission — a response written against the superseded clause is non-compliant.

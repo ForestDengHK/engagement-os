@@ -33,6 +33,11 @@ BLOCK_PREFIXES = {
 # `_sources/engagement/` is built by research OR delivery.
 SHARED_PREFIX = ("_sources/engagement/", ("research", "delivery"))
 
+# Paths that exist only when the engagement happens to have the thing they hold. The scaffolder
+# is right not to create them — an empty `archive-<PRIOR-ID>/` in a repo with no prior bid is the
+# same "built a block just in case" noise the modes exist to avoid.
+CONDITIONAL = ("01_pursuit/archive-",)
+
 # scenario -> (mode, [commands])   — mirrors USAGE.md
 SCENARIOS = {
     "1 research only": ("research", ["eng-new", "eng-source", "eng-sprint"]),
@@ -52,6 +57,8 @@ def blocks_of(mode):
 
 def owned_by_selected(path, blocks):
     """Is this path's owning block part of the mode? (unowned paths are never required)"""
+    if path.startswith(CONDITIONAL):
+        return False
     for block, prefixes in BLOCK_PREFIXES.items():
         if any(path.startswith(p) for p in prefixes):
             return block == "core" or block in blocks
