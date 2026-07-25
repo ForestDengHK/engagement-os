@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 11 skills + 6 composed workflows (playbooks) + 21 templates + 2 deterministic
+Packaged as 11 skills + 6 playbook commands + 21 templates + 2 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -74,14 +74,55 @@ Take either, both, or neither — see §4 for modes.
 Skills compose **by orchestration, not duplication**: each playbook is a thin checklist
 that names the owning skill per step plus its stop gates. Six recurring situations:
 
-| Situation | Playbook | Chain |
+| Situation | Command | Chain |
 |---|---|---|
-| **New source arrived** | `references/playbooks/new-source-arrived.md` | bucket it → ingest (per doc) → canonicalize (per bucket) → findings-impact check → log |
-| **Post-workshop** | `references/playbooks/post-workshop.md` | held-notes → findings → canonical deltas → question backlog → log |
-| **Deliverable sprint** | `references/playbooks/deliverable-sprint.md` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
-| **New engagement, day 1** | `references/playbooks/new-engagement.md` | pick mode → scaffold → fill context → panel-init → first ingest batch |
-| **An RFP arrived** | `references/playbooks/rfp-arrived.md` | ingest RFP → analyse → go/no-go → research → respond → red-team |
-| **The scope grew** (bid won, study became an engagement) | `references/playbooks/adding-a-block.md` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
+| **New source arrived** | `/eng-source` | bucket it → ingest (per doc) → canonicalize (per bucket) → findings-impact check → log |
+| **Post-workshop** | `/eng-workshop` | held-notes → findings → canonical deltas → question backlog → log |
+| **Deliverable sprint** | `/eng-sprint` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
+| **New engagement, day 1** | `/eng-new` | pick mode → scaffold → fill context → panel-init → first ingest batch |
+| **An RFP arrived** | `/eng-rfp` | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| **The scope grew** (bid won, study became an engagement) | `/eng-upgrade` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
+
+Each command is a thin router to `skills/eng-os/references/playbooks/<name>.md` — the playbook
+holds the content, the command is just an explicit entry point. Saying the situation in words
+works too; the commands exist for when you'd rather be deterministic than descriptive.
+
+## 3b. Invoking things explicitly
+
+Two surfaces, both typed with `/`. Skills auto-trigger from natural language; commands and skills
+can also be called by name when you'd rather not rely on the trigger firing.
+
+**Playbook commands** — a multi-step chain (one situation → several skills + stop gates):
+
+```
+/eng-new       /eng-rfp        /eng-source
+/eng-upgrade   /eng-workshop   /eng-sprint
+```
+
+**Skills** — one stage, one job. Call directly when you know exactly which stage you want:
+
+| Skill | Call it directly when |
+|---|---|
+| `/eng-os` | You want the map: which stage owns what, or a convention lookup |
+| `/eng-scaffold` | Standing up a repo, or adding a block to one |
+| `/eng-ingest-source` | Converting **one** document to citable markdown |
+| `/eng-update-canonical` | Folding an ingested batch into a bucket's SUMMARY / INSIGHTS |
+| `/eng-write-findings` | Turning evidence into findings |
+| `/eng-validate-findings` | Running the corpus-wide precedence + `[⚠VERIFY]` sweep |
+| `/eng-build-deliverable` | Assembling a deliverable from validated findings |
+| `/eng-maintain-memory` | Re-indexing CLAUDE.md / DELIVERABLES / project-context |
+| `/eng-rfp-analyze` | Decomposing an RFP into the compliance matrix |
+| `/eng-bid-research` | Closing matrix gaps with cited research |
+| `/eng-bid-respond` | Writing the tender response from the matrix |
+
+Plugin skills are namespaced `engagement-os:eng-<name>`; the bare `/eng-<name>` form works when
+it's unambiguous. Arguments are free text and get passed through — `/eng-new ACME 27-010 mode=pursuit`.
+
+**Which surface to use.** Reach for the **command** when the situation is the unit of work ("a
+doc arrived", "we won") — it carries the ordering and the stop gates, which are the part that's
+easy to skip. Reach for the **skill** when you want exactly one stage and nothing else. When in
+doubt use the command: running one stage of a chain in isolation is how a deliverable ends up
+built on unvalidated findings.
 
 "Source arrives → OCR → canonical → finding" is exactly the first playbook. It is a
 playbook rather than one fat skill because each stage also has its own standalone

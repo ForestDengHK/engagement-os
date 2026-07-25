@@ -123,14 +123,16 @@ Composition is **by reference, never by duplication**: a playbook is a thin chec
 that names the owning skill per step and sets the stop gates. When a task matches one
 of these four recurring situations, open the playbook and run the chain:
 
-| Situation | Playbook | Chain |
-|---|---|---|
-| A new source doc / batch arrived | [references/playbooks/new-source-arrived.md](references/playbooks/new-source-arrived.md) | ingest → canonicalize → findings-impact → log |
-| A workshop / discovery session just ended | [references/playbooks/post-workshop.md](references/playbooks/post-workshop.md) | held-notes → findings → canonical deltas → backlog → log |
-| Findings are ready, deliverable due | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index |
-| Day 1 of a new engagement | [references/playbooks/new-engagement.md](references/playbooks/new-engagement.md) | scaffold → context → panel-init → first ingest batch |
-| An RFP / tender arrived (bid it) | [references/playbooks/rfp-arrived.md](references/playbooks/rfp-arrived.md) | ingest RFP → analyse → go/no-go → research → respond → red-team |
-| The scope grew — bid won, study became an engagement, client tendered | [references/playbooks/adding-a-block.md](references/playbooks/adding-a-block.md) | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
+Each playbook also has a **slash command** that just routes to it — same content, explicit entry.
+
+| Situation | Command | Playbook | Chain |
+|---|---|---|---|
+| A new source doc / batch arrived | `/eng-source` | [references/playbooks/new-source-arrived.md](references/playbooks/new-source-arrived.md) | bucket → ingest → canonicalize → findings-impact → log |
+| A workshop / discovery session just ended | `/eng-workshop` | [references/playbooks/post-workshop.md](references/playbooks/post-workshop.md) | held-notes → findings → canonical deltas → backlog → log |
+| Findings are ready, deliverable due | `/eng-sprint` | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index |
+| Day 1 of a new engagement | `/eng-new` | [references/playbooks/new-engagement.md](references/playbooks/new-engagement.md) | pick mode → scaffold → context → panel-init → first ingest batch |
+| An RFP / tender arrived (bid it) | `/eng-rfp` | [references/playbooks/rfp-arrived.md](references/playbooks/rfp-arrived.md) | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| The scope grew — bid won, study became an engagement, client tendered | `/eng-upgrade` | [references/playbooks/adding-a-block.md](references/playbooks/adding-a-block.md) | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
 
 Anything that doesn't match a playbook: use the pipeline table above and invoke the
 one stage skill that owns your task.

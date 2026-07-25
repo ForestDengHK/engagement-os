@@ -1,6 +1,6 @@
 {
   "name": "engagement-os",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Engagement OS \u2014 a composable operating system for document-heavy consulting engagements: bid-only, delivery-only, or both (11 eng-* skills + playbooks + templates + scripts)",
   "owner": {
     "name": "Forest Deng",
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "engagement-os",
-      "description": "Composable operating system for consulting engagements. Pursuit: rfp-analyze \u2192 bid-research \u2192 bid-respond. Delivery: scaffold \u2192 ingest \u2192 canonicalize \u2192 findings \u2192 validate \u2192 build, with a panel review gate. Scaffold only the blocks you need (research / pursuit / delivery / full); source material is bucketed by confidentiality constraint. 11 skills + playbooks + templates + scripts.",
+      "description": "Composable operating system for consulting engagements. Pursuit: rfp-analyze \u2192 bid-research \u2192 bid-respond. Delivery: scaffold \u2192 ingest \u2192 canonicalize \u2192 findings \u2192 validate \u2192 build, with a panel review gate. Scaffold only the blocks you need (research / pursuit / delivery / full); source material is bucketed by confidentiality constraint. 11 skills + 6 playbook commands + templates + scripts.",
       "source": "./engagement-os",
       "category": "productivity"
     }
