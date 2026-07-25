@@ -6,7 +6,8 @@ Packaged as 11 skills + 6 playbook commands + 21 templates + 3 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
-> **Just want the commands?** → [`USAGE.md`](USAGE.md) — every scenario as a 2–4 line sequence.
+> **Just want to run it?** → [`USAGE.md`](USAGE.md) — each scenario as what you type, what
+> runs by itself, and where it stops and needs you.
 >
 > The agent-facing entry point is `skills/eng-os/SKILL.md` (auto-triggers). This file is the
 > human-facing manual: the same material with the reasoning attached.
@@ -124,7 +125,9 @@ can also be called by name when you'd rather not rely on the trigger firing.
 | `/eng-bid-respond` | Writing the tender response from the matrix |
 
 Plugin skills are namespaced `engagement-os:eng-<name>`; the bare `/eng-<name>` form works when
-it's unambiguous. Arguments are free text and get passed through — `/eng-new ACME 27-010 mode=pursuit`.
+it's unambiguous. **Arguments are plain text, not flags** — write it however you'd say it
+(`/eng-new ACME, 27-010, "DWH Assessment", bid only`) and the command asks for whatever it
+still needs. The `--mode` flag exists only on the underlying script, not on the command.
 
 **Which surface to use.** Reach for the **command** when the situation is the unit of work ("a
 doc arrived", "we won") — it carries the ordering and the stop gates, which are the part that's
