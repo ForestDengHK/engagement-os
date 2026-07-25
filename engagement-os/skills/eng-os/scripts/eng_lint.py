@@ -262,6 +262,7 @@ def rule_section_budget(root, r):
     if not secs:
         return
     r.ran()
+    shared = {}
     for p in secs:
         body = p.read_text(encoding="utf-8", errors="replace")
         fm = re.match(r"^---\n(.*?)\n---\n", body, re.S)
@@ -277,14 +278,107 @@ def rule_section_budget(root, r):
         words = len(prose.split())
         figs = len(re.findall(r"^!\[", prose, re.M))
         pages = words / 525 + figs * 0.5
-        m = re.search(r"(\d+)\s*A4", fm.group(1))
-        if m and pages > int(m.group(1)):
+        # Read the page_budget VALUE, not the whole frontmatter: grouping on the full block gave
+        # every file its own group, so a shared budget was silently checked per-file after all.
+        bm = re.search(r"^page_budget:\s*[\"']?(.+?)[\"']?\s*$", fm.group(1), re.M)
+        budget = bm.group(1).strip() if bm else ""
+        m = re.search(r"(\d+)\s*A4", budget)
+        if not m:
+            continue
+        limit = int(m.group(1))
+        if "shared" in budget.lower():
+            # A shared budget spans several files, so per-file checking always passes while the
+            # group overruns — the exact confusion the RFT wording invites. Pool by the declared
+            # budget string and check the total once.
+            shared.setdefault(budget, []).append((p, pages))
+        elif pages > limit:
             r.error("section-overlength", str(p.relative_to(root)),
-                    f"~{pages:.1f} A4 estimated against a stated limit of {m.group(1)} — "
+                    f"~{pages:.1f} A4 estimated against a stated limit of {limit} — "
                     "format non-compliance is a common auto-reject")
 
+    for budget, members in shared.items():
+        total = sum(pg for _p, pg in members)
+        limit = int(re.search(r"(\d+)\s*A4", budget).group(1))
+        if total > limit:
+            r.error("section-overlength", ", ".join(str(f.name) for f, _ in members),
+                    f"~{total:.1f} A4 across {len(members)} sections sharing a {limit}-page budget "
+                    f'("{budget}") — the limit is on the group, not each file')
 
-RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_budget, rule_verify_not_shipped, rule_mandatory_met,
+
+def rule_review_status(root, r):
+    """A section's `status` must agree with its review log, and nothing unfinished may be frozen.
+
+    Review rounds only work if their outcome is visible at a glance. A verdict buried in a table
+    while the frontmatter still says `draft` means the next person re-reads six files to learn
+    that one is blocked.
+    """
+    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    if not secs:
+        return
+    r.ran()
+    OK = {"draft", "reviewed-r1", "reviewed-r2", "revise-r1", "revise-r2", "blocked-r1",
+          "blocked-r2", "approved"}
+    for p in secs:
+        body = p.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"^status:\s*(\S+)", body, re.M)
+        if not m:
+            continue
+        st = m.group(1)
+        if st not in OK:
+            r.warn("status-unknown", str(p.relative_to(root)),
+                   f"status '{st}' is not one of {sorted(OK)}")
+        rounds = re.findall(r"^\|\s*R\d\s*\|.*?\|.*?\|\s*\*?\*?(\w[\w-]*)", body, re.M)
+        done = [v for v in rounds if v.lower() not in ("", "verdict")]
+        if st == "approved" and any(v.lower().startswith(("revise", "blocked")) for v in done):
+            r.error("status-contradicts-review", str(p.relative_to(root)),
+                    "marked approved while a review round recorded revise/blocked")
+        if st == "draft" and done:
+            r.warn("status-stale", str(p.relative_to(root)),
+                   f"review recorded a verdict ({done[0]}) but status is still 'draft'")
+
+    frozen = [f for f in (root / "01_pursuit").glob("*/4_final/*") if f.name != ".gitkeep"]
+    if frozen:
+        unfinished = [str(p.name) for p in secs
+                      if (re.search(r"^status:\s*(\S+)", p.read_text(encoding="utf-8", errors="replace"), re.M)
+                          or [None]) and not re.search(r"^status:\s*approved", p.read_text(encoding="utf-8", errors="replace"), re.M)]
+        if unfinished:
+            r.error("frozen-unapproved", "01_pursuit/*/4_final/",
+                    f"a response is frozen while {len(unfinished)} section(s) are not approved: "
+                    + ", ".join(unfinished[:4]))
+
+
+def rule_figures_exist(root, r):
+    """Every image a draft section references must exist, and keep its editable source.
+
+    Found by rendering for real: two sections cited figures that were never built, and the
+    citation-resolution rule missed them because it only looks at `file.md §Page` references.
+    Pandoc degrades a missing image to its alt text, so the document renders and the figure is
+    simply gone — the failure is silent in exactly the place it costs most.
+    """
+    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    if not secs:
+        return
+    r.ran()
+    for p in secs:
+        for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            for ref in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", line):
+                if "<" in ref:
+                    continue                      # template placeholder
+                target = (p.parent / ref).resolve()
+                if not target.exists():
+                    r.error("figure-missing", f"{p.relative_to(root)}:{i}",
+                            f"references '{ref}', which does not exist — the render will silently "
+                            "drop it to alt text")
+                    continue
+                for companion, why in ((".html", "editable source"), (".pptx", "editable one-slide export")):
+                    if not target.with_suffix(companion).exists():
+                        r.warn("figure-not-editable", str(p.relative_to(root)),
+                               f"'{target.name}' has no {companion} {why} — a reviewer who cannot "
+                               "edit sends the correction back as prose")
+
+
+RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_budget, rule_review_status,
+         rule_figures_exist, rule_verify_not_shipped, rule_mandatory_met,
          rule_citations_resolve, rule_findings_conform, rule_live_index_resolves,
          rule_spine_filled, rule_images_triaged, rule_manifest_complete,
          rule_pointer_table_resolves]
