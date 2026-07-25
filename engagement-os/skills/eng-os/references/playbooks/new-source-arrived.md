@@ -11,16 +11,22 @@ eng-ingest-source ─► eng-update-canonical ─► (findings impact?) ─► e
      per doc            per batch              conditional            per session
 ```
 
+0. **Bucket the batch first — by how each doc was obtained**, not by topic.
+   Public → `_sources/_shared/` · buyer-issued pre-award → `_sources/pursuit/` ·
+   client-handed post-award → `_sources/delivery/` · the tender pack itself →
+   `01_pursuit/<ENG-ID>/1_received/`. A mixed batch splits into per-bucket sub-batches
+   and each runs the loop separately. If a doc's provenance is unclear, ask — don't default.
 1. **Ingest — one doc at a time** → `eng-ingest-source`.
    Convert to anchored markdown with the lossless image rule; append the manifest row.
-   Verify: output markdown exists under the reference pack, images triaged
+   Verify: output markdown exists under the right bucket, images triaged
    (decorative dropped / content kept+captioned / uncertain OCR'd inline), manifest row added.
-2. **Repeat step 1 for every doc in the batch.** Do not start canonicalizing until the
-   batch is fully ingested — canonical updates are cheaper in one pass.
-3. **Canonicalize — once per batch** → `eng-update-canonical`.
-   Facts → `00_REFERENCE_SUMMARY.md`; interpretation → `01_REFERENCE_INSIGHTS.md`;
-   conflicts superseded, never deleted; new `[⚠VERIFY]` items registered.
-   Verify: every ingested doc is reflected in the canonical set with provenance tags.
+2. **Repeat step 1 for every doc in the sub-batch.** Do not start canonicalizing until the
+   sub-batch is fully ingested — canonical updates are cheaper in one pass.
+3. **Canonicalize — once per sub-batch, into that bucket's pair** → `eng-update-canonical`.
+   Facts → `<bucket>/_md/00_REFERENCE_SUMMARY.md`; interpretation →
+   `<bucket>/_md/01_REFERENCE_INSIGHTS.md`; conflicts superseded, never deleted; new
+   `[⚠VERIFY]` items registered. **Never fold one bucket's facts into another's summary.**
+   Verify: every ingested doc is reflected in its own bucket's canonical set with provenance tags.
 4. **Findings impact check — judgment gate, no skill.**
    Ask: does any new fact create, extend, or contradict a finding?
    - Yes → invoke `eng-write-findings` (new finding or extend an existing one, with the
@@ -37,3 +43,7 @@ eng-ingest-source ─► eng-update-canonical ─► (findings impact?) ─► e
 - **STOP and surface to the human** if a new fact contradicts a *validated* finding
   that already fed a shipped deliverable — that's a deliverable erratum decision, not
   a routine update.
+- **STOP before citing across buckets.** A `delivery/` fact never enters a bid document;
+  a `pursuit/` fact carried into delivery stays `[T3]` until re-established from a
+  delivery-phase source or measured from the system. Cross-bucket reasoning goes in
+  `_pm/source_precedence_and_conflict_register.md`, nowhere else.

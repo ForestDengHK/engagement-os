@@ -1,0 +1,62 @@
+# Source materials — {{CLIENT}} {{ENG_ID}}
+
+Everything we were **given** or **found**, kept as originals, converted to citable markdown
+under each bucket's `_md/`. Originals are never edited. This tree is the only place sourced
+material lives — our own analysis lives in the phase trees, not here.
+
+## The three buckets — and why they are separate
+
+Bid-phase and delivery-phase materials are **not the same corpus** and must not be pooled.
+Pre-award you have what the buyer issued and what is publicly obtainable; post-award you have
+client-internal material under the engagement's confidentiality terms. Mixing them corrupts the
+evidence chain (a bid assumption gets cited as a verified client fact) and creates a real
+confidentiality exposure (post-award material leaking into a later bid).
+
+| Bucket | Holds | Rule |
+|---|---|---|
+| `_shared/` | Publicly obtainable company information, sector and regulatory research, published benchmarks and standards. | Usable by **both** phases. Nothing NDA-bound, nothing client-internal — if you would hesitate to show it to another client, it does not belong here. |
+| `pursuit/` | The tender pack and appendices, clarification answers, anything the buyer issued or published pre-award. | Scoped to the bid. Must stay usable if we **lose**. |
+| `delivery/` | What the client hands over after award — internal architecture docs, system exports, org charts, strategy decks, security questionnaires. | Engagement-scoped. **Never reused in another bid**, and never cited in a bid document. |
+
+**One exception — the tender pack itself.** The RFP and its appendices live in
+`01_pursuit/<ENG-ID>/1_received/`, not here: they are the contractual artefact of *one* tender,
+frozen as issued and cited as `[RFP §x]`. `_sources/pursuit/` holds the pre-award material we
+*gathered* around it (published strategy, annual reports, market and competitor information),
+which stays useful across tenders for the same buyer.
+
+## Flow rules
+
+- **`_shared/` → either phase.** Free to cite anywhere.
+- **`pursuit/` → `delivery/` is allowed** once we win, but the fact does not upgrade with it:
+  a pre-award claim stays `[T3]` until re-established from a delivery-phase source or measured
+  from the system. Re-verify, don't re-label.
+- **`delivery/` → `pursuit/` is forbidden.** Post-award client-internal material does not travel
+  into any bid — this one, or a later one. If a bid needs the fact, source it independently.
+- **Promotion to `_shared/`** requires that the material is genuinely public. When in doubt it
+  is not shared; leave it in its phase bucket.
+
+## Per-bucket layout
+
+```
+<bucket>/
+├── SOURCES_GO_HERE.md          # what belongs in this bucket
+├── <client's own folder taxonomy>/   # ORIGINALS — never renamed, never edited
+└── _md/                        # derived, citable markdown (the searched layer)
+    ├── README.md               # manifest: source → md map + conversion conventions
+    ├── 00_REFERENCE_SUMMARY.md # facts roll-up for THIS bucket
+    ├── 01_REFERENCE_INSIGHTS.md# interpretation for THIS bucket
+    ├── NN_<topic>/             # per-topic converted markdown
+    └── images/<topic>/         # extracted + OCR'd figures
+```
+
+Each bucket keeps **its own** summary + insights pair. Do not write one merged summary across
+buckets — the separation above is exactly what a merged file would destroy. When a
+cross-bucket conflict matters, record it in `_pm/source_precedence_and_conflict_register.md`,
+which is the one place allowed to reason across buckets.
+
+## Adding material
+
+Drop the original in the right bucket, then run `eng-ingest-source` on it — it converts to
+anchored markdown, handles images losslessly, and registers a manifest row. If you cannot tell
+which bucket a document belongs to, ask how it was obtained: *issued with the tender* →
+`pursuit/`; *handed over under the engagement* → `delivery/`; *found in public* → `_shared/`.

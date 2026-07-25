@@ -10,7 +10,7 @@ the **only** skill that runs the corpus-wide precedence sweep. It edits the regi
 tags; it does not invent new findings.
 
 ## The register
-`02_delivery/_pm/source_precedence_and_conflict_register.md` — the truth-arbitration layer.
+`_pm/source_precedence_and_conflict_register.md` — the truth-arbitration layer.
 Precedence tiers, the `[⚠VERIFY]` lifecycle, and conflict clusters are defined in `eng-os`
 → `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/provenance-and-precedence.md`.
 

@@ -13,7 +13,19 @@ This skill is the **map**. It explains the pipeline and points to the one skill 
 owns each stage. The deep conventions live in `references/`; the fill-in artefacts
 live in `templates/`; deterministic helpers live in `scripts/`.
 
-## The pipeline (one job per stage)
+## Two pipelines, composable — take only what the work needs
+
+The pursuit side and the delivery side are **independent**. An engagement can be bid-only,
+delivery-only, both, or neither (a bare research base). `eng-scaffold --mode` builds only the
+blocks you name — `pursuit` · `delivery` · `research` (core only) · `full` (default, = both);
+comma-combine to mix, and re-run later to add a block without touching what exists.
+
+Source material is kept **separate per phase** in `_sources/{_shared,pursuit,delivery}/`, each
+with its own summary/insights pair: pre-award and post-award corpora are not interchangeable, and
+pooling them would both corrupt the evidence chain and leak NDA material into later bids. Boundary
++ flow rules: [references/directory-conventions.md](references/directory-conventions.md).
+
+## The delivery pipeline (one job per stage)
 
 ```
                                               ┌─ panel-discuss (lock structure)
@@ -26,7 +38,7 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 
 | Stage | Skill | What it does |
 |---|---|---|
-| **Scaffold** | `eng-scaffold` | Stand up the standard repo (folders + CLAUDE.md + project-context + DELIVERABLES + memory), then delegate to `/panel-init`. |
+| **Scaffold** | `eng-scaffold` | Stand up the repo for the selected blocks (`--mode`), then delegate to `/panel-init`. Serves both pipelines. |
 | **Ingest** | `eng-ingest-source` | Convert ONE client/reference document to faithful, citable markdown with lossless image/OCR handling + a manifest row. |
 | **Canonicalize** | `eng-update-canonical` | Fold new facts into the canonical `00_REFERENCE_SUMMARY` (facts) and `01_REFERENCE_INSIGHTS` (interpretation), keeping provenance. |
 | **Findings** | `eng-write-findings` | Turn evidence into standards-conformant current-state findings (severity/priority, evidence tags, precedence tags, backbone mapping). |
@@ -38,7 +50,7 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 ## The pursuit pipeline (bid side — win the work first)
 
 Before delivery there's the bid. Same document-and-provenance discipline, aimed at a compliant,
-winning tender. Runs in `01_pursuit/<ENG-ID>/`.
+winning tender. Runs in `01_pursuit/<ENG-ID>/`, sourced from `_sources/pursuit/` + `_sources/_shared/`.
 
 ```
 ingest RFP ─► analyse ─► research gaps ─► write response ─► panel red-team gate ─► submit
@@ -57,7 +69,7 @@ ingest RFP ─► analyse ─► research gaps ─► write response ─► pane
 Everything in this pack exists to protect these. If a choice conflicts with one, the principle wins.
 
 1. **Source → derived separation.** Originals are never edited. Every derived markdown, finding, and slide traces back to an original by path + page/slide. Provenance is a first-class citizen, not an afterthought.
-2. **Single source of truth, referenced not copied.** Each fact lives in exactly one file; everything else *links* to it. Deliverable versions live only in `DELIVERABLES.md`; project facts only in `.claude/project-context.md`; CLAUDE.md is a router, never a fact store.
+2. **Single source of truth, referenced not copied.** Each fact lives in exactly one file; everything else *links* to it. Deliverable versions live only in `DELIVERABLES.md`; project facts only in `.claude/project-context.md`; CLAUDE.md is a router, never a fact store. The one deliberate *non*-merge: each `_sources/` bucket keeps its own summary, because bid and delivery corpora must not pool.
 3. **A finding is a fact baseline, not a recommendation.** Findings record what *is* (observation and interpretation kept visibly separate) so every downstream deliverable can cite the same fact with its own so-what, without re-pasting evidence.
 4. **Precedence resolves conflict; nothing is deleted.** Measured-from-the-system beats the workshop room beats the vendor deck (T1 > T2 > T3). On conflict, keep both and stamp the loser `⚠ superseded-by`. Unverifiable claims are gated with `[⚠VERIFY]`.
 5. **Lean by design.** Depth lives in dedicated files; the index stays skimmable. CLAUDE.md and canonical summaries are updated on *milestones and material change*, not every edit.
@@ -66,7 +78,7 @@ Everything in this pack exists to protect these. If a choice conflicts with one,
 
 Keep these one level away; read the specific file when the stage needs it.
 
-- **Directory + file naming + the dual-index discipline** → [references/directory-conventions.md](references/directory-conventions.md)
+- **Directory + composable blocks + the `_sources/` bucket boundary + dual-index discipline** → [references/directory-conventions.md](references/directory-conventions.md)
 - **Ingestion, lossless image/OCR rule, facts-vs-insights canonical split** → [references/canonical-reference.md](references/canonical-reference.md)
 - **Finding schema — severity vs priority, evidence tags, body shapes** → [references/finding-standard.md](references/finding-standard.md)
 - **Source precedence (T1/T2/T3), `[⚠VERIFY]`/V-n register, conflict clusters** → [references/provenance-and-precedence.md](references/provenance-and-precedence.md)
@@ -78,14 +90,18 @@ Keep these one level away; read the specific file when the stage needs it.
 
 ## Templates and scripts
 
-- **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants into a new repo: `CLAUDE.md.tmpl`, `project-context.md.tmpl`, `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, the `_md/` reference-pack trio, `engagement_log.md.tmpl`, `source_precedence_register.md.tmpl`, `raid_and_decisions.md.tmpl`, `discovery_questions.md.tmpl`, `finding.md.tmpl`, `MEMORY.md.tmpl`. The pursuit/bid artefacts are filled on demand by the RFP skills: `compliance_matrix.md.tmpl`, `rfp_analysis.md.tmpl`, `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
+- **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants, by block:
+  - *core* — `CLAUDE.md.tmpl` (mode-aware: `<!--IF:block-->` fences), `project-context.md.tmpl`, `sources-README.md.tmpl`, the per-bucket source trio (`SOURCES_GO_HERE` + `reference-pack-README` + `REFERENCE_SUMMARY` + `REFERENCE_INSIGHTS`, planted once per bucket), `engagement_log.md.tmpl`, `raid_and_decisions.md.tmpl`, `source_precedence_register.md.tmpl`, `MEMORY.md.tmpl`.
+  - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`. (`bid_research_log.md.tmpl` and `bid_response_outline.md.tmpl` stay on-demand — the research log opens when research starts, the outline only after a go decision.)
+  - *delivery* — `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, `finding.md.tmpl`, `discovery_questions.md.tmpl`.
 - **Scripts** (`scripts/`):
-  - `scaffold_engagement.py` — deterministic: create the folder tree and plant templates with placeholder substitution.
+  - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` anchors + image extraction for triage.
 
 ## How the skills compose
 
-- **Adopt-in-place vs greenfield.** In a brand-new repo, run `eng-scaffold` first. In an existing engagement that already follows these conventions, the in-engagement skills read the *project's own* planted convention files (e.g. `3_findings/_FINDING_STANDARD.md`), so they work without the umbrella.
+- **Adopt-in-place vs greenfield.** In a brand-new repo, run `eng-scaffold` first — with the `--mode` that matches the actual work, not reflexively `full`. In an existing engagement that already follows these conventions, the in-engagement skills read the *project's own* planted convention files (e.g. `3_findings/_FINDING_STANDARD.md`), so they work without the umbrella.
+- **Blocks are independent, not sequential.** No delivery skill requires `01_pursuit/` to exist, and no pursuit skill requires `02_delivery/`. Only `_sources/` + `_pm/` + `project-context.md` are shared, which is why they sit at the root rather than inside a phase.
 - **The seam contract.** `eng-ingest-source` is per-document and additive and hands off an ingest report; `eng-update-canonical` is the only skill that edits the canonical summaries. `eng-write-findings` produces fact baselines; `eng-validate-findings` is the only skill that runs the corpus-wide precedence sweep; `eng-build-deliverable` consumes only validated findings.
 - **Panel is a companion, not a rebuild.** `eng-scaffold` produces `.claude/project-context.md` once and then delegates to `/panel-init` (one SSOT, two consumers). Wire `panel-review` in as the mandatory gate before any deliverable ships.
 

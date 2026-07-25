@@ -12,14 +12,19 @@ How raw client materials become a trustworthy, citable knowledge base — and st
 
 ## The two-directory, two-file-class pattern
 
+The pattern below repeats **once per `_sources/` bucket**. Buckets separate material by
+provenance — `_shared/` (public, either phase) · `pursuit/` (pre-award) · `delivery/` (post-award,
+NDA) — and each keeps its own canonical pair. See directory-conventions for why they never pool.
+
 ```
-_shared/<client>_reference/          ← SOURCE tier (originals, never edited)
+_sources/<bucket>/                   ← SOURCE tier (originals, never edited)
+  SOURCES_GO_HERE.md                 ← what belongs in THIS bucket
   Data Strategy/…pdf                 ← kept in the client's own folder taxonomy
   DWH Documents/…pptx
   _md/                               ← DERIVED tier (all generated markdown)
     README.md                        ← the manifest: source→md map + conventions
-    00_REFERENCE_SUMMARY.md          ← CANONICAL facts (one comprehensive summary)
-    01_REFERENCE_INSIGHTS.md         ← CANONICAL interpretation (deltas vs the brief)
+    00_REFERENCE_SUMMARY.md          ← CANONICAL facts for this bucket
+    01_REFERENCE_INSIGHTS.md         ← CANONICAL interpretation for this bucket
     01_topic/ … NN_topic/            ← per-topic numbered folders, one MD per source
     images/<topic>/                  ← extracted rasters + full-page renders
 ```
@@ -29,8 +34,8 @@ _shared/<client>_reference/          ← SOURCE tier (originals, never edited)
 1. **Source → derived separation.** Originals stay untouched under the client's own folder names; every generated `.md` lives under `_md/`. Provenance = the derived file always names its source path + page count, both in the README row and in its own header.
 2. **One MD per source file**, with `## Page N:` / `## Slide N:` anchors, so any downstream claim can cite `file.md §Page 12`.
 3. **Lossless image rule** (see next section) — no information lost, but noise stripped.
-4. **Canonical = multiple files split by kind**, not one mega-file (see below).
-5. **New-document flow is fixed** (see below): drop original → convert to MD in the matching `_md/` group → add a README row → fold facts/deltas into SUMMARY/INSIGHTS.
+4. **Canonical = multiple files split by kind**, not one mega-file (see below) — and split by **bucket** on top of that. A fact never migrates between buckets by being restated; it is re-established from a source in the new bucket or it stays where it is.
+5. **New-document flow is fixed** (see below): choose the bucket by how the doc was obtained → drop original → convert to MD in the matching `_md/` group → add a README row → fold facts/deltas into **that bucket's** SUMMARY/INSIGHTS.
 
 ## The lossless image / OCR rule (the key discipline)
 

@@ -81,22 +81,37 @@ orchestration gives the chained experience without duplication.
 
 ## 4. Day 1 of a new engagement
 
+Pick the **mode** first — the pursuit and delivery sides are independent, so build only the
+blocks the work actually needs:
+
+| The work is… | `--mode` |
+|---|---|
+| Bid only — respond to an RFP | `pursuit` |
+| Delivery only — we already have the work | `delivery` |
+| Just understand a client's materials | `research` (core only) |
+| Bid then deliver | `full` *(default)* |
+
+Comma-combine to mix (`pursuit,delivery` ≡ `full`). Blocks are **additive**: re-run later to add
+a phase and nothing existing is touched.
+
 ```bash
 # 1. Scaffold (or say "set up a new engagement for <client> <id>" — eng-scaffold fires)
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/scaffold_engagement.py \
-  --root ./acme-27-010 --client ACME --eng-id 27-010 --name "Data Platform Strategic Assessment"
+  --root ./acme-27-010 --client ACME --eng-id 27-010 \
+  --name "Data Platform Strategic Assessment" --mode full
 
 # 2. Fill what a machine can't know: project-context.md (stakeholders / pre-decisions /
-#    constraints), the findings backbone, DELIVERABLES.md
+#    constraints), plus the findings backbone + DELIVERABLES.md [delivery]
+#    or the compliance matrix [pursuit]
 
 # 3. /panel-init — builds roles from the same project-context.md
 
-# 4. Drop client materials into the reference folder; ingest them one by one
+# 4. Drop materials into the right _sources/ bucket; ingest them one by one
 #    (new-source-arrived playbook)
 ```
 
 Adopting an existing repo with its own layout (adopt-in-place): don't rebuild the tree;
-plant only the missing convention files (finding standard, reference-pack skeleton,
+plant only the missing convention files (finding standard, source-bucket skeleton,
 DELIVERABLES index) and record the mapping in CLAUDE.md.
 
 ## 5. Everyday cheat sheet
@@ -113,20 +128,34 @@ DELIVERABLES index) and record the mapping in CLAUDE.md.
 
 ## 6. What a scaffolded repo looks like
 
+Blocks marked `[core]` / `[pursuit]` / `[delivery]` — you get core plus whichever you selected.
+
 ```
 <engagement>/
-├── CLAUDE.md                  ← navigation index, not a fact store
-├── .claude/project-context.md ← the one source of project facts
-├── DELIVERABLES.md            ← live-version index (check here first, never grep for the newest file)
-├── 01_tender/                 ← bid phase (frozen)
-├── 02_delivery/
-│   ├── _shared/reference/     ← client originals + _md/ converted markdown
-│   ├── 0_mobilisation/        ← discovery-question backlog
-│   ├── 1_discovery/           ← workshops + 3_findings/ (findings by domain)
+├── CLAUDE.md                  ← [core] navigation index, not a fact store (built for your mode)
+├── .claude/project-context.md ← [core] the one source of project facts
+├── _sources/                  ← [core] ALL sourced material, SEPARATED BY PROVENANCE
+│   ├── README.md              ←   the bucket boundary + flow rules
+│   ├── _shared/               ←   [core]     public / sector / regulatory — usable by both phases
+│   ├── pursuit/               ←   [pursuit]  pre-award: what the buyer published + market research
+│   └── delivery/              ←   [delivery] post-award: client-internal, under NDA
+│       └── _md/               ←   each bucket: originals + its OWN converted markdown + summary/insights
+├── _pm/                       ← [core] engagement log, source-precedence register, RAID + decisions
+├── 01_pursuit/<ENG-ID>/       ← [pursuit] tender pack, RFP analysis + compliance matrix, drafting, final
+├── 02_delivery/               ← [delivery]
+│   ├── 0_mobilisation/        ←   discovery-question backlog
+│   ├── 1_discovery/           ←   workshops + 3_findings/ (findings by domain)
 │   ├── 2_assessment/ … 6_executive_summary/
-│   └── _pm/                   ← engagement log, source-precedence register, RAID
-└── archived/                  ← superseded versions (audit trail, never deleted)
+│   └── DELIVERABLES.md        ←   live-version index (check here, never grep for the newest file)
+└── archived/                  ← [core] superseded versions (audit trail, never deleted)
 ```
+
+**Why `_sources/` is split three ways:** pre-award and post-award corpora are not
+interchangeable. Pooling them corrupts the evidence chain (a bid assumption resurfaces as a
+verified client fact) and leaks NDA material into later bids. Each bucket keeps its own
+summary/insights pair; `delivery/ → pursuit/` is forbidden; `pursuit/ → delivery/` is allowed on
+win but the fact stays `[T3]` until re-established. The source-precedence register is the only
+place allowed to reason across buckets.
 
 ## 7. FAQ
 
