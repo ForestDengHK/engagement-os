@@ -24,12 +24,15 @@ Repeat per section. The value is in the **field-level diff**, not the verdict: "
 is only trustworthy when you can see the two clauses side by side.
 
 ### <section ref + title>
-**Status:** FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW
+**Status:** FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW · **Reuse:** <~%>
 **Maps to:** R-0xx *(compliance-matrix row — reuse and compliance must agree)*
 
-| Element | Prior (`<PRIOR-ID>`) | Current ({{ENG_ID}}) | Status |
-|---|---|---|---|
-| <e.g. turnover requirement> | <old value> | <new value> `[RFP §x]` | Same / **CHANGED** / CHECK |
+Go **element by element**, not section by section. "Section 4.1 is reusable" hides the one field
+that moved; a table of elements makes the actual edit list fall out of the analysis.
+
+| Element | Prior (`<PRIOR-ID>`) | Current ({{ENG_ID}}) | Where it lives in the prior response | Status |
+|---|---|---|---|---|
+| <e.g. turnover requirement> | <old value> | <new value> `[RFP §x]` | <doc + section> | Same / **CHANGED** / CHECK |
 
 **Action required:**
 - <the specific edit, not "review">
