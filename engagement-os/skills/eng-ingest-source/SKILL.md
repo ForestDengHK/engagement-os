@@ -56,7 +56,7 @@ PACK=_sources/<bucket>          # public | pre_award | engagement
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <source_path> \
   --out "$PACK/_md/<NN_topic>/<slug>.md" --images-dir "$PACK/_md/images/<topic>"
 ```
-Handles pdf/pptx/docx/xlsx/csv/image with per-`## Page N:` / `## Slide N:` anchors and image
+Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · `## Slide N:` pptx · `## Sheet:` xlsx · `## Section N:` docx) and image
 extraction. If a library is missing it prints a `pip install` line for that format — install
 and re-run. For docx/xlsx you may prefer the `docx` / `xlsx` skills for tricky files.
 

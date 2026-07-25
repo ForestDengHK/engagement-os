@@ -110,7 +110,7 @@ Keep these one level away; read the specific file when the stage needs it.
   - *delivery* — `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, `finding.md.tmpl`, `discovery_questions.md.tmpl`.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
-  - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` anchors + image extraction for triage.
+  - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` / `## Sheet:` / `## Section N:` anchors + image extraction for triage.
   - `eng_lint.py` — **the mechanical gate**: bucket-leak (engagement/ cited from a bid), `[⚠VERIFY]` in a shipped artefact, unmet mandatory requirements, dangling citations, untagged/unmapped findings, dangling live-file index, unfilled spine. Run it instead of asking a reviewer to check what a script can decide.
   - `verify_scenarios.py` — self-test: scaffolds every documented mode and checks each command resolves to a playbook whose named skills and block-owned paths all exist. Run after editing a playbook, command, or the scaffolder.
 
