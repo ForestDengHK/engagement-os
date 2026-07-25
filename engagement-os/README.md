@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 11 skills + 5 composed workflows (playbooks) + 18 templates + 2 deterministic
+Packaged as 11 skills + 6 composed workflows (playbooks) + 21 templates + 2 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -72,7 +72,7 @@ Take either, both, or neither — see §4 for modes.
 ## 3. Composed workflows (Playbooks)
 
 Skills compose **by orchestration, not duplication**: each playbook is a thin checklist
-that names the owning skill per step plus its stop gates. Five recurring situations:
+that names the owning skill per step plus its stop gates. Six recurring situations:
 
 | Situation | Playbook | Chain |
 |---|---|---|
@@ -81,6 +81,7 @@ that names the owning skill per step plus its stop gates. Five recurring situati
 | **Deliverable sprint** | `references/playbooks/deliverable-sprint.md` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
 | **New engagement, day 1** | `references/playbooks/new-engagement.md` | pick mode → scaffold → fill context → panel-init → first ingest batch |
 | **An RFP arrived** | `references/playbooks/rfp-arrived.md` | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| **The scope grew** (bid won, study became an engagement) | `references/playbooks/adding-a-block.md` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
 
 "Source arrives → OCR → canonical → finding" is exactly the first playbook. It is a
 playbook rather than one fat skill because each stage also has its own standalone
@@ -88,36 +89,112 @@ trigger surface (findings also arise from workshops, bypassing ingest); duplicat
 the stage content into a mega-skill would create a second truth that rots. Thin
 orchestration gives the chained experience without duplication.
 
-## 4. Day 1 of a new engagement
+## 4. Pick your lane
 
-Pick the **mode** first — the pursuit and delivery sides are independent, so build only the
-blocks the work actually needs:
+Three lanes, independent. Build only what the work actually is — an empty `02_delivery/` in a bid
+repo sends every later skill hunting through folders that will never hold anything.
 
-| The work is… | `--mode` |
-|---|---|
-| Bid only — respond to an RFP | `pursuit` |
-| Delivery only — we already have the work | `delivery` |
-| A standalone research assignment (no bid, no delivery) | `research` |
-| Bid then deliver | `full` *(default)* |
+| The work is… | `--mode` | You get |
+|---|---|---|
+| A standalone research assignment — materials in, a report out | `research` | `00_research/` + `public` `engagement` buckets |
+| Bid only — respond to an RFP | `pursuit` | `01_pursuit/<ENG-ID>/` + `public` `pre_award` buckets |
+| Delivery only — we already have the work | `delivery` | `02_delivery/` + `public` `engagement` buckets |
+| Bid then deliver | `full` *(default)* | both phase trees + all three buckets |
 
-Comma-combine to mix (`pursuit,delivery` ≡ `full`). Blocks are **additive**: re-run later to add
-a phase and nothing existing is touched.
+Comma-combine to mix (`pursuit,delivery` ≡ `full`; `research,pursuit` = pre-bid intelligence
+feeding a tender). Every lane also gets core: `CLAUDE.md`, `project-context.md`, `_pm/`,
+`_sources/README.md`, `archived/`, `references/`, `panel/`.
+
+Everything below starts the same way — **say it in words and `eng-scaffold` fires** ("set up a
+research repo for ACME", "we're bidding ACME 27-010"), or run the script directly:
 
 ```bash
-# 1. Scaffold (or say "set up a new engagement for <client> <id>" — eng-scaffold fires)
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/scaffold_engagement.py \
-  --root ./acme-27-010 --client ACME --eng-id 27-010 \
-  --name "Data Platform Strategic Assessment" --mode full
-
-# 2. Fill what a machine can't know: project-context.md (stakeholders / pre-decisions /
-#    constraints), plus the findings backbone + DELIVERABLES.md [delivery]
-#    or the compliance matrix [pursuit]
-
-# 3. /panel-init — builds roles from the same project-context.md
-
-# 4. Drop materials into the right _sources/ bucket; ingest them one by one
-#    (new-source-arrived playbook)
+  --root ./acme-27-010 --client ACME --eng-id 27-010 --name "<engagement name>" --mode <lane>
 ```
+
+Then, in every lane: fill `.claude/project-context.md` (the facts a machine can't know), and run
+`/panel-init` if you have the Panel Framework.
+
+### Lane A — research (`--mode research`)
+
+```
+1. Write the questions       00_research/README.md — bounded, answerable; this is the spine.
+                             Do this BEFORE ingesting, or sourced facts land nowhere.
+2. Ingest sources            "ingest this doc" → eng-ingest-source, one doc at a time.
+                             Bucket by how you got it: found in public → public/;
+                             client gave it to you → engagement/.
+3. Canonicalize              eng-update-canonical → facts to 00_REFERENCE_SUMMARY,
+                             interpretation to 01_REFERENCE_INSIGHTS, per bucket.
+4. Analyse                   00_research/1_analysis/, one file per question, evidence cited
+                             inline back to <bucket>/_md/<file>.md §Page N.
+5. Write the output          00_research/2_output/, v0.1 → v1.0. Close or cut every
+                             [⚠VERIFY] first — an unsourceable claim never ships.
+6. Review, then issue        panel-review (or a manual multi-lens pass). Record the live
+                             version in 00_research/README.md §4.
+```
+
+### Lane B — pursuit (`--mode pursuit`)
+
+```
+1. Ingest the tender         → 01_pursuit/<ENG-ID>/1_received/_md/ (the RFP is the contractual
+                             artefact, cited [RFP §x]). Background research → pre_award/.
+2. Analyse the RFP           eng-rfp-analyze → fills the planted rfp_analysis.md +
+                             compliance_matrix.md: every requirement gets a row, eval weights
+                             mapped, win-themes, risks, materials-needed, go/no-go.
+3. GO / NO-GO — human        Stop here on a no-go and log why. Don't sink writing effort
+                             into a bid you won't win or can't deliver.
+4. Research the gaps         eng-bid-research → close every matrix `gap` with a citation.
+                             Zero fabrication; unsourceable → [⚠VERIFY] → cut.
+5. Write the response        eng-bid-respond → built FROM the matrix, in the RFP's mandated
+                             format. Every claim traces to [RFP §x] or a closed log row.
+6. Red-team, then submit     panel-review. Freeze to 4_final/ and record what was submitted.
+```
+
+### Lane C — delivery (`--mode delivery`)
+
+```
+1. Set the backbone          02_delivery/1_discovery/3_findings/README.md — the fixed problem
+                             list every finding maps to. The one structural choice to make
+                             deliberately up front.
+2. Ingest + canonicalize     Client materials → engagement/ bucket → eng-ingest-source →
+                             eng-update-canonical. (new-source-arrived playbook)
+3. Workshops → findings      eng-write-findings — a finding is a FACT BASELINE, not a
+                             recommendation. (post-workshop playbook)
+4. Validate                  eng-validate-findings — corpus-wide precedence sweep, evidence-tag
+                             audit, [⚠VERIFY] register. Run before any deliverable.
+5. Build deliverables        panel-discuss locks the structure → eng-build-deliverable →
+                             panel-review is the hard ship gate. (deliverable-sprint playbook)
+6. Keep the index honest     Update DELIVERABLES.md to the new version; archive the old one.
+```
+
+## 4b. Upgrading — the scope grew
+
+You bid, you won. Or the study became the engagement. **Don't rebuild and don't fork a second
+repo** — add the block and keep one audit trail. Full chain + gates:
+`references/playbooks/adding-a-block.md`.
+
+```bash
+# Name the OLD blocks AND the new one — --mode is the repo's full block list, not a delta.
+python3 .../scaffold_engagement.py --root <same root> ... --mode pursuit,delivery
+```
+
+Everything that exists prints `skip`; only the new block's tree, bucket, and templates appear.
+Then three things the script can't do for you:
+
+| # | Do this | Why |
+|---|---|---|
+| 1 | **Top up `CLAUDE.md` by hand** — new pointer rows, skills line, `**Phase:**` | The scaffolder never rewrites an existing `CLAUDE.md`; it warns when a block was added |
+| 2 | **Write the handoff** — for a won bid, `01_pursuit/<ENG-ID>/7_briefing/`: what we won, what we promised, scope, dates, priced assumptions | Delivery scope gets read from here, not from memory of the bid. Skipping it is the most expensive failure mode of a won bid |
+| 3 | **Re-baseline the sources** | See below — this is the one that bites |
+
+**The gate that matters: winning verifies nothing.** A `pre_award/` fact stays `[T3]` after the
+win; the `engagement/` bucket starts **empty** and fills from what the client hands over
+post-award. Re-verify, don't re-label — and log the re-baseline in the precedence register.
+
+**And the sharp edge in the other direction:** when a delivery client tenders again, *everything*
+in `engagement/` is off-limits to that bid. The material you know best is the material you may not
+use. There is no "we already know it" exception — source it independently or drop the claim.
 
 Adopting an existing repo with its own layout (adopt-in-place): don't rebuild the tree;
 plant only the missing convention files (finding standard, source-bucket skeleton,

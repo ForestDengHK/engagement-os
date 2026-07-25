@@ -130,6 +130,7 @@ of these four recurring situations, open the playbook and run the chain:
 | Findings are ready, deliverable due | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index |
 | Day 1 of a new engagement | [references/playbooks/new-engagement.md](references/playbooks/new-engagement.md) | scaffold → context → panel-init → first ingest batch |
 | An RFP / tender arrived (bid it) | [references/playbooks/rfp-arrived.md](references/playbooks/rfp-arrived.md) | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| The scope grew — bid won, study became an engagement, client tendered | [references/playbooks/adding-a-block.md](references/playbooks/adding-a-block.md) | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
 
 Anything that doesn't match a playbook: use the pipeline table above and invoke the
 one stage skill that owns your task.

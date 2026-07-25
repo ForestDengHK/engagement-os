@@ -36,6 +36,12 @@ intelligence feeding a tender). Every mode also gets core: `_pm/`, `CLAUDE.md`,
 extra block; nothing existing is touched. Ask the user which mode only if the request doesn't
 make it obvious.
 
+**Adding a block to an existing repo is its own workflow**, not just a re-run: there's a handoff
+artefact to write and a source re-baseline that must happen before the new block's work starts.
+Follow `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/playbooks/adding-a-block.md` — the mode
+flag is one step out of four, and skipping the others is how a won bid's delivery scope drifts
+from what was sold.
+
 **Research and delivery share the `engagement` bucket** — in both, the client handed us material
 under an engagement's confidentiality terms. Buckets are named for the constraint on the material,
 not for the work tree that consumes it, so the same filing rule holds in every mode.
