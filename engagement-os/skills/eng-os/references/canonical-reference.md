@@ -39,7 +39,13 @@ _sources/<bucket>/                   ← SOURCE tier (originals, never edited)
 
 ## The lossless image / OCR rule (the key discipline)
 
-Every extracted image is triaged into exactly one of three buckets:
+**The converter drops the obvious cases first**, so triage is only spent on images that might
+matter: a raster repeated across pages/slides is template furniture (logo, footer, divider) and
+anything under ~6KB is an icon or rule. Both are counted in the output. On a real 24-page policy
+this took 49 extracted images down to 1. The lossless rule is about not losing *information* — a
+logo carries none.
+
+What survives is triaged into exactly one of three buckets:
 
 - **`[decorative]`** → delete (logos, borders, backgrounds, spacers). No information lost.
 - **`[content]`** — a diagram/table that carries meaning and survived text extraction → keep as a captioned PNG render under `images/<topic>/`; write the caption from the surrounding text, not the filename.
