@@ -11,6 +11,16 @@ tags; it does not invent new findings.
 
 ## The register
 `_pm/source_precedence_and_conflict_register.md` — the truth-arbitration layer.
+
+**Run the mechanical checks first** — they decide in a second what would otherwise cost a careful
+read, and they don't get less reliable on a cheaper model:
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/eng_lint.py <repo-root>
+```
+Fix every ERROR before starting the judgment work below. What the linter *can't* decide — whether
+a finding is the right finding, whether a conflict was arbitrated correctly, whether coverage is
+complete — is exactly what the rest of this skill is for.
+
 Precedence tiers, the `[⚠VERIFY]` lifecycle, and conflict clusters are defined in `eng-os`
 → `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/provenance-and-precedence.md`.
 

@@ -16,3 +16,6 @@ Expect: client short-code · engagement/tender id · engagement name · destinat
 Step 0 of the playbook is picking the mode — do not default to `full` without checking what the
 work actually is. Building a block "just in case" leaves empty folders that every later skill
 will hunt through.
+
+Draft `project-context.md` and the spine (question list / findings backbone) from the
+invocation text and any ingested tender — show them inline and ask only the residual.

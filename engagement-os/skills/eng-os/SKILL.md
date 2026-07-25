@@ -76,7 +76,7 @@ ingest RFP ─► analyse ─► research gaps ─► write response ─► pane
 
 (RFP intake reuses `eng-ingest-source`; the RFP is the pursuit-side source of record — tag facts `[RFP §x]`.)
 
-## The five load-bearing principles
+## The six load-bearing principles
 
 Everything in this pack exists to protect these. If a choice conflicts with one, the principle wins.
 
@@ -85,6 +85,7 @@ Everything in this pack exists to protect these. If a choice conflicts with one,
 3. **A finding is a fact baseline, not a recommendation.** Findings record what *is* (observation and interpretation kept visibly separate) so every downstream deliverable can cite the same fact with its own so-what, without re-pasting evidence.
 4. **Precedence resolves conflict; nothing is deleted.** Measured-from-the-system beats the workshop room beats the vendor deck (T1 > T2 > T3). On conflict, keep both and stamp the loser `⚠ superseded-by`. Unverifiable claims are gated with `[⚠VERIFY]`.
 5. **Lean by design.** Depth lives in dedicated files; the index stays skimmable. CLAUDE.md and canonical summaries are updated on *milestones and material change*, not every edit.
+6. **Draft first, ask second — never send the user to an editor.** Templates exist so the *agent* fills them, not so a human is handed a blank form. Draft from what's already available (invocation text, project-context, ingested RFP/SOW, manifests), show it inline, ask only the residual with your recommendation stated, then write the file. A workflow step whose instruction is "now go write X.md" is mis-designed. → [references/guided-elicitation.md](references/guided-elicitation.md)
 
 ## Conventions — read the reference file that matches your task
 
@@ -96,6 +97,7 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Source precedence (T1/T2/T3), `[⚠VERIFY]`/V-n register, conflict clusters** → [references/provenance-and-precedence.md](references/provenance-and-precedence.md)
 - **As-is / to-be assembly, versioning, the panel gate** → [references/deliverable-build.md](references/deliverable-build.md)
 - **CLAUDE.md / project-context / DELIVERABLES / memory discipline (incl. AGENTS.md)** → [references/memory-discipline.md](references/memory-discipline.md)
+- **Guided elicitation — how to fill an artefact WITH the user instead of handing them a blank** → [references/guided-elicitation.md](references/guided-elicitation.md)
 - **RFP decomposition — compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
 - **Bid research — depth+breadth, source discipline, zero-fabrication, the [⚠VERIFY] gate** → [references/bid-research.md](references/bid-research.md)
 - **Bid response — requirement-driven assembly, format-match, traceability, red-team gate** → [references/bid-response.md](references/bid-response.md)
@@ -109,6 +111,7 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` anchors + image extraction for triage.
+  - `eng_lint.py` — **the mechanical gate**: bucket-leak (engagement/ cited from a bid), `[⚠VERIFY]` in a shipped artefact, unmet mandatory requirements, dangling citations, untagged/unmapped findings, dangling live-file index, unfilled spine. Run it instead of asking a reviewer to check what a script can decide.
   - `verify_scenarios.py` — self-test: scaffolds every documented mode and checks each command resolves to a playbook whose named skills and block-owned paths all exist. Run after editing a playbook, command, or the scaffolder.
 
 ## How the skills compose

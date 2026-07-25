@@ -5,7 +5,11 @@ Every scenario as: **what you type → what runs by itself → where it stops an
 There is no flag syntax. A command's arguments are plain text — write it however you'd say it,
 and it asks for anything it still needs.
 
-Legend: `[auto]` runs without you · `[asks]` it stops and asks · `[you]` you write it yourself.
+Legend: `[auto]` runs without you · `[drafts]` it writes a first version and shows you ·
+`[decide]` a judgment call that's yours.
+
+You are never sent to a text editor. Every artefact is drafted from what you already said and
+presented inline; you correct it in the conversation and the agent writes the file.
 
 ---
 
@@ -21,9 +25,10 @@ A client hands you material; you produce a report. No bid, no delivery.
     [asks]  where to put the repo (default ./acme-27-010)
     [auto]  scaffolds the research tree — 15 files
     [asks]  fills .claude/project-context.md from what you tell it
-    [you]   ← STOP. Write the questions in 00_research/README.md §1.
-            5-8 bounded, answerable questions. This is the spine — every
-            source and every analysis file maps to one. Do it before ingesting.
+    [drafts] 5-8 questions for 00_research/README.md §1, derived from the goal
+            you stated, shown inline
+    [decide] ← you reshape them in chat ("drop 3, split 5"). It writes the file.
+            This is the spine — every source and analysis file maps to one.
 
 ▸ You type   (once per batch of documents)
     /eng-source   ~/Downloads/acme-pack/
@@ -45,7 +50,7 @@ A client hands you material; you produce a report. No bid, no delivery.
     [auto]  records the live version in 00_research/README.md §4
 ```
 
-**3 commands.** One stop that's genuinely yours: the question list.
+**3 commands.** One decision that's genuinely yours: approving the question list.
 
 <details><summary>What lands on disk</summary>
 
@@ -123,9 +128,9 @@ Note there is **no `engagement/` bucket** — a bid has no post-award material y
 
     [auto]  scaffolds the delivery tree — 19 files
     [asks]  fills project-context.md
-    [you]   ← STOP. Set the backbone in
-            02_delivery/1_discovery/3_findings/README.md — the fixed problem list
-            every finding maps to. Derive it from the SOW / RFP requirements.
+    [drafts] the backbone for 3_findings/README.md, derived from the SOW / RFP
+            requirements if either is ingested, else the sector-standard shape
+    [decide] ← you add/cut/rename in chat. It writes the file.
 
 ▸ You type   (once per batch)
     /eng-source   ~/client-docs/
@@ -134,7 +139,9 @@ Note there is **no `engagement/` bucket** — a bid has no post-award material y
 ▸ You type   (once per session)
     /eng-workshop   week_1/session_2
 
-    [you]   fill the held-notes: asked / answered / quotes / NOT covered
+    [drafts] the held-notes from whatever you supply — transcript, bullet dump,
+            or a verbal recap: asked / answered / quotes / NOT covered
+    [decide] ← it asks only about gaps ("nothing covers agenda item 4 — was it run?")
     [auto]  writes findings, one per topic, each tagged and mapped to the backbone
     [auto]  folds canonical deltas, updates the open-question backlog, logs it
 
@@ -145,7 +152,7 @@ Note there is **no `engagement/` bucket** — a bid has no post-award material y
     [auto]  updates DELIVERABLES.md to the new live version, archives the old
 ```
 
-**4 commands**, the middle two on repeat. One stop that's genuinely yours: the backbone.
+**4 commands**, the middle two on repeat. One decision that's genuinely yours: the backbone.
 
 ---
 
@@ -177,9 +184,10 @@ run `/eng-upgrade` later.
 ▸ What happens
     [auto]  re-scaffolds with old blocks + the new one. Everything existing
             prints `skip` — nothing is touched, nothing is overwritten.
-    [you]   ← top up CLAUDE.md: the new block's pointer rows + skills line.
-            The scaffolder never rewrites an existing CLAUDE.md; it warns you.
-    [asks]  ← writes the handoff with you. For a won bid that's
+    [auto]  updates CLAUDE.md itself — new pointer rows, skills line, phase.
+            (The *script* won't clobber it, so the agent edits it and shows the diff.)
+    [drafts] ← the handoff, from the compliance matrix + what was submitted in
+            4_final/ + the RFP's dates. For a won bid that's
             01_pursuit/<id>/7_briefing/ — what we won, what we promised, scope,
             dates, the assumptions we priced. Delivery scope is read from HERE,
             not from anyone's memory of the bid.
@@ -226,9 +234,9 @@ deliverable ends up built on unvalidated findings.
 
 | Scenario | Commands | The one thing only you can do |
 |---|---|---|
-| Research | `/eng-new` → `/eng-source`* → `/eng-sprint` | write the question list |
+| Research | `/eng-new` → `/eng-source`* → `/eng-sprint` | approve the question list |
 | Pursuit | `/eng-new` → `/eng-rfp` | the go/no-go call |
-| Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | set the findings backbone |
+| Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | approve the findings backbone |
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
 

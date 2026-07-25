@@ -16,3 +16,6 @@ Three things this is NOT allowed to shortcut:
 1. `--mode` must name the **old blocks and the new one** — it's the repo's full block list, not a delta.
 2. The handoff artefact gets written **before** any new-block work starts.
 3. Sources are re-baselined: winning verifies nothing, and `engagement/` material never enters a bid.
+
+You own the `CLAUDE.md` top-up and the handoff draft — produce them and ask for
+confirmation. Do not tell the user to go edit a file.

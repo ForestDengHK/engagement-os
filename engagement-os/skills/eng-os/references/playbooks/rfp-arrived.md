@@ -45,4 +45,7 @@ eng-ingest-source ─► eng-rfp-analyze ─► eng-bid-research ─► eng-bid-
 - **STOP and surface to the human** if research cannot source a claim a win-theme depends on
   (`[⚠VERIFY]` on a load-bearing claim) — that's a go/no-go re-check, not a wording fix.
 - **STOP before submission** if any mandatory requirement is not `met` or any format rule is breached —
-  format non-compliance is a common auto-reject.
+  format non-compliance is a common auto-reject. Run
+  `python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/eng_lint.py <repo-root> --strict`: it
+  decides the mandatory-row check, the `[⚠VERIFY]`-in-a-frozen-response check, and the
+  bucket-leak check without a human re-reading the whole response.

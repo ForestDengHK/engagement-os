@@ -9,8 +9,8 @@ The mechanical part takes one command. The part that matters is what does **not*
 ## Chain
 
 ```
-re-run eng-scaffold --mode <old>,<new> ─► top up CLAUDE.md ─► write the handoff ─► re-baseline sources
-       adds only the new block              by hand (warned)     what we promised    the sharp gate
+re-run eng-scaffold --mode <old>,<new> ─► top up CLAUDE.md ─► draft the handoff ─► re-baseline sources
+       adds only the new block              you edit it         what we promised     the sharp gate
 ```
 
 1. **Re-run the scaffolder with the old blocks AND the new one.**
@@ -21,12 +21,16 @@ re-run eng-scaffold --mode <old>,<new> ─► top up CLAUDE.md ─► write the 
    ```
    Always name the **old blocks too** — the mode is the repo's full block list, not a delta.
    Verify: the new work tree + its source bucket exist; every pre-existing file printed `skip`.
-2. **Top up `CLAUDE.md` by hand** (or via `eng-maintain-memory`). The scaffolder never rewrites
-   an existing `CLAUDE.md` and prints a warning saying so. Add the new block's pointer-table rows
-   and its pipeline-skills line; update the "Scaffolded blocks" line and `**Phase:**`.
+2. **Top up `CLAUDE.md` — you do it, not the user.** The *script* never rewrites an existing
+   `CLAUDE.md` (it never clobbers) and prints a warning. Read the file, add the new block's
+   pointer-table rows and its pipeline-skills line, update the "Scaffolded blocks" line and
+   `**Phase:**`, then show the diff for confirmation.
    Verify: every path in the pointer table resolves.
-3. **Write the handoff before doing any new work** — the block-specific artefact below. This is
-   what stops the new phase from quietly redefining what was agreed in the old one.
+3. **Draft the handoff before doing any new work** — the block-specific artefact below. Write a
+   complete first version from the old block's own output (for a won bid: the compliance matrix,
+   the submitted response in `4_final/`, the RFP's stated dates and deliverables) and present it
+   for confirmation. Do not hand the user a blank briefing template. This is what stops the new
+   phase from quietly redefining what was agreed in the old one.
 4. **Re-baseline the sources** — see the gate. Then resume the normal loops
    (`new-source-arrived`, `rfp-arrived`, `post-workshop`, `deliverable-sprint`).
 
