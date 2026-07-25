@@ -245,8 +245,14 @@ deliverable ends up built on unvalidated findings.
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
 | Ship the file | `/eng-render <dir>` — standalone, any directory | decide document vs deck, and clear the gates |
+| Fix an issued deck | `/eng-render` → splice the redrawn slides, `verify_deck.py` | say which slides are wrong; the rest do not move |
 
 `*` = repeat per batch / session / deliverable.
 
-Self-test: `python3 skills/eng-os/scripts/verify_scenarios.py` scaffolds every scenario above and
-checks each command resolves to a playbook whose skills and paths all exist.
+Self-tests, all three green before a release:
+
+| Harness | Covers |
+|---|---|
+| `python3 skills/eng-os/scripts/verify_scenarios.py` | scaffolds every scenario above; each command resolves to a playbook whose skills and paths all exist; every markdown link in the pack resolves |
+| `python3 tests/run_tests.py` | one clean tree + one violated tree per `eng_lint.py` rule |
+| `python3 tests/test_verify_deck.py` | one passing + one failing deck per `verify_deck.py` check |

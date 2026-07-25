@@ -28,7 +28,10 @@ Follow the method for that mode in the reference — its step lists live there, 
 Non-negotiables at this desk, whichever mode:
 - Admit ONLY validated facts into client-facing text; `[⚠VERIFY]` stays out of headlines.
 - A `SKELETON` holds no real content (names / € / dates); the deliverable stays **editable**
-  (native shapes/text, never a stitched image-per-slide).
+  (native shapes/text, never a stitched image-per-slide) — `verify_deck.py` decides this, so it
+  is a gate rather than a hope.
+- Correcting an already-issued deck is a **splice of the changed slides**, not a rebuild, and it
+  is not done until it is spliced, verified and re-indexed (eng-os `references/deck-assembly.md`).
 - Version openly and update `DELIVERABLES.md` the moment a version exists; archive the prior.
 
 ## The review gate (not optional)

@@ -1,6 +1,6 @@
 ---
 name: eng-render
-description: Use when a set of written markdown sections (plus their figures) must become the delivered artefact — a Word/PDF document or a slide deck. Triggers on FORMAT verbs only: "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT from these sections", "export these sections to docx/pdf", "what would this build into". (Writing or assembling the CONTENT is eng-bid-respond / eng-build-deliverable — this skill never drafts.) Works standalone on ANY directory of markdown; needs no engagement scaffold, no compliance matrix, no prior eng-* step.
+description: Use when a set of written markdown sections (plus their figures) must become the delivered artefact — a Word/PDF document or a slide deck. Triggers on FORMAT verbs only: "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT from these sections", "export these sections to docx/pdf", "what would this build into" — and on the deck round trip after that: "splice these corrected slides back into the deck", "check this deck before I send it". (Writing or assembling the CONTENT is eng-bid-respond / eng-build-deliverable — this skill never drafts.) Works standalone on ANY directory of markdown; needs no engagement scaffold, no compliance matrix, no prior eng-* step.
 ---
 
 # Rendering written sections into the delivered artefact
@@ -12,10 +12,11 @@ argument — if any of that is still open, this is the wrong skill.
 **Standalone by design.** Point it at a directory. It does not care how the markdown got there,
 which phase produced it, or whether an engagement repo exists around it.
 
-**Dependency (packaging note).** The engine is
-`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/render_document.py` — this skill is the facade;
-the script lives with the eng-os kernel alongside `eng_lint.py` and the scaffolder. Installing
-or pruning skills individually must keep `eng-os` for this one to run.
+**Dependency (packaging note).** The engines are
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/render_document.py` and, for the deck gate,
+`verify_deck.py` — this skill is the facade; both live with the eng-os kernel alongside
+`eng_lint.py` and the scaffolder. Installing or pruning skills individually must keep `eng-os`
+for this one to run.
 
 ## What this owns, and what it hands off
 
@@ -25,6 +26,8 @@ or pruning skills individually must keep `eng-os` for this one to run.
 | markdown → docx/pdf | `pandoc` + `soffice`, per the **`docx`** skill | a converter is a solved problem |
 | figures | **`designing-figures`** | archetype before pixels; already a skill |
 | slide deck | **`presentation-builder`** | it owns storyline, action titles, and the editable export |
+| copying slides between decks | the **`pptx`** skill | verbatim slide copy + running order is solved there |
+| is the assembled package safe to send | **this skill** (`verify_deck.py`) | the one step nothing else owned |
 
 The handoffs are the point. A deck built here would be a worse `presentation-builder`, and a
 converter written here would be a worse pandoc.
@@ -48,11 +51,16 @@ converter written here would be a worse pandoc.
         pandoc's mainfont/fontsize metadata — that mechanism never worked); if the
         buyer mandates a template, pass it as --reference-doc instead. Re-check the
         PAGE COUNT the build prints against the budgets — a word estimate is an estimate.
-- [ ] 5. DECK: --to deck-manifest --audience "..." --decision "...", then invoke the
-        `presentation-builder` skill with the manifest. Audience and decision are
-        recorded IN the manifest so the handoff survives being re-run from the file.
-- [ ] 6. Verify the artefact, not the log. Open the file. Confirm every figure is
-        present and every internal marking is gone.
+- [ ] 5. DECK, first build: --to deck-manifest --audience "..." --decision "...", then
+        invoke the `presentation-builder` skill with the manifest. Audience and decision
+        are recorded IN the manifest so the handoff survives being re-run from the file.
+- [ ] 5b. DECK, correcting an issued one: do NOT rebuild it. Write the running order
+        down, splice the redrawn slides in via the `pptx` skill, keep every other slide
+        untouched → references/deck-assembly.md (in eng-os).
+- [ ] 6. Gate the package, then verify the artefact — not the log:
+        python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/verify_deck.py <deck.pptx> \
+          --expect <slide count you intended>
+        Then open the file: every figure present, every internal marking gone.
 ```
 
 ## Profiles are policy, not mechanism
@@ -93,6 +101,12 @@ and hands off: `presentation-builder` re-cuts the argument into one message per 
 Housekeeping: `presentation-builder` may leave its working artefact (a storyline draft such as
 `<name>_readthrough.md`) beside the deck. It is an intermediate, safe to delete; the manifest
 and the deck are the contract.
+
+Once a deck exists, corrections are a **splice**, not a rebuild, and the assembled package gets
+gated by `verify_deck.py` before it goes anywhere. Both live in eng-os
+`references/deck-assembly.md` — including the two defects that are invisible in a build log and
+only visible in the package (a flattened picture-per-slide deck; a font neither standard nor
+embedded).
 
 ## Guardrails
 
