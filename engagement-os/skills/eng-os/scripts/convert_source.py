@@ -10,10 +10,20 @@ under a few KB is an icon or rule. Both are counted and reported in the output, 
 auditable. Everything that survives is tagged `[uncertain]` for the agent to classify
 [decorative]/[content] and OCR — that part is a judgment + vision task. See `eng-ingest-source`.
 
-NOT a replacement for the `pptx` / `docx` / `pdf` / `xlsx` skills. This is bulk, deterministic,
-zero-token extraction for ingesting many documents. Reach for the matching skill when a single
-document matters more than throughput — tracked changes, comments, SmartArt, charts with data
-labels, complex merged tables, or a scanned PDF needing real OCR.
+EXTRACTION IS DELEGATED, NOT REIMPLEMENTED. docx goes through `pandoc` and pptx through
+`markitdown` — the same tools the `docx` / `pptx` skills read with. They settled document order,
+heading levels, lists, footnotes, nested tables and shape coverage years ago; hand-rolling that
+on top of python-docx/python-pptx just reproduces their bugs. pdf stays on pymupdf and xlsx on
+openpyxl because those need per-page / per-sheet control to place the anchors, which a
+whole-file converter cannot give.
+
+What this script owns is the PACKAGING the pack's discipline depends on and no general converter
+provides: the provenance header (source path, md5, unit counts), the citable anchor per unit,
+image extraction to disk with decorative auto-drop, and one uniform interface across six formats.
+Each output names its extractor, and a fallback says plainly what it lost.
+
+Still reach for the matching SKILL, per document, when the script's own output falls short:
+tracked changes, comments, chart data labels, or a scanned PDF needing real OCR.
 
 Usage:
     python convert_source.py <source_path> [--out <md_path>] [--images-dir <dir>]
@@ -26,6 +36,7 @@ rather than crashing. Install as needed: pip install pymupdf python-pptx python-
 import argparse
 import hashlib
 import os
+import re
 import sys
 import datetime as _dt
 
@@ -130,6 +141,50 @@ def img_section(collector):
     return "\n".join(lines) + "\n"
 
 
+def _tool(name):
+    """Path to an external converter, or None."""
+    from shutil import which
+    return which(name)
+
+
+def _run(cmd):
+    import subprocess
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        return r.stdout if r.returncode == 0 and r.stdout.strip() else None
+    except Exception:
+        return None
+
+
+def number_headings(md, label="Section"):
+    """Give every markdown heading a stable, citable number, keeping its level.
+
+    The extraction tools return the document's real heading hierarchy; what they can't give is
+    an anchor a downstream claim can cite. Numbering in place adds one without flattening the
+    structure: `## Minimum Requirements` becomes `## Section 12: Minimum Requirements`, so
+    `file.md §Section 12` resolves and the outline still reads as an outline.
+    """
+    out, n = [], 0
+    for line in md.splitlines():
+        m = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m and m.group(2).strip():
+            n += 1
+            out.append(f"{m.group(1)} {label} {n}: {m.group(2).strip()}")
+        else:
+            out.append(line)
+    return "\n".join(out), n
+
+
+def _pptx_shapes(container):
+    """Yield shapes depth-first: a grouped diagram keeps its labels in child shapes, and
+    `slide.shapes` only yields the top level — those labels would be lost silently."""
+    for sh in container:
+        if getattr(sh, "shape_type", None) == 6:      # GROUP
+            yield from _pptx_shapes(sh.shapes)
+        else:
+            yield sh
+
+
 def convert_pdf(src, images_dir):
     try:
         import fitz  # pymupdf
@@ -162,19 +217,30 @@ def convert_pptx(src, images_dir):
     except ImportError:
         return None, "python-pptx not installed — run: pip install python-pptx (PEP-668: add --user --break-system-packages)"
     prs = Presentation(src)
-    out = [header(src, f"> **Slides:** {len(prs.slides)}  ")]
     coll = ImageCollector(images_dir)
+
+    # markitdown owns the text: it reaches shape types python-pptx makes you hunt for and
+    # carries each picture's embedded accessibility description, which is often the only
+    # written account of a diagram. python-pptx still does the image FILES — markitdown
+    # names images but does not write them, and the pack needs them on disk for triage.
+    if _tool("markitdown"):
+        md = _run(["markitdown", src])
+        if md:
+            body = re.sub(r"<!--\s*Slide number:\s*(\d+)\s*-->", r"## Slide \1:", md)
+            for i, slide in enumerate(prs.slides, 1):
+                for shape in _pptx_shapes(slide.shapes):
+                    if getattr(shape, "shape_type", None) == 13:
+                        try:
+                            coll.add(shape.image.blob, i, f"s{i}_{shape.shape_id}.{shape.image.ext}")
+                        except Exception:
+                            continue
+            head = header(src, f"> **Slides:** {len(prs.slides)}  \n> **Extractor:** markitdown  ")
+            return head + body + img_section(coll), None
+
+    out = [header(src, f"> **Slides:** {len(prs.slides)}  \n> **Extractor:** python-pptx (fallback — install markitdown for richer shape coverage + image alt-text)  ")]
     for i, slide in enumerate(prs.slides, 1):
         out.append(f"## Slide {i}:\n")
-        # Walk groups recursively: a grouped diagram keeps its labels in child shapes, and
-        # `slide.shapes` only yields the top level — those labels would be lost silently.
-        def shapes_of(container):
-            for sh in container:
-                if getattr(sh, "shape_type", None) == 6:      # GROUP
-                    yield from shapes_of(sh.shapes)
-                else:
-                    yield sh
-        for shape in shapes_of(slide.shapes):
+        for shape in _pptx_shapes(slide.shapes):
             if shape.has_text_frame and shape.text_frame.text.strip():
                 out.append(shape.text_frame.text.strip() + "\n")
             if shape.has_table:
@@ -203,10 +269,22 @@ def convert_pptx(src, images_dir):
 
 
 def convert_docx(src, images_dir):
+    # Pandoc owns the extraction. It keeps document order (tables stay in their clause), real
+    # heading levels, lists, footnotes and nested tables — all things a hand-rolled python-docx
+    # walk gets wrong, and all things pandoc settled years ago. We add only what pandoc has no
+    # reason to know about: the provenance header and the citable section numbering.
+    if _tool("pandoc"):
+        md = _run(["pandoc", "-t", "gfm", "--wrap=none", src])
+        if md:
+            body, n = number_headings(md, "Section")
+            return header(src, f"> **Sections:** {n}  \n> **Extractor:** pandoc  ") + body, None
+
+    # Fallback: no pandoc on this machine. Order is lost (python-docx exposes paragraphs and
+    # tables as two separate sequences) — the header says so rather than pretending otherwise.
     try:
         import docx  # python-docx
     except ImportError:
-        return None, "python-docx not installed — run: pip install python-docx (or use the docx skill; PEP-668: add --user --break-system-packages)"
+        return None, "no pandoc, and python-docx not installed — install either: brew install pandoc | pip install python-docx (PEP-668: add --user --break-system-packages)"
     d = docx.Document(src)
     # A .docx has no stable page concept — pagination is decided by the renderer, so a "page"
     # anchor would not survive a font change. Anchor on SECTIONS instead (headings, or one
@@ -229,7 +307,7 @@ def convert_docx(src, images_dir):
     if section:
         body.append("\n".join(section))
 
-    out = [header(src, f"> **Sections:** {n}  ")]
+    out = [header(src, f"> **Sections:** {n}  \n> **Extractor:** python-docx (fallback — tables are appended after the text, not in document order; install pandoc for faithful order)  ")]
     out.extend(body)
     for t, table in enumerate(d.tables, 1):
         rows = [[c.text.strip() for c in r.cells] for r in table.rows]
