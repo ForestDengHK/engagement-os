@@ -12,9 +12,9 @@ How raw client materials become a trustworthy, citable knowledge base — and st
 
 ## The two-directory, two-file-class pattern
 
-The pattern below repeats **once per `_sources/` bucket**. Buckets separate material by
-provenance — `_shared/` (public, either phase) · `pursuit/` (pre-award) · `delivery/` (post-award,
-NDA) — and each keeps its own canonical pair. See directory-conventions for why they never pool.
+The pattern below repeats **once per `_sources/` bucket**. Buckets separate material by the
+constraint on it — `public/` (unrestricted) · `pre_award/` (bid-scoped) · `engagement/` (restricted,
+engagement-bound) — and each keeps its own canonical pair. See directory-conventions for why they never pool.
 
 ```
 _sources/<bucket>/                   ← SOURCE tier (originals, never edited)

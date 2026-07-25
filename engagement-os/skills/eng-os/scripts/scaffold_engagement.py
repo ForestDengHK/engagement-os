@@ -5,12 +5,16 @@ Creates the standard directory tree and plants the fill-in-the-blank artefacts w
 placeholder substitution. Idempotent: never clobbers a file that already exists.
 
 The tree is assembled from composable BLOCKS, so a repo can be pursuit-only, delivery-only,
-or a bare research knowledge base:
+a standalone research assignment, or any combination:
 
-    --mode research           core only  (sources + _pm + CLAUDE.md + project-context)
+    --mode research           core + the research tree
     --mode pursuit            core + the bid tree
     --mode delivery           core + the delivery tree
     --mode pursuit,delivery   both  (same as `full`, the default)
+
+Source material is bucketed by CONSTRAINT, not by phase — public / pre_award / engagement —
+so the same rule answers "who may see this" in every mode. Blocks select their buckets:
+core always gets `public`; `pursuit` adds `pre_award`; `research` and `delivery` add `engagement`.
 
 Usage:
     python scaffold_engagement.py --root <dir> --client <CODE> --eng-id <ID> --name "<name>" \
@@ -36,11 +40,16 @@ TEMPLATES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "temp
 # (comma-separated for "any of"). Unselected blocks are stripped; selected blocks are unwrapped.
 BLOCK_RE = re.compile(r"[ \t]*<!--IF:([a-z,]+)-->\n(.*?)[ \t]*<!--/IF:\1-->\n", re.S)
 
-BLOCKS = ("pursuit", "delivery")  # "research" == core only; core is always built
+BLOCKS = ("research", "pursuit", "delivery")  # core is always built
+
+# Which source buckets a block needs. Buckets are CONSTRAINT classes, not phases: a standalone
+# research assignment and a delivery engagement both hold client material under the same
+# confidentiality terms, so both use `engagement`.
+BLOCK_BUCKETS = {"research": ["engagement"], "pursuit": ["pre_award"], "delivery": ["engagement"]}
+CORE_BUCKETS = ["public"]
 
 # Empty dirs get a .gitkeep so they survive in git.
 CORE_DIRS = [
-    "_sources/_shared/_md/images",
     "_pm",
     "archived",
     "references/compliance",
@@ -52,8 +61,12 @@ CORE_DIRS = [
     ".claude",
 ]
 
+RESEARCH_DIRS = [
+    "00_research/1_analysis",
+    "00_research/2_output",
+]
+
 PURSUIT_DIRS = [
-    "_sources/pursuit/_md/images",
     "01_pursuit/_shared",
     "01_pursuit/{ENG_ID}/1_received",
     "01_pursuit/{ENG_ID}/2_analysis",
@@ -65,7 +78,6 @@ PURSUIT_DIRS = [
 ]
 
 DELIVERY_DIRS = [
-    "_sources/delivery/_md/images",
     "02_delivery/_shared/compliance_research",
     "02_delivery/0_mobilisation/decks",
     "02_delivery/0_mobilisation/meetings",
@@ -89,58 +101,67 @@ DELIVERY_DIRS = [
 ]
 
 # Per-bucket context for the source-pack trio, so each bucket states its own boundary.
+# Buckets are named for the CONSTRAINT on the material ("who may see this"), not for a phase —
+# that way the same filing question has the same answer in every mode.
 BUCKETS = {
-    "_shared": {
-        "BUCKET": "_shared",
-        "BUCKET_LABEL": "Cross-phase",
-        "BUCKET_SCOPE": "material that is legitimately usable in BOTH the bid and the delivery — "
-        "publicly obtainable company information, sector/regulatory research, published benchmarks, "
-        "standards. Nothing NDA-bound, nothing client-internal.",
+    "public": {
+        "BUCKET": "public",
+        "BUCKET_LABEL": "Public (unrestricted)",
+        "BUCKET_SCOPE": "material we could show anyone — publicly obtainable company information, "
+        "sector and regulatory research, published benchmarks and standards. If you would hesitate "
+        "to show it to a different client, it does not belong here.",
     },
-    "pursuit": {
-        "BUCKET": "pursuit",
-        "BUCKET_LABEL": "Pursuit (pre-award)",
-        "BUCKET_SCOPE": "material obtained for the BID — the tender pack and its appendices, "
-        "clarification answers, and anything the buyer issued or published pre-award. "
-        "This bucket must stay usable if we lose the bid.",
+    "pre_award": {
+        "BUCKET": "pre_award",
+        "BUCKET_LABEL": "Pre-award (bid-scoped)",
+        "BUCKET_SCOPE": "material obtained for a BID before any award — what the buyer issued or "
+        "published with the tender, clarification answers, and the market research we gathered "
+        "around it. Must stay usable if we lose.",
     },
-    "delivery": {
-        "BUCKET": "delivery",
-        "BUCKET_LABEL": "Delivery (post-award)",
-        "BUCKET_SCOPE": "material the client hands over AFTER award, under the engagement's "
-        "confidentiality terms — internal architecture docs, system exports, org charts, strategy "
-        "decks, security questionnaires. Engagement-scoped; never reused in another bid.",
+    "engagement": {
+        "BUCKET": "engagement",
+        "BUCKET_LABEL": "Engagement-bound (restricted)",
+        "BUCKET_SCOPE": "material the client gave us under this engagement's confidentiality terms "
+        "— internal architecture docs, system exports, org charts, strategy decks, questionnaires. "
+        "Scoped to THIS engagement (a research assignment counts); never reused in a bid, this one "
+        "or a later one.",
     },
 }
+
+
+def bucket_dirs(name):
+    return [f"_sources/{name}/_md/images"]
+
+
+def bucket_files(name):
+    ctx = BUCKETS[name]
+    return [
+        ("SOURCES_GO_HERE.md.tmpl", f"_sources/{name}/SOURCES_GO_HERE.md", ctx),
+        ("reference-pack-README.md.tmpl", f"_sources/{name}/_md/README.md", ctx),
+        ("REFERENCE_SUMMARY.md.tmpl", f"_sources/{name}/_md/00_REFERENCE_SUMMARY.md", ctx),
+        ("REFERENCE_INSIGHTS.md.tmpl", f"_sources/{name}/_md/01_REFERENCE_INSIGHTS.md", ctx),
+    ]
 
 # (template filename, destination path relative to root, extra context)
 CORE_FILES = [
     ("CLAUDE.md.tmpl", "CLAUDE.md", {}),
     ("project-context.md.tmpl", ".claude/project-context.md", {}),
     ("sources-README.md.tmpl", "_sources/README.md", {}),
-    ("SOURCES_GO_HERE.md.tmpl", "_sources/_shared/SOURCES_GO_HERE.md", BUCKETS["_shared"]),
-    ("reference-pack-README.md.tmpl", "_sources/_shared/_md/README.md", BUCKETS["_shared"]),
-    ("REFERENCE_SUMMARY.md.tmpl", "_sources/_shared/_md/00_REFERENCE_SUMMARY.md", BUCKETS["_shared"]),
-    ("REFERENCE_INSIGHTS.md.tmpl", "_sources/_shared/_md/01_REFERENCE_INSIGHTS.md", BUCKETS["_shared"]),
     ("engagement_log.md.tmpl", "_pm/engagement_log.md", {}),
     ("raid_and_decisions.md.tmpl", "_pm/raid_and_decisions.md", {}),
     ("source_precedence_register.md.tmpl", "_pm/source_precedence_and_conflict_register.md", {}),
 ]
 
+RESEARCH_FILES = [
+    ("research-README.md.tmpl", "00_research/README.md", {}),
+]
+
 PURSUIT_FILES = [
-    ("SOURCES_GO_HERE.md.tmpl", "_sources/pursuit/SOURCES_GO_HERE.md", BUCKETS["pursuit"]),
-    ("reference-pack-README.md.tmpl", "_sources/pursuit/_md/README.md", BUCKETS["pursuit"]),
-    ("REFERENCE_SUMMARY.md.tmpl", "_sources/pursuit/_md/00_REFERENCE_SUMMARY.md", BUCKETS["pursuit"]),
-    ("REFERENCE_INSIGHTS.md.tmpl", "_sources/pursuit/_md/01_REFERENCE_INSIGHTS.md", BUCKETS["pursuit"]),
     ("rfp_analysis.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/rfp_analysis.md", {}),
     ("compliance_matrix.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/compliance_matrix.md", {}),
 ]
 
 DELIVERY_FILES = [
-    ("SOURCES_GO_HERE.md.tmpl", "_sources/delivery/SOURCES_GO_HERE.md", BUCKETS["delivery"]),
-    ("reference-pack-README.md.tmpl", "_sources/delivery/_md/README.md", BUCKETS["delivery"]),
-    ("REFERENCE_SUMMARY.md.tmpl", "_sources/delivery/_md/00_REFERENCE_SUMMARY.md", BUCKETS["delivery"]),
-    ("REFERENCE_INSIGHTS.md.tmpl", "_sources/delivery/_md/01_REFERENCE_INSIGHTS.md", BUCKETS["delivery"]),
     ("DELIVERABLES.md.tmpl", "02_delivery/DELIVERABLES.md", {}),
     ("FINDING_STANDARD.md.tmpl", "02_delivery/1_discovery/3_findings/_FINDING_STANDARD.md", {}),
     ("findings-README.md.tmpl", "02_delivery/1_discovery/3_findings/README.md", {}),
@@ -148,29 +169,40 @@ DELIVERY_FILES = [
     ("discovery_questions.md.tmpl", "02_delivery/0_mobilisation/discovery_questions.md", {}),
 ]
 
-DIR_BLOCKS = {"pursuit": PURSUIT_DIRS, "delivery": DELIVERY_DIRS}
-FILE_BLOCKS = {"pursuit": PURSUIT_FILES, "delivery": DELIVERY_FILES}
+DIR_BLOCKS = {"research": RESEARCH_DIRS, "pursuit": PURSUIT_DIRS, "delivery": DELIVERY_DIRS}
+FILE_BLOCKS = {"research": RESEARCH_FILES, "pursuit": PURSUIT_FILES, "delivery": DELIVERY_FILES}
 
 
 def parse_mode(raw):
-    """'full' / 'research' / comma-list of blocks → the set of blocks to build."""
+    """'full' / comma-list of blocks → the set of blocks to build."""
     tokens = [t.strip().lower() for t in raw.split(",") if t.strip()]
     if not tokens:
         raise ValueError("empty --mode")
     selected = set()
     for tok in tokens:
         if tok == "full":
-            selected |= set(BLOCKS)
-        elif tok == "research":
-            pass  # core only — nothing to add
+            selected |= {"pursuit", "delivery"}  # the bid→delivery lifecycle
         elif tok in BLOCKS:
             selected.add(tok)
         else:
             raise ValueError(
-                "unknown mode %r — expected any of: full, research, %s (comma-separated)"
+                "unknown mode %r — expected any of: full, %s (comma-separated)"
                 % (tok, ", ".join(BLOCKS))
             )
+    if not selected:
+        raise ValueError("--mode selected no blocks")
     return selected
+
+
+def buckets_for(selected):
+    """Source buckets the selected blocks need, in fixed order, deduplicated."""
+    wanted = list(CORE_BUCKETS)
+    for block in BLOCKS:
+        if block in selected:
+            for b in BLOCK_BUCKETS[block]:
+                if b not in wanted:
+                    wanted.append(b)
+    return wanted
 
 
 def expand_path(path, ctx):
@@ -230,11 +262,17 @@ def main():
         "ENGAGEMENT_NAME": args.name,
         "DATE": _dt.date.today().isoformat(),
         "PHASE": args.phase,
-        "MODE": ", ".join(sorted(selected)) if selected else "research (core only)",
+        "MODE": ", ".join(b for b in BLOCKS if b in selected),
     }
+
+    buckets = buckets_for(selected)
+    ctx["BUCKETS"] = " · ".join(buckets)
 
     dirs = list(CORE_DIRS)
     files = list(CORE_FILES)
+    for b in buckets:
+        dirs += bucket_dirs(b)
+        files += bucket_files(b)
     for block in BLOCKS:  # fixed order, so output is deterministic
         if block in selected:
             dirs += DIR_BLOCKS[block]
@@ -243,7 +281,7 @@ def main():
     root = os.path.abspath(args.root)
     os.makedirs(root, exist_ok=True)
     print(f"Scaffolding engagement into: {root}")
-    print(f"Mode: {ctx['MODE']}\n")
+    print(f"Mode: {ctx['MODE']}   Source buckets: {ctx['BUCKETS']}\n")
 
     print("Directories:")
     for d in dirs:
@@ -299,8 +337,12 @@ def main():
     step = 1
     print(f"  {step}. Fill .claude/project-context.md (client, scope, stack, stakeholders).")
     step += 1
-    print(f"  {step}. Read _sources/README.md — which bucket each incoming document belongs in.")
+    print(f"  {step}. Read _sources/README.md — which bucket each incoming document belongs in "
+          f"({ctx['BUCKETS']}).")
     step += 1
+    if "research" in selected:
+        print(f"  {step}. Write the research questions + scope in 00_research/README.md.")
+        step += 1
     if "pursuit" in selected:
         print(f"  {step}. Ingest the tender pack to 01_pursuit/{ctx['ENG_ID']}/1_received/_md/, "
               "then run `eng-rfp-analyze`.")
@@ -311,10 +353,8 @@ def main():
     print(f"  {step}. Drop source materials in the right _sources/ bucket and run `eng-ingest-source`.")
     step += 1
     print(f"  {step}. Run `/panel-init` to stand up the review panel (it reuses project-context.md).")
-    if not selected:
-        print("\n  Research-only repo: add a phase later with "
-              "`--mode pursuit` or `--mode delivery` — the scaffolder is additive and won't "
-              "touch what already exists.")
+    print("\n  Blocks are additive — add a phase later with e.g. `--mode pursuit`; nothing "
+          "existing is touched.")
     return 0
 
 

@@ -8,8 +8,9 @@
 
 <!-- 1–3 sentences: what this engagement is ({{CLIENT}} {{ENG_ID}} — {{ENGAGEMENT_NAME}}),
      its phases, and which top-level folder holds what. -->
-**Scaffolded blocks:** {{MODE}} — add another phase later by re-running `eng-scaffold` with
-a different `--mode`; the scaffolder is additive and never touches what already exists.
+**Scaffolded blocks:** {{MODE}} · **source buckets:** {{BUCKETS}} — add another block later by
+re-running `eng-scaffold` with a different `--mode`; the scaffolder is additive and never
+touches what already exists.
 
 ## Client-facing content rules (ALWAYS apply — bake in recurring corrections)
 
@@ -26,16 +27,21 @@ a different `--mode`; the scaffolder is additive and never touches what already 
 | Topic | Source-of-truth file | Use when |
 |---|---|---|
 | Canonical project facts (stack, stakeholders, scope, pre-decisions) | `.claude/project-context.md` | You need a fact about the engagement |
-| **Which source bucket a document belongs in** (+ the bid↔delivery boundary rule) | `_sources/README.md` | A new document arrives, or you're about to cite across phases |
-| Cross-phase factual baseline (public / sector / regulatory) | `_sources/_shared/_md/00_REFERENCE_SUMMARY.md` | You need a fact usable in **both** bid and delivery |
+| **Which source bucket a document belongs in** (+ the flow rules between them) | `_sources/README.md` | A new document arrives, or you're about to cite one source in another context |
+| Unrestricted factual baseline (public / sector / regulatory) | `_sources/public/_md/00_REFERENCE_SUMMARY.md` | You need a fact citable **anywhere** |
 <!--IF:pursuit-->
-| Pre-award factual baseline (tender pack + what the buyer published) | `_sources/pursuit/_md/00_REFERENCE_SUMMARY.md` | You need what the **bid** is allowed to rely on |
+| Pre-award factual baseline (what the buyer published + market research) | `_sources/pre_award/_md/00_REFERENCE_SUMMARY.md` | You need what the **bid** is allowed to rely on |
 | Requirement completeness spine | `01_pursuit/{{ENG_ID}}/2_analysis/compliance_matrix.md` | You need what the RFP demands / what's still a gap |
 | RFP analysis, win-themes, go/no-go | `01_pursuit/{{ENG_ID}}/2_analysis/rfp_analysis.md` | You need the bid's strategy and its evidence |
 <!--/IF:pursuit-->
+<!--IF:research,delivery-->
+| Restricted factual baseline (client-internal, engagement-bound) | `_sources/engagement/_md/00_REFERENCE_SUMMARY.md` | You need the raw client baseline — read first |
+| Interpretive deltas / gaps | `_sources/engagement/_md/01_REFERENCE_INSIGHTS.md` | You need interpretation, not raw fact |
+<!--/IF:research,delivery-->
+<!--IF:research-->
+| Research questions, scope, and the live output | `00_research/README.md` | You need what this assignment is answering, or which output version is current |
+<!--/IF:research-->
 <!--IF:delivery-->
-| Post-award factual baseline (client-internal material) | `_sources/delivery/_md/00_REFERENCE_SUMMARY.md` | You need the raw client baseline — read first |
-| Interpretive deltas / gaps | `_sources/delivery/_md/01_REFERENCE_INSIGHTS.md` | You need interpretation, not raw fact |
 | Current deliverable versions | `02_delivery/DELIVERABLES.md` | Before opening any deliverable — never grep for the newest file |
 | Open-question backlog | `02_delivery/0_mobilisation/discovery_questions.md` | You need what's still owed / answered |
 <!--/IF:delivery-->
@@ -50,9 +56,9 @@ a different `--mode`; the scaffolder is additive and never touches what already 
 <!--IF:pursuit-->
   - *Pursuit:* `eng-rfp-analyze` · `eng-bid-research` · `eng-bid-respond`
 <!--/IF:pursuit-->
-<!--IF:delivery-->
-  - *Delivery:* `eng-write-findings` · `eng-validate-findings` · `eng-build-deliverable`
-<!--/IF:delivery-->
+<!--IF:research,delivery-->
+  - *Analysis:* `eng-write-findings` · `eng-validate-findings` · `eng-build-deliverable`
+<!--/IF:research,delivery-->
   - *Always:* `eng-scaffold` · `eng-ingest-source` · `eng-update-canonical` · `eng-maintain-memory`
 
 ## Project Architecture

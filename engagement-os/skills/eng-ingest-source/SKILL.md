@@ -10,18 +10,20 @@ right `_sources/` bucket, register it in the manifest, and hand off. This skill 
 **per-document and additive** — it does NOT edit the canonical summaries (that's `eng-update-canonical`).
 
 ## Pick the bucket FIRST
-Source material is kept separate by provenance, because pre-award and post-award corpora are not
-interchangeable — pooling them corrupts the evidence chain and leaks NDA material into later bids.
-Decide by **how the document was obtained**:
+Buckets track the **constraint on the material** — who may see it and where we may use it — not
+which phase we're in. Material under different constraints must not pool: it corrupts the evidence
+chain (a pre-award assumption resurfaces as a verified client fact) and leaks restricted material
+into later bids. Decide by **how the document was obtained**:
 
 | How we got it | Bucket (`<pack-root>`) |
 |---|---|
-| Found in public — company info, sector/regulatory research, published benchmarks | `_sources/_shared/` |
-| Issued or published by the buyer pre-award; market research around the tender | `_sources/pursuit/` |
-| Handed over by the client after award, under the engagement's terms | `_sources/delivery/` |
+| Found in public — company info, sector/regulatory research, published benchmarks | `_sources/public/` |
+| Issued or published by the buyer pre-award; market research around the tender | `_sources/pre_award/` |
+| Handed to us by the client under this engagement's terms — including a standalone research assignment | `_sources/engagement/` |
 | **The tender pack itself** (RFP + appendices) | `01_pursuit/<ENG-ID>/1_received/` — the contractual artefact, cited `[RFP §x]` |
 
-If you can't tell, ask — don't default. Full boundary + flow rules: the planted `_sources/README.md`.
+If you can't tell, ask — **don't default to the least restrictive bucket**. Full boundary + flow
+rules: the planted `_sources/README.md`.
 
 ## Where things go
 Paths below are under the chosen `<pack-root>`.
@@ -50,7 +52,7 @@ buckets is a provenance fact, not a duplicate, and each bucket cites its own cop
 **Step 3 — convert (deterministic extraction):**
 ```bash
 # Pass FULL paths from the repo root so output lands in the real bucket, not CWD.
-PACK=_sources/<bucket>          # _shared | pursuit | delivery
+PACK=_sources/<bucket>          # public | pre_award | engagement
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <source_path> \
   --out "$PACK/_md/<NN_topic>/<slug>.md" --images-dir "$PACK/_md/images/<topic>"
 ```
@@ -74,11 +76,12 @@ images kept / OCR'd / dropped, and any new open questions spotted. Then point to
 ## Edge cases
 - **Multi-file pack:** loop — one MD per file, never merge.
 - **Our own analysis** is not a source — keep as-is and flag; don't ingest into `_sources/` at all
-  (it belongs in the phase tree: `01_pursuit/<ENG-ID>/2_analysis/` or `02_delivery/_shared/`).
+  (it belongs in a work tree: `00_research/1_analysis/`, `01_pursuit/<ENG-ID>/2_analysis/`,
+  or `02_delivery/_shared/`).
 - **Superseded version:** keep the old MD, mark `⚠ Superseded by <newer>`; never delete.
 - **Confidential:** carry the CONFIDENTIAL marker into the MD header.
-- **Same doc, two phases:** ingest into each bucket separately — do NOT cross-link or move. A
-  `delivery/` copy must never become a `pursuit/` citation.
+- **Same doc, two buckets:** ingest into each bucket separately — do NOT cross-link or move. A
+  `engagement/` copy must never become a `pre_award/` citation.
 - **Wrong bucket, caught later:** move the original + its `_md/` output together, fix both
   manifests, and check whether anything already cited it across the boundary.
 

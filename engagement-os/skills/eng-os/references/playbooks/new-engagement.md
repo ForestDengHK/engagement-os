@@ -11,8 +11,9 @@ pick mode ─► eng-scaffold ─► fill context (human) ─► /panel-init ─
 ```
 
 0. **Pick the blocks — the one irreversible-ish choice on day 1.**
-   `pursuit` (bidding only) · `delivery` (we already have the work) · `research` (understand
-   the client's materials, no bid, no delivery) · `full` (both, default). Combine with commas.
+   `pursuit` (bidding only) · `delivery` (we already have the work) · `research` (a standalone
+   research assignment — materials in, a report out, no bid and no delivery) · `full`
+   (= pursuit + delivery, default). Combine with commas.
    Build only what the work needs — an empty `02_delivery/` in a bid repo sends every later
    skill hunting through folders that will never hold anything. Blocks are additive, so
    under-building is cheap to fix and over-building is not.

@@ -10,14 +10,14 @@ a reader can trust "read the summary once, don't re-read the sources." This is t
 allowed to edit the canonical summaries.
 
 ## The two canonical files — per bucket
-Each `_sources/` bucket (`_shared/` · `pursuit/` · `delivery/`) keeps its **own** pair:
+Each `_sources/` bucket (`public/` · `pre_award/` · `engagement/`) keeps its **own** pair:
 - `<bucket>/_md/00_REFERENCE_SUMMARY.md` — **facts** (verifiable statements + `§Page/Slide` citations).
 - `<bucket>/_md/01_REFERENCE_INSIGHTS.md` — **interpretation** (meaning, deltas vs the brief/prior sources).
 
 Facts and interpretation never mix across the two files. **Buckets never merge into one summary** —
-update the pair belonging to the ingested doc's bucket and no other. Pre-award and post-award
-corpora are deliberately separate (boundary rules: `_sources/README.md`); a merged canonical would
-destroy exactly that separation and let a bid assumption resurface as a verified client fact.
+update the pair belonging to the ingested doc's bucket and no other. The buckets are separated by
+confidentiality constraint (boundary rules: `_sources/README.md`); a merged canonical would destroy
+exactly that separation and let a bid assumption resurface as a verified client fact.
 Reasoning that genuinely spans buckets belongs in the source-precedence register (step 5).
 
 ## Workflow

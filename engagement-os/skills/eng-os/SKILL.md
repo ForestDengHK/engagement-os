@@ -15,15 +15,27 @@ live in `templates/`; deterministic helpers live in `scripts/`.
 
 ## Two pipelines, composable — take only what the work needs
 
-The pursuit side and the delivery side are **independent**. An engagement can be bid-only,
-delivery-only, both, or neither (a bare research base). `eng-scaffold --mode` builds only the
-blocks you name — `pursuit` · `delivery` · `research` (core only) · `full` (default, = both);
-comma-combine to mix, and re-run later to add a block without touching what exists.
+The pursuit side and the delivery side are **independent**, and a standalone research assignment
+is a third peer. `eng-scaffold --mode` builds only the blocks you name — `research` · `pursuit` ·
+`delivery` · `full` (default, = pursuit + delivery); comma-combine to mix, and re-run later to add
+a block without touching what exists.
 
-Source material is kept **separate per phase** in `_sources/{_shared,pursuit,delivery}/`, each
-with its own summary/insights pair: pre-award and post-award corpora are not interchangeable, and
-pooling them would both corrupt the evidence chain and leak NDA material into later bids. Boundary
-+ flow rules: [references/directory-conventions.md](references/directory-conventions.md).
+| Block | Work tree | Source bucket it needs |
+|---|---|---|
+| core (always) | `_pm/` · `CLAUDE.md` · `project-context.md` | `public/` |
+| `research` | `00_research/` — questions · `1_analysis/` · `2_output/` | `engagement/` |
+| `pursuit` | `01_pursuit/<ENG-ID>/` | `pre_award/` |
+| `delivery` | `02_delivery/` | `engagement/` |
+
+Source material is bucketed by **confidentiality constraint**, not by phase — a bucket answers
+"who may see this, and where may we use it", and that answer is the same in every mode. Each
+bucket keeps its own summary/insights pair; pooling them would both corrupt the evidence chain
+and leak restricted material into later bids. Research and delivery share `engagement/` because
+they carry the same constraint. Boundary + flow rules:
+[references/directory-conventions.md](references/directory-conventions.md).
+
+**`_sources/` is what we were given or found; work trees are what we write.** Never put our own
+analysis in `_sources/`.
 
 ## The delivery pipeline (one job per stage)
 
@@ -50,7 +62,7 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 ## The pursuit pipeline (bid side — win the work first)
 
 Before delivery there's the bid. Same document-and-provenance discipline, aimed at a compliant,
-winning tender. Runs in `01_pursuit/<ENG-ID>/`, sourced from `_sources/pursuit/` + `_sources/_shared/`.
+winning tender. Runs in `01_pursuit/<ENG-ID>/`, sourced from `_sources/pre_award/` + `_sources/public/`.
 
 ```
 ingest RFP ─► analyse ─► research gaps ─► write response ─► panel red-team gate ─► submit

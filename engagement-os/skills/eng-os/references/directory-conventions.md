@@ -16,35 +16,43 @@
 ## Composable blocks — pursuit / delivery / research
 
 Not every engagement has both phases. A pursuit-only repo (we're just bidding), a delivery-only
-repo (we were handed the work), and a bare research repo (understand a client's materials, no bid
-and no delivery) are all legitimate, and each should get **only** the tree it needs — a half-empty
-delivery skeleton in a bid repo is noise that rots into wrong navigation.
+repo (we were handed the work), and a standalone research assignment (client materials in, a
+report out — no bid, no delivery) are all legitimate, and each should get **only** the tree it
+needs — a half-empty delivery skeleton in a bid repo is noise that rots into wrong navigation.
 
-The tree is therefore assembled from three blocks. `eng-scaffold` builds the ones you name
+The tree is therefore assembled from blocks. `eng-scaffold` builds the ones you name
 (`--mode`, comma-separated to combine); **core is always built**.
 
-| Block | Adds | `--mode` |
-|---|---|---|
-| **core** (always) | `_sources/_shared/`, `_pm/`, `.claude/project-context.md`, `CLAUDE.md`, `archived/`, `references/`, `panel/` | `research` = core only |
-| **pursuit** | `_sources/pursuit/` + `01_pursuit/<ENG-ID>/…` + the `rfp_analysis` / `compliance_matrix` spine | `pursuit` |
-| **delivery** | `_sources/delivery/` + `02_delivery/…` + `DELIVERABLES.md` + the findings spine | `delivery` |
+| Block | Work tree it adds | Source bucket it needs | `--mode` |
+|---|---|---|---|
+| **core** (always) | `_pm/`, `.claude/project-context.md`, `CLAUDE.md`, `archived/`, `references/`, `panel/` | `public/` | — |
+| **research** | `00_research/` (questions + `1_analysis/` + `2_output/`) | `engagement/` | `research` |
+| **pursuit** | `01_pursuit/<ENG-ID>/…` + the `rfp_analysis` / `compliance_matrix` spine | `pre_award/` | `pursuit` |
+| **delivery** | `02_delivery/…` + `DELIVERABLES.md` + the findings spine | `engagement/` | `delivery` |
 
-`--mode full` (the default) = `pursuit,delivery`. **Blocks are additive**: a research repo that
-later wins scope re-runs the scaffolder with a phase block and nothing existing is touched. The
-one thing an additive run cannot do is extend an already-written `CLAUDE.md` — its pointer table
-and skills list are mode-specific and must be extended by hand (the scaffolder says so).
+`--mode full` (the default) = `pursuit,delivery` — the bid→delivery lifecycle. Research is a peer
+block, not a lesser one: `--mode research,pursuit` is pre-bid intelligence feeding a tender.
+
+**Research and delivery share the `engagement/` bucket** because they carry the same constraint —
+in both, the client handed us material under an engagement's confidentiality terms. Buckets track
+the constraint, not which work tree consumes them.
+
+**Blocks are additive**: a research repo that later wins scope re-runs the scaffolder with a phase
+block and nothing existing is touched. The one thing an additive run cannot do is extend an
+already-written `CLAUDE.md` — its pointer table and skills list are mode-specific and must be
+extended by hand (the scaffolder says so).
 
 ## The abstracted directory tree
 
-Blocks are marked `[core]` / `[pursuit]` / `[delivery]`.
+Blocks are marked `[core]` / `[research]` / `[pursuit]` / `[delivery]`.
 
 ```
 <engagement-root>/
-├── _sources/                           # [core] ALL sourced material — phase-separated, never edited
+├── _sources/                           # [core] ALL sourced material — bucketed by CONSTRAINT, never edited
 │   ├── README.md                       # the bucket boundary + flow rules (read before filing anything)
-│   ├── _shared/                        # [core]     cross-phase: public company info, sector/regulatory research, benchmarks
-│   ├── pursuit/                        # [pursuit]  pre-award: what the buyer published + market research around the tender
-│   └── delivery/                       # [delivery] post-award: client-internal material under the engagement's NDA
+│   ├── public/                         # [core]      unrestricted: public company info, sector/regulatory research, benchmarks
+│   ├── pre_award/                      # [pursuit]   bid-scoped: what the buyer published + market research around the tender
+│   └── engagement/                     # [research|delivery] restricted: client-internal, under this engagement's terms
 │       ├── SOURCES_GO_HERE.md          # what belongs in THIS bucket
 │       ├── <client's own taxonomy>/    # ORIGINALS (native docx/pptx/pdf/xlsx) — never renamed, never edited
 │       └── _md/                        # CANONICAL markdown conversion — the searched layer, per bucket
@@ -55,6 +63,11 @@ Blocks are marked `[core]` / `[pursuit]` / `[delivery]`.
 │           └── images/<TOPIC>/         # extracted + OCR'd page/figure images, foldered by topic
 │
 ├── _pm/                                # [core] engagement_log.md · raid_and_decisions.md · source-precedence register
+│
+├── 00_research/                        # [research] STANDALONE RESEARCH ASSIGNMENT — our own work, not sources
+│   ├── README.md                       # the questions (the spine) · scope · the LIVE-output index
+│   ├── 1_analysis/                     # working analysis, one file per question/theme, evidence cited inline
+│   └── 2_output/                       # the report / brief / deck, versioned v0.x → v1.0
 │
 ├── 01_pursuit/                         # [pursuit] BID PHASE — frozen once won
 │   ├── _shared/                        # cross-bid reusable assets OF OURS (approaches, CVs, case studies, finance)
@@ -95,28 +108,28 @@ Blocks are marked `[core]` / `[pursuit]` / `[delivery]`.
 
 The deliverable folder names above (`2_assessment`…`6_executive_summary`) are the common data-strategy shape; rename them to the engagement's actual deliverable slots, but keep the **numeric-prefix + fixed D-number map** discipline.
 
-Note the two different `_shared/` meanings, distinguished by parent: `_sources/_shared/` is
-*sourced material usable by both phases*; `01_pursuit/_shared/` and `02_delivery/_shared/` are
-*our own* reusable assets and derived research.
+Don't confuse `_sources/` with the phase-level `_shared/` folders: `_sources/` holds material we
+were **given or found**, bucketed by who may see it; `01_pursuit/_shared/` and
+`02_delivery/_shared/` hold **our own** reusable assets and derived research.
 
 ## The `_sources/` boundary — why bid and delivery material stay apart
 
-Pre-award and post-award corpora are not interchangeable and must never be pooled into one pack.
+Material under different confidentiality constraints is not interchangeable and must never be pooled.
 Pooling them breaks two things at once: the **evidence chain** (a pre-award assumption gets cited
 downstream as a verified client fact) and **confidentiality** (post-award client-internal material
 leaks into a later bid). Hence one bucket per provenance class, each with its **own**
 summary/insights pair — a merged summary would destroy exactly the separation the buckets exist for.
 
 **Flow rules:**
-- `_shared/` → citable by either phase.
-- `pursuit/` → `delivery/` **allowed on win**, but the fact does not upgrade with it: a pre-award
+- `public/` → citable anywhere.
+- `pre_award/` → `engagement/` **allowed on win**, but the fact does not upgrade with it: a pre-award
   claim stays `[T3]` until re-established from a delivery source or measured from the system.
-- `delivery/` → `pursuit/` **forbidden**, in this bid or any later one. Source it independently.
-- Promotion into `_shared/` requires the material to be genuinely public; when in doubt, it isn't.
+- `engagement/` → `pre_award/` **forbidden**, in this bid or any later one. Source it independently.
+- Promotion into `public/` requires the material to be genuinely public; when in doubt, it isn't.
 
 **The tender pack is the one exception** — the RFP and appendices live in
-`01_pursuit/<ENG-ID>/1_received/`, not `_sources/pursuit/`, because they are the contractual
-artefact of *one* tender, frozen as issued and cited `[RFP §x]`. `_sources/pursuit/` holds the
+`01_pursuit/<ENG-ID>/1_received/`, not `_sources/pre_award/`, because they are the contractual
+artefact of *one* tender, frozen as issued and cited `[RFP §x]`. `_sources/pre_award/` holds the
 pre-award material we *gathered around* it, which stays useful across tenders for the same buyer.
 
 `_pm/source_precedence_and_conflict_register.md` is the **only** place allowed to reason across

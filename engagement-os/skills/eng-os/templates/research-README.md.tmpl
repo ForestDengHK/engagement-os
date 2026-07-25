@@ -1,0 +1,62 @@
+# Research — {{CLIENT}} {{ENG_ID}} — {{ENGAGEMENT_NAME}}
+
+The research assignment's own tree. Sourced material lives in `_sources/`; **this** is where our
+own work goes — the questions, the analysis, and the output. Keep the two apart: a source is
+something we were given or found, an analysis is something we wrote.
+
+```
+00_research/
+├── README.md      ← this file: the questions, the scope, the live output
+├── 1_analysis/    ← working analysis, one file per question or theme
+└── 2_output/      ← the report / brief / deck, versioned
+```
+
+## 1. The questions
+
+The fixed spine of this assignment: every analysis file and every output section maps to ≥1 row.
+Settle these before ingesting, the way a delivery engagement settles its findings backbone —
+otherwise sourced facts land nowhere and the pack turns into unstructured reading.
+
+| # | Question | Why it matters / who asked | Status |
+|---|---|---|---|
+| Q1 | <the question, answerable and bounded> | <decision it feeds> | open |
+| Q2 | | | open |
+
+**Status key:** `open` · `partial` · `answered` · `unanswerable (say so in the output)`.
+
+## 2. Scope
+
+**In scope:** <what this research covers>
+**Out of scope:** <what it deliberately does not — state it, so the output can't be read wider than it is>
+**Sources available:** <which `_sources/` buckets hold material, and what's still owed>
+
+## 3. Analysis files
+
+One file per question or theme under `1_analysis/`. Each carries its evidence inline with
+citations back to `_sources/<bucket>/_md/<file>.md §Page N` — never a bare assertion.
+
+| File | Answers | Status |
+|---|---|---|
+| `1_analysis/<topic>.md` | Q1, Q2 | draft |
+
+## 4. Live output
+
+The "don't grep for the newest file" index for this assignment. Update this row when a version
+lands; archive the old one under `archived/`, never delete.
+
+| Output | Current file (live path) | Format | Status |
+|---|---|---|---|
+| <name> | `2_output/<CLIENT>_<ENG-ID>_<Name>_v<X.Y>.<ext>` | .docx / .pptx / .md | draft |
+
+**Versioning:** `v0.1`…`v0.x` (drafts) → `v1.0` (client-issued) → `v2.x` (post-feedback).
+
+## 5. Discipline that still applies
+
+- **Evidence tags and precedence are unchanged** — `[Observed]` / `[Reported]` / `[Assumed]`,
+  and T1 measured > T2 stated > T3 secondary. Conflicts are superseded, never deleted; log them
+  in `_pm/source_precedence_and_conflict_register.md`.
+- **`[⚠VERIFY]` gates the output.** An unsourceable claim is either closed with a citation or
+  cut — it never ships as an assertion.
+- **Never cite across the `_sources/` boundary.** `engagement/` material stays out of any bid.
+- **Review before it ships** — `panel-review` if the Panel Framework is installed, else a manual
+  multi-lens pass.

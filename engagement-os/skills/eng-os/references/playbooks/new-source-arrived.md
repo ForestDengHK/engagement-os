@@ -12,8 +12,8 @@ eng-ingest-source ─► eng-update-canonical ─► (findings impact?) ─► e
 ```
 
 0. **Bucket the batch first — by how each doc was obtained**, not by topic.
-   Public → `_sources/_shared/` · buyer-issued pre-award → `_sources/pursuit/` ·
-   client-handed post-award → `_sources/delivery/` · the tender pack itself →
+   Public → `_sources/public/` · buyer-issued pre-award → `_sources/pre_award/` ·
+   client-handed post-award → `_sources/engagement/` · the tender pack itself →
    `01_pursuit/<ENG-ID>/1_received/`. A mixed batch splits into per-bucket sub-batches
    and each runs the loop separately. If a doc's provenance is unclear, ask — don't default.
 1. **Ingest — one doc at a time** → `eng-ingest-source`.
@@ -43,7 +43,7 @@ eng-ingest-source ─► eng-update-canonical ─► (findings impact?) ─► e
 - **STOP and surface to the human** if a new fact contradicts a *validated* finding
   that already fed a shipped deliverable — that's a deliverable erratum decision, not
   a routine update.
-- **STOP before citing across buckets.** A `delivery/` fact never enters a bid document;
-  a `pursuit/` fact carried into delivery stays `[T3]` until re-established from a
+- **STOP before citing across buckets.** An `engagement/` fact never enters a bid document;
+  a `pre_award/` fact carried into delivery stays `[T3]` until re-established from a
   delivery-phase source or measured from the system. Cross-bucket reasoning goes in
   `_pm/source_precedence_and_conflict_register.md`, nowhere else.

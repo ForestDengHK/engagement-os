@@ -5,8 +5,8 @@ skill that owns it — follow that skill, don't reproduce it here. Runs in the `
 tree (`eng-scaffold --mode pursuit`; no delivery block is needed to bid).
 
 Sources: the tender pack lives in `1_received/`; pre-award background we gather goes to
-`_sources/pursuit/`; public/sector research usable either side goes to `_sources/_shared/`.
-**Nothing from `_sources/delivery/` may be cited in a bid** — not this engagement's, not another's.
+`_sources/pre_award/`; public/sector research usable either side goes to `_sources/public/`.
+**Nothing from `_sources/engagement/` may be cited in a bid** — not this engagement's, not another's.
 
 ## Chain
 
@@ -29,8 +29,8 @@ eng-ingest-source ─► eng-rfp-analyze ─► eng-bid-research ─► eng-bid-
 4. **Research the gaps** → `eng-bid-research`.
    Close every matrix `gap` and arm the win-themes: external research `[T3:OWN]` + firm-held
    materials the user uploads. Every finding cited in `bid_research_log.md`; zero fabrication.
-   Sourced documents are ingested to `_sources/pursuit/` (buyer-specific) or `_sources/_shared/`
-   (sector/regulatory/benchmark), never to `_sources/delivery/`.
+   Sourced documents are ingested to `_sources/pre_award/` (buyer-specific) or `_sources/public/`
+   (sector/regulatory/benchmark), never to `_sources/engagement/`.
    Verify: every gap is either closed with a citation or explicitly `[⚠VERIFY]` (and thus cut).
 5. **Assemble the response** → `eng-bid-respond`.
    Build from the matrix (not free-written); match the RFP's mandated format exactly; compliance

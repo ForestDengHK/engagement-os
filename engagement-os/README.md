@@ -1,9 +1,10 @@
 # Engagement OS — User Guide
 
-**A delivery operating system for document-heavy consulting engagements.** Raw client
-materials come in; defensible deliverables go out; every step in between is traceable.
-The methodology is packaged as 8 skills + 4 composed workflows (playbooks) + 15
-templates + 2 deterministic scripts, ready to land on day 1 of a new engagement.
+**A composable operating system for document-heavy consulting engagements, bid to delivery.**
+Raw client materials come in; defensible deliverables go out; every step in between is traceable.
+Packaged as 11 skills + 5 composed workflows (playbooks) + 18 templates + 2 deterministic
+scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
+actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
 > The agent-facing entry point is `skills/eng-os/SKILL.md` (auto-triggers). This file
 > is the human-facing manual.
@@ -34,19 +35,26 @@ multi-lens review when it is not.
 
 ## 2. What this is
 
-One pipeline, one skill per stage, no overlapping authority:
+Two independent pipelines, one skill per stage, no overlapping authority:
 
 ```
-scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─► build deliverable
-                                                          │            │
-                                                  maintain memory   panel-review (hard ship gate)
-                                                  (throughout)
+PURSUIT   ingest RFP ─► analyse ─► research gaps ─► write response ─► red-team gate ─► submit
+
+DELIVERY  scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─► build deliverable
+                                                        │            │
+                                                maintain memory   panel-review (hard ship gate)
+                                                (throughout)
 ```
+
+Take either, both, or neither — see §4 for modes.
 
 | Skill | Job | Typical trigger |
 |---|---|---|
 | `eng-os` | Method map + shared assets (references / templates / scripts / playbooks) | Engagement start; finding a convention or workflow |
-| `eng-scaffold` | Stand up the engagement repo (tree + CLAUDE.md + templates) → delegate to `/panel-init` | "set up a new engagement" |
+| `eng-scaffold` | Stand up the repo for the blocks you need (`--mode`) → delegate to `/panel-init` | "set up a new engagement" |
+| `eng-rfp-analyze` | Decompose an RFP: compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go | A tender arrived |
+| `eng-bid-research` | Close the analysis gaps with cited, zero-fabrication research | After RFP analysis, on a go |
+| `eng-bid-respond` | Assemble the response from the matrix in the RFP's mandated format; red-team before submit | Writing the tender |
 | `eng-ingest-source` | One document → anchored markdown; lossless image rule (decorative dropped / content kept / uncertain OCR'd) | A new source arrives |
 | `eng-update-canonical` | Fold new facts into the canonical set: facts → SUMMARY, interpretation → INSIGHTS; conflicts superseded, never deleted | After ingest |
 | `eng-write-findings` | Evidence → standards-conformant findings (severity/priority axes, evidence tags, backbone mapping) | After workshops; query results |
@@ -64,14 +72,15 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 ## 3. Composed workflows (Playbooks)
 
 Skills compose **by orchestration, not duplication**: each playbook is a thin checklist
-that names the owning skill per step plus its stop gates. Four recurring situations:
+that names the owning skill per step plus its stop gates. Five recurring situations:
 
 | Situation | Playbook | Chain |
 |---|---|---|
-| **New source arrived** | `references/playbooks/new-source-arrived.md` | ingest (per doc) → canonicalize (per batch) → findings-impact check → log |
+| **New source arrived** | `references/playbooks/new-source-arrived.md` | bucket it → ingest (per doc) → canonicalize (per bucket) → findings-impact check → log |
 | **Post-workshop** | `references/playbooks/post-workshop.md` | held-notes → findings → canonical deltas → question backlog → log |
 | **Deliverable sprint** | `references/playbooks/deliverable-sprint.md` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
-| **New engagement, day 1** | `references/playbooks/new-engagement.md` | scaffold → fill context → panel-init → first ingest batch |
+| **New engagement, day 1** | `references/playbooks/new-engagement.md` | pick mode → scaffold → fill context → panel-init → first ingest batch |
+| **An RFP arrived** | `references/playbooks/rfp-arrived.md` | ingest RFP → analyse → go/no-go → research → respond → red-team |
 
 "Source arrives → OCR → canonical → finding" is exactly the first playbook. It is a
 playbook rather than one fat skill because each stage also has its own standalone
@@ -88,7 +97,7 @@ blocks the work actually needs:
 |---|---|
 | Bid only — respond to an RFP | `pursuit` |
 | Delivery only — we already have the work | `delivery` |
-| Just understand a client's materials | `research` (core only) |
+| A standalone research assignment (no bid, no delivery) | `research` |
 | Bid then deliver | `full` *(default)* |
 
 Comma-combine to mix (`pursuit,delivery` ≡ `full`). Blocks are **additive**: re-run later to add
@@ -128,19 +137,22 @@ DELIVERABLES index) and record the mapping in CLAUDE.md.
 
 ## 6. What a scaffolded repo looks like
 
-Blocks marked `[core]` / `[pursuit]` / `[delivery]` — you get core plus whichever you selected.
+Blocks marked `[core]` / `[research]` / `[pursuit]` / `[delivery]` — you get core plus whichever
+you selected. Source buckets follow the blocks: core always gets `public/`; `pursuit` adds
+`pre_award/`; `research` and `delivery` add `engagement/`.
 
 ```
 <engagement>/
 ├── CLAUDE.md                  ← [core] navigation index, not a fact store (built for your mode)
 ├── .claude/project-context.md ← [core] the one source of project facts
-├── _sources/                  ← [core] ALL sourced material, SEPARATED BY PROVENANCE
+├── _sources/                  ← [core] ALL sourced material, BUCKETED BY CONSTRAINT
 │   ├── README.md              ←   the bucket boundary + flow rules
-│   ├── _shared/               ←   [core]     public / sector / regulatory — usable by both phases
-│   ├── pursuit/               ←   [pursuit]  pre-award: what the buyer published + market research
-│   └── delivery/              ←   [delivery] post-award: client-internal, under NDA
+│   ├── public/                ←   [core]      unrestricted — citable anywhere
+│   ├── pre_award/             ←   [pursuit]   bid-scoped — must stay usable if we lose
+│   └── engagement/            ←   [research|delivery] restricted — never travels into a bid
 │       └── _md/               ←   each bucket: originals + its OWN converted markdown + summary/insights
 ├── _pm/                       ← [core] engagement log, source-precedence register, RAID + decisions
+├── 00_research/               ← [research] questions + scope, 1_analysis/, 2_output/ (+ live-output index)
 ├── 01_pursuit/<ENG-ID>/       ← [pursuit] tender pack, RFP analysis + compliance matrix, drafting, final
 ├── 02_delivery/               ← [delivery]
 │   ├── 0_mobilisation/        ←   discovery-question backlog
@@ -150,12 +162,21 @@ Blocks marked `[core]` / `[pursuit]` / `[delivery]` — you get core plus whiche
 └── archived/                  ← [core] superseded versions (audit trail, never deleted)
 ```
 
-**Why `_sources/` is split three ways:** pre-award and post-award corpora are not
-interchangeable. Pooling them corrupts the evidence chain (a bid assumption resurfaces as a
-verified client fact) and leaks NDA material into later bids. Each bucket keeps its own
-summary/insights pair; `delivery/ → pursuit/` is forbidden; `pursuit/ → delivery/` is allowed on
-win but the fact stays `[T3]` until re-established. The source-precedence register is the only
-place allowed to reason across buckets.
+**Why `_sources/` is split three ways — and why by constraint, not by phase.** A bucket answers
+one question: *who may see this, and where may we use it.* That answer is the same whether you're
+bidding, delivering, or running a standalone research assignment — so the same filing rule works
+in every mode, and a research assignment's client material lands in `engagement/` where it
+belongs instead of being mislabelled as public.
+
+Pooling classes would break two things at once: the **evidence chain** (a pre-award assumption
+resurfaces downstream as a verified client fact) and **confidentiality** (restricted material
+leaks into a later bid). So each bucket keeps its own summary/insights pair;
+`engagement/ → pre_award/` is forbidden; `pre_award/ → engagement/` is allowed on win but the
+fact stays `[T3]` until re-established. The source-precedence register is the only place allowed
+to reason across buckets.
+
+**Sources vs work.** `_sources/` is only what we were *given or found*. What we *write* goes in a
+work tree — `00_research/1_analysis/`, `01_pursuit/<ENG-ID>/2_analysis/`, or `02_delivery/`.
 
 ## 7. FAQ
 

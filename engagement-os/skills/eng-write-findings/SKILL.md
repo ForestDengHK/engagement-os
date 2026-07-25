@@ -9,6 +9,10 @@ Produce a **fact baseline** — a finding records what *is*, so every downstream
 cite the same fact with its own so-what. A finding is NOT a recommendation.
 
 ## Read the project's own standard first
+In a **research-block** repo there is no findings tree: the equivalent artefacts are the analysis
+files under `00_research/1_analysis/`, mapped to the question list in `00_research/README.md`
+instead of a findings backbone. Everything below still applies — only the paths change.
+
 Follow `02_delivery/1_discovery/3_findings/_FINDING_STANDARD.md` (planted per engagement — it
 may carry engagement-specific areas and backbone). The method rationale is in `eng-os` →
 `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/finding-standard.md`. A blank file to copy: `3_findings/_TEMPLATE_finding.md`.
