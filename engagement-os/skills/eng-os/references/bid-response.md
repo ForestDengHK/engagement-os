@@ -160,19 +160,17 @@ don't impose our own structure (the pursuit-side version of the "match the host-
 
 ### Assembling
 
-`scripts/assemble_response.py` does it. Don't concatenate by hand — the strip is fiddly and the
+**Hand off to the `eng-render` skill** with `--profile bid`. Rendering is a separate,
+independently invokable step — it works on any directory of markdown and knows nothing about
+tenders except what the profile tells it. Don't concatenate by hand: the strip is fiddly and the
 failure is invisible (internal scaffolding reaching an evaluator).
-
-```bash
-python3 scripts/assemble_response.py --sections 3_drafting/sections \
-  --out 3_drafting/_render --name volume2_technical --format both
-```
 
 It orders the sections, **strips what is internal** — the scoring notes (`>` blocks), the
 traceability line, the review log — delegates conversion to pandoc and soffice, then prints each
 section's word count beside its page budget and the delivered page count.
 
-It **refuses to build** on three conditions, each of which was a real defect first:
+Under `--profile bid` it **refuses to build** on three conditions, each of which was a real
+defect first:
 
 | Refusal | Why it exists |
 |---|---|
@@ -180,21 +178,21 @@ It **refuses to build** on three conditions, each of which was a real defect fir
 | a section has not reached R2 | a `revise-r1` verdict means an unfixed finding; assembling hides that the response is not ready |
 | `[⚠VERIFY]` survives in body text | it is an open question wearing the clothes of an answer, and it is body prose, so stripping it would ship the unsupported claim silently |
 
-`--allow-unreviewed` overrides the last two for a working draft. Nothing overrides the first.
+`--force` overrides the last two for a working draft. Nothing overrides the first.
 
 Re-check the page count **after** rendering — a word-count estimate is an estimate, and the limit
 is measured in pages of the delivered file.
 
 ### If the buyer wants slides
 
-**A deck is a different artefact, not a reformat of the response.** `--format pptx` converts the
-same markdown (pandoc writes native, editable slides), but a response section is prose sized to a
-page budget: it overflows onto untitled continuation slides and orphans the figure captions onto
-slides of their own. That output is an internal read-through and nothing more.
+**A deck is a different artefact, not a reformat of the response.** A response section is prose
+sized to a page budget: paginate it and it overflows onto untitled continuation slides and orphans
+the figure captions onto slides of their own.
 
-For a client-facing deck — a bid defence, a shortlist presentation — build the slides through the
-figure pipeline above: HTML source in the same visual system, exported to native editable shapes.
-The deck then matches the figures instead of colliding with them.
+So `eng-render --to deck-manifest` emits a manifest and hands off to `presentation-builder`, which
+re-cuts the argument into one message per slide and produces the editable export. The manifest
+carries each figure's `.html` source and editable `.pptx` alongside the `.png`, so the deck stays
+correctable rather than flattened.
 
 ## Compliance first, persuasion second
 

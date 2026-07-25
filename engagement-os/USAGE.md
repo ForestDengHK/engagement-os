@@ -239,6 +239,7 @@ deliverable ends up built on unvalidated findings.
 | Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | approve the findings backbone |
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
+| Ship the file | `/eng-render <dir>` — standalone, any directory | decide document vs deck, and clear the gates |
 
 `*` = repeat per batch / session / deliverable.
 

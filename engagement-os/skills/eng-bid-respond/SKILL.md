@@ -38,8 +38,9 @@ Bid Response Progress:
 - [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
         R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
         → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
-- [ ] 7. ONLY NOW render to the mandated format (docx/pptx skills); re-check page counts on the
-        rendered file, not the word estimate
+- [ ] 7. ONLY NOW render — hand off to the `eng-render` skill with `--profile bid`. It gates on
+        R2 status and open [⚠VERIFY], strips the internal scaffolding, and re-checks page counts
+        on the rendered file. Do not assemble by hand here.
 - [ ] 8. Freeze the submitted version to 4_final/ + record date; matrix fully closed
 ```
 

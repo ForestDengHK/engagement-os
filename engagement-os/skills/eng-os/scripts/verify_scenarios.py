@@ -45,6 +45,7 @@ SCENARIOS = {
     "3 delivery only": ("delivery", ["eng-new", "eng-source", "eng-workshop", "eng-sprint"]),
     "4 bid then deliver": ("full", ["eng-new", "eng-rfp", "eng-source", "eng-workshop", "eng-sprint"]),
     "5 upgrade (pursuit +delivery)": ("pursuit->pursuit,delivery", ["eng-upgrade"]),
+    "6 render (standalone)": ("pursuit", ["eng-render"]),
 }
 
 PATH_RE = re.compile(r"`((?:_sources|_pm|00_research|01_pursuit|02_delivery)/[\w<>./-]*)`")
@@ -90,10 +91,19 @@ def main():
                 f = CMD / f"{c}.md"
                 if not f.exists():
                     print(f"  ✗ /{c}: command file missing"); fails.append(f"{name}:/{c}"); continue
-                m = re.search(r"playbooks/([\w-]+\.md)", f.read_text())
-                if not m or not (PB / m.group(1)).exists():
-                    print(f"  ✗ /{c}: playbook target missing"); fails.append(f"{name}:/{c}"); continue
-                body = (PB / m.group(1)).read_text()
+                text = f.read_text()
+                # A command targets either a multi-step playbook or, when it wraps a single
+                # capability, one skill directly. Both are legitimate; require one of them.
+                m = re.search(r"playbooks/([\w-]+\.md)", text)
+                if m and (PB / m.group(1)).exists():
+                    target, body = m.group(1), (PB / m.group(1)).read_text()
+                else:
+                    ms = re.search(r"skills/(eng-[\w-]+)/SKILL\.md", text)
+                    if not ms or not (ROOT / "skills" / ms.group(1) / "SKILL.md").exists():
+                        print(f"  ✗ /{c}: neither a playbook nor a skill target resolves")
+                        fails.append(f"{name}:/{c}"); continue
+                    target = ms.group(1)
+                    body = (ROOT / "skills" / target / "SKILL.md").read_text()
 
                 missing_skills = sorted(set(SKILL_RE.findall(body)) - SKILLS)
                 required = {p for p in PATH_RE.findall(body) if owned_by_selected(p, blocks)}
@@ -105,7 +115,7 @@ def main():
                     if not (list(root.glob(probe)) if "*" in probe else [1] if (root / probe).exists() else []):
                         bad.append(p)
                 ok = not missing_skills and not bad
-                print(f"  {'✓' if ok else '✗'} /{c:12} → {m.group(1):24} "
+                print(f"  {'✓' if ok else '✗'} /{c:12} → {target:24} "
                       f"skills={len(set(SKILL_RE.findall(body)) & SKILLS)} paths={len(required)}"
                       + (f"  MISSING-SKILLS={missing_skills}" if missing_skills else "")
                       + (f"  MISSING-PATHS={bad}" if bad else ""))

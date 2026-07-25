@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 11 skills + 6 playbook commands + 25 templates + 4 deterministic
+Packaged as 12 skills + 7 commands + 25 templates + 5 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -85,6 +85,7 @@ that names the owning skill per step plus its stop gates. Six recurring situatio
 | **Deliverable sprint** | `/eng-sprint` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
 | **New engagement, day 1** | `/eng-new` | pick mode → scaffold → fill context → panel-init → first ingest batch |
 | **An RFP arrived** | `/eng-rfp` | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| **Written sections must become the delivered file** | `/eng-render` | analyse the directory → gate → strip → docx/pdf, or a manifest handed to `presentation-builder` |
 | **The scope grew** (bid won, study became an engagement) | `/eng-upgrade` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
 
 Each command is a thin router to `skills/eng-os/references/playbooks/<name>.md` — the playbook
@@ -107,6 +108,12 @@ can also be called by name when you'd rather not rely on the trigger firing.
 ```
 /eng-new       /eng-rfp        /eng-source
 /eng-upgrade   /eng-workshop   /eng-sprint
+```
+
+**Single-capability command** — wraps one skill, usable on its own with no engagement around it:
+
+```
+/eng-render <dir>          # markdown sections + figures -> the delivered file
 ```
 
 **Skills** — one stage, one job. Call directly when you know exactly which stage you want:
