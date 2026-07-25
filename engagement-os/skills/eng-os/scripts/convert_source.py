@@ -2,10 +2,18 @@
 """Convert one source document to faithful, citable Markdown for the reference pack.
 
 Deterministic extraction only: text + tables with per-page/slide anchors, plus image
-extraction to a sibling images dir. IMAGE TRIAGE AND OCR ARE LEFT TO THE AGENT (a judgment +
-vision task) — this script emits every extracted image tagged `[uncertain]` so the agent can
-classify [decorative]/[content]/[uncertain] and OCR the uncertain ones inline. See the
-`eng-ingest-source` skill.
+extraction to a sibling images dir.
+
+Images that are decorative *by construction* are dropped here rather than pushed onto the agent:
+a raster repeated across pages/slides is template furniture (logo, footer mark, divider) and one
+under a few KB is an icon or rule. Both are counted and reported in the output, so the pass stays
+auditable. Everything that survives is tagged `[uncertain]` for the agent to classify
+[decorative]/[content] and OCR — that part is a judgment + vision task. See `eng-ingest-source`.
+
+NOT a replacement for the `pptx` / `docx` / `pdf` / `xlsx` skills. This is bulk, deterministic,
+zero-token extraction for ingesting many documents. Reach for the matching skill when a single
+document matters more than throughput — tracked changes, comments, SmartArt, charts with data
+labels, complex merged tables, or a scanned PDF needing real OCR.
 
 Usage:
     python convert_source.py <source_path> [--out <md_path>] [--images-dir <dir>]
@@ -40,14 +48,84 @@ def header(src, extra=""):
     )
 
 
-def img_section(images):
-    if not images:
-        return ""
-    lines = ["\n---\n\n## Images extracted — triage these\n",
+MIN_IMG_BYTES = 6 * 1024        # below this is an icon, bullet, rule or spacer
+MIN_IMG_PIXELS = 120            # narrowest side; logos and dividers fall under this
+
+
+class ImageCollector:
+    """Collects extracted images, dropping the ones that are decorative by construction.
+
+    Two heuristics do almost all the work, and both are decidable from the bytes:
+
+    * **Repeats.** A raster that appears on more than one page/slide is template furniture —
+      a logo, a footer mark, a divider. Content diagrams do not repeat. This is the strong one.
+    * **Size.** Under a few KB, or narrower than ~120px, it is an icon or a rule.
+
+    Everything dropped is counted and reported, so the pass stays auditable: the lossless rule
+    is about not losing *information*, and a logo carries none. What survives is what a human
+    would actually have to look at.
+    """
+
+    def __init__(self, images_dir):
+        self.dir = images_dir
+        self.kept = []                  # (relpath, unit) in emit order
+        self._by_digest = {}            # digest -> [(path, unit), ...]
+        self.dropped_small = 0
+
+    def add(self, blob, unit, name):
+        """Offer one image. Returns True if written to disk."""
+        if len(blob) < MIN_IMG_BYTES:
+            self.dropped_small += 1
+            return False
+        digest = hashlib.md5(blob).hexdigest()
+        path = os.path.join(self.dir, name)
+        os.makedirs(self.dir, exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(blob)
+        rel = os.path.relpath(path, os.path.dirname(self.dir))
+        self._by_digest.setdefault(digest, []).append((path, rel, unit))
+        return True
+
+    def finalise(self):
+        """Delete repeats, keep one copy of anything unique. Returns (kept, dropped_repeat)."""
+        dropped_repeat = 0
+        for copies in self._by_digest.values():
+            if len(copies) > 1:                      # same bytes on 2+ units → template furniture
+                for path, _rel, _unit in copies:
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+                    dropped_repeat += 1
+            else:
+                _path, rel, unit = copies[0]
+                self.kept.append((rel, unit))
+        self.kept.sort(key=lambda t: t[1])
+        return self.kept, dropped_repeat
+
+
+def img_section(collector):
+    if isinstance(collector, list):                  # legacy call-site safety
+        kept, dropped_repeat, dropped_small = [(i, 0) for i in collector], 0, 0
+    else:
+        kept, dropped_repeat = collector.finalise()
+        dropped_small = collector.dropped_small
+    note = ""
+    if dropped_repeat or dropped_small:
+        bits = []
+        if dropped_repeat:
+            bits.append(f"{dropped_repeat} repeated across units (logo / template furniture)")
+        if dropped_small:
+            bits.append(f"{dropped_small} under {MIN_IMG_BYTES // 1024}KB (icon / rule / spacer)")
+        note = f"\n**Auto-dropped as decorative:** {' · '.join(bits)}. " \
+               "Repeats and icons carry no information; nothing that appears once was touched.\n"
+    if not kept:
+        return ("\n---\n\n## Images\n" + note + "\nNo content-bearing images.\n") if note else ""
+    lines = ["\n---\n\n## Images extracted — triage these\n", note,
              "Classify each `[decorative]` (delete) / `[content]` (keep + caption) / "
              "`[uncertain]` (OCR inline, then retag `[ocr-done]`). Do not delete an "
              "`[uncertain]` image before its text is captured.\n"]
-    for im in images:
+    for im, _unit in kept:
         lines.append(f"- `[uncertain]` ![{os.path.basename(im)}]({im})")
     return "\n".join(lines) + "\n"
 
@@ -59,23 +137,23 @@ def convert_pdf(src, images_dir):
         return None, "pymupdf not installed — run: pip install pymupdf (PEP-668: add --user --break-system-packages)"
     doc = fitz.open(src)
     out = [header(src, f"> **Pages:** {doc.page_count}  ")]
-    images = []
+    coll = ImageCollector(images_dir)
     for i, page in enumerate(doc, 1):
         out.append(f"## Page {i}:\n")
         text = page.get_text("text").strip()
         out.append(text + "\n" if text else "_(no extractable text — likely a diagram/image page; see extracted images)_\n")
         for j, img in enumerate(page.get_images(full=True)):
-            xref = img[0]
             try:
-                pix = fitz.Pixmap(doc, xref)
+                pix = fitz.Pixmap(doc, img[0])
                 if pix.n - pix.alpha >= 4:
                     pix = fitz.Pixmap(fitz.csRGB, pix)
-                name = os.path.join(images_dir, f"p{i}_img{j}.png")
-                pix.save(name)
-                images.append(os.path.relpath(name, os.path.dirname(images_dir)))
+                if min(pix.width, pix.height) < MIN_IMG_PIXELS:
+                    coll.dropped_small += 1
+                    continue
+                coll.add(pix.tobytes("png"), i, f"p{i}_img{j}.png")
             except Exception:
                 continue
-    return "\n".join(out) + img_section(images), None
+    return "\n".join(out) + img_section(coll), None
 
 
 def convert_pptx(src, images_dir):
@@ -85,10 +163,18 @@ def convert_pptx(src, images_dir):
         return None, "python-pptx not installed — run: pip install python-pptx (PEP-668: add --user --break-system-packages)"
     prs = Presentation(src)
     out = [header(src, f"> **Slides:** {len(prs.slides)}  ")]
-    images = []
+    coll = ImageCollector(images_dir)
     for i, slide in enumerate(prs.slides, 1):
         out.append(f"## Slide {i}:\n")
-        for shape in slide.shapes:
+        # Walk groups recursively: a grouped diagram keeps its labels in child shapes, and
+        # `slide.shapes` only yields the top level — those labels would be lost silently.
+        def shapes_of(container):
+            for sh in container:
+                if getattr(sh, "shape_type", None) == 6:      # GROUP
+                    yield from shapes_of(sh.shapes)
+                else:
+                    yield sh
+        for shape in shapes_of(slide.shapes):
             if shape.has_text_frame and shape.text_frame.text.strip():
                 out.append(shape.text_frame.text.strip() + "\n")
             if shape.has_table:
@@ -103,13 +189,17 @@ def convert_pptx(src, images_dir):
             if shape.shape_type == 13:  # picture
                 try:
                     image = shape.image
-                    name = os.path.join(images_dir, f"s{i}_{shape.shape_id}.{image.ext}")
-                    with open(name, "wb") as f:
-                        f.write(image.blob)
-                    images.append(os.path.relpath(name, os.path.dirname(images_dir)))
+                    coll.add(image.blob, i, f"s{i}_{shape.shape_id}.{image.ext}")
                 except Exception:
                     continue
-    return "\n".join(out) + img_section(images), None
+        try:
+            if slide.has_notes_slide:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+                if notes:
+                    out.append(f"**Speaker notes:**\n\n{notes}\n")
+        except Exception:
+            pass
+    return "\n".join(out) + img_section(coll), None
 
 
 def convert_docx(src, images_dir):

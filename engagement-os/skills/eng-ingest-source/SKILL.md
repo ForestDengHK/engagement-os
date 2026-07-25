@@ -56,9 +56,19 @@ PACK=_sources/<bucket>          # public | pre_award | engagement
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <source_path> \
   --out "$PACK/_md/<NN_topic>/<slug>.md" --images-dir "$PACK/_md/images/<topic>"
 ```
-Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · `## Slide N:` pptx · `## Sheet:` xlsx · `## Section N:` docx) and image
-extraction. If a library is missing it prints a `pip install` line for that format — install
-and re-run. For docx/xlsx you may prefer the `docx` / `xlsx` skills for tricky files.
+Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · `## Slide N:` pptx ·
+`## Sheet:` xlsx · `## Section N:` docx). It walks grouped shapes and pulls speaker notes, and it
+auto-drops images that are decorative by construction (repeated across units, or under 6KB),
+reporting the counts. If a library is missing it prints a `pip install` line for that format.
+
+**When to escalate to the format skill instead.** The script is bulk extraction: deterministic,
+repeatable, no token cost per document — right for a batch. Re-do a single document with the
+`pptx` / `docx` / `pdf` / `xlsx` skill when the script's own output tells you it fell short:
+- a page/slide renders as `_(no extractable text …)_` and its images don't explain it → scanned or vector-only, needs real OCR
+- the doc is known to carry **tracked changes or comments** (a reviewed policy, a marked-up contract) — the script reads final text only
+- **charts / SmartArt** whose meaning is in the data labels, not the shape text
+- merged or nested tables that came out ragged
+One re-done document is cheap; a whole batch through a skill is not. Escalate per document, not per batch.
 
 **Step 4 — image triage (the lossless rule; agent + vision).** For every image the script
 extracted (all emitted tagged `[uncertain]`), classify:
