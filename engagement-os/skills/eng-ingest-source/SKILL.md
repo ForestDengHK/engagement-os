@@ -61,9 +61,16 @@ Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · 
 auto-drops images that are decorative by construction (repeated across units, or under 6KB),
 reporting the counts. If a library is missing it prints a `pip install` line for that format.
 
-**When to escalate to the format skill instead.** The script is bulk extraction: deterministic,
-repeatable, no token cost per document — right for a batch. Re-do a single document with the
-`pptx` / `docx` / `pdf` / `xlsx` skill when the script's own output tells you it fell short:
+The script **delegates extraction to the same tools the format skills use** — `pandoc` for docx,
+`markitdown` for pptx (pdf/xlsx stay on pymupdf/openpyxl, which are what give per-page and
+per-sheet anchors). It adds only the packaging: provenance header, citable anchors, image
+policy. Each output names its extractor; if a tool is missing it falls back to the python
+library and says in the header what that costs. Install both for faithful output:
+`brew install pandoc` · `pip install markitdown`.
+
+**When to escalate to the format skill anyway.** The script is bulk: deterministic, repeatable,
+no token cost per document. Re-do a single document with the `pptx` / `docx` / `pdf` / `xlsx`
+skill when the script's own output tells you it fell short:
 - a page/slide renders as `_(no extractable text …)_` and its images don't explain it → scanned or vector-only, needs real OCR
 - the doc is known to carry **tracked changes or comments** (a reviewed policy, a marked-up contract) — the script reads final text only
 - **charts / SmartArt** whose meaning is in the data labels, not the shape text
