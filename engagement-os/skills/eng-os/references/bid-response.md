@@ -66,21 +66,62 @@ If a section needs a figure, build it while writing that section — a figure de
 becomes decoration, and a figure that would have carried the argument gets replaced by three
 paragraphs that do it worse.
 
-Figures live in `3_drafting/figures/` as `F-0x_<name>.svg`, referenced from the section that owns
-them. Keep the SVG as the source: it stays editable and re-renders cleanly at any size, which
-matters because the same figure has to survive whatever output format is chosen later.
+**Use the `designing-figures` skill.** Do not hand-draw. Its first rule is the one that matters:
+pick the archetype from the message before drawing anything. Hand-rolling this for real produced
+the anti-pattern the skill names explicitly — a flat row of boxes — when the message ("six
+deliverables, each scored individually, together covering the buyer's own eleven limitations")
+called for a **coverage grid**. Swapping the archetype changed what the figure proved; that is the
+test for having picked the right one.
 
-Two mistakes cost a cycle each, both found by doing this for real:
+### Three artefacts per figure, one source
 
-- **Escape `&` in SVG text.** A bare ampersand ("Handover & Enablement") makes the file
-  unparseable — the renderer fails with `xmlParseEntityRef: no name`, which does not name the
-  character. Use `&amp;`.
-- **Compute the canvas from the content.** Width must equal margin + (n × box) + ((n-1) × gap) +
-  margin. Guess it and the last element is silently clipped: the file renders, it just loses
-  content, and you will not notice unless you look at the raster.
+| File | What it is | Who uses it |
+|---|---|---|
+| `F-0x_<name>.html` | **the source** — edit here, re-render | whoever revises the figure |
+| `F-0x_<name>.png` | raster at 2× | drops into the response document |
+| `F-0x_<name>.pptx` | **one slide, native editable shapes** | a reviewer who wants to correct it in PowerPoint |
 
-**Always look at the rendered raster before moving on** (`rsvg-convert -w 1600 f.svg -o f.png`).
-An SVG that parses is not an SVG that reads correctly.
+A flattened image is not enough: review rounds produce figure corrections, and a reviewer who
+cannot edit sends the change back as prose instead. Generate the PPTX from the same HTML, so the
+three never diverge.
+
+```bash
+cd 3_drafting/figures && (python3 -m http.server 4321 &) ; sleep 1
+CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$CH" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
+  --window-size=1920,1080 --default-background-color=FFFFFFFF \
+  --screenshot=F-01.png "http://localhost:4321/F-01.html"
+node ~/.claude/skills/baoyu-design/agents/gen-pptx/dist/cli.mjs \
+  --url "http://localhost:4321/F-01.html" --config cfg.json --out .
+pkill -f "http.server 4321"
+```
+
+### What breaks the editable export
+
+- **No CSS pseudo-elements or masked icons.** `::before` / `::after` and `mask`-recoloured icons
+  do not convert. Draw dots, bullets and markers as **real elements** (`<i class="dot">`) —
+  otherwise they vanish from the PPTX while looking fine in the PNG.
+- **Text that fits in HTML can clip in the export.** PowerPoint's text metrics differ, so a label
+  sized to its box in the browser loses its last characters as a shape. Found for real:
+  "CARRIES THE DECISION" arrived as "CARRIES THE DECISIO".
+- CSS gradients become a picture, not a shape. Fine for a brand bar; don't rely on one for content.
+
+### Verify both outputs, every time
+
+Look at the PNG **and** round-trip the PPTX back to an image before moving on:
+
+```bash
+soffice --headless --convert-to pdf F-01.pptx --outdir /tmp/v && pdftoppm -png -r 100 /tmp/v/F-01.pdf /tmp/v/rt
+```
+
+Then confirm it is genuinely editable rather than a flattened page:
+
+```bash
+python3 -c "from pptx import Presentation; s=Presentation('F-01.pptx').slides[0]; \
+print(len(s.shapes),'shapes;',sum(1 for x in s.shapes if x.has_text_frame and x.text_frame.text.strip()),'with text')"
+```
+A one-slide export with 1-2 shapes is a screenshot in a wrapper. The figure above came out as 174
+native shapes, 44 of them carrying editable text.
 
 ## Review rounds, not a review
 

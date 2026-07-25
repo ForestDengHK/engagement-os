@@ -7,6 +7,7 @@ description: Use when a validated RFP analysis + sourced research are ready and 
 
 Turn the validated analysis + sourced research into a compliant, persuasive, fully traceable
 response. Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/bid-response.md`.
+Figures: the `designing-figures` skill owns them — spec before pixels, archetype from the message.
 
 ## Prerequisite
 Build only from a closed analysis (`compliance_matrix.md`) and a cited research log
@@ -27,7 +28,10 @@ Bid Response Progress:
 - [ ] 2. One MD per section in 3_drafting/sections/, from bid_section.md.tmpl — frontmatter carries
         marks, scoring basis, page budget, reqs answered, figures, evidence
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
-        build its figures alongside it in 3_drafting/figures/ (SVG source + rendered PNG)
+        build its figures alongside it with the `designing-figures` skill — archetype from the
+        message, never a default row of boxes. Three artefacts per figure from ONE html source:
+        .html (edit here) + .png (2x, goes in the document) + .pptx (one slide, native shapes,
+        so a reviewer can correct it)
 - [ ] 4. Weave the 3–5 win-themes at the high-weight criteria, each backed by a cited log row or
         an indexed firm asset (A-nnn)
 - [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a closed research-log row; kill any [⚠VERIFY]
@@ -71,6 +75,9 @@ from the RFT; R2 is judgement and cannot.
 - No unsupported claim, no fabricated credential — ever. Anything `[⚠VERIFY]` is cut or closed first.
 - Every mandatory requirement is `met`; exceptions stated openly with rationale.
 - Never edit a submitted volume in place — a post-submission change is a new dated version.
-- **Look at every rendered figure.** An SVG that parses is not an SVG that reads correctly — a
-  mis-sized canvas clips the last element silently. Escape `&` as `&amp;` or the file won't parse
-  at all.
+- **Never ship a figure as only a flat image.** Review rounds produce figure corrections; a
+  reviewer who cannot edit sends the change back as prose. Every figure gets its editable
+  one-slide PPTX alongside the PNG, both generated from the same HTML.
+- **Look at both outputs.** Round-trip the PPTX back to an image and check the shape count — a
+  one-slide export with 1-2 shapes is a screenshot in a wrapper, not an editable figure. Text that
+  fits in HTML can clip as a PowerPoint shape.
