@@ -106,6 +106,17 @@ pkill -f "http.server 4321"
   "CARRIES THE DECISION" arrived as "CARRIES THE DECISIO".
 - CSS gradients become a picture, not a shape. Fine for a brand bar; don't rely on one for content.
 
+### What breaks the PNG
+
+- **Never pin the footer with `margin-top:auto`.** On a fixed 1080px canvas the surrounding column
+  flex collapses that row to a few pixels: the legend and the source line disappear from the render
+  while the page looks correct in a browser tab. Pin the footer with `position:absolute` and an
+  explicit `top`, inside a `position:relative` wrapper. Cost the first time this was hit: three
+  figures shipped a render with no source line, and a long detour chasing a phantom cache bug.
+- **`timeout` is not on macOS.** A render wrapped in it never runs, and the *previous* PNG is still
+  on disk — so the verification passes against a stale image. If a re-render produces a
+  byte-identical file after a real CSS change, suspect the harness before the browser.
+
 ### Verify both outputs, every time
 
 Look at the PNG **and** round-trip the PPTX back to an image before moving on:
@@ -149,24 +160,41 @@ don't impose our own structure (the pursuit-side version of the "match the host-
 
 ### Assembling
 
-Concatenate the section files in the buyer's order, **stripping what is internal**: the scoring
-notes (`>` blocks), the traceability line, and the review log. Those exist to make the draft
-checkable; shipping them tells the evaluator how the sausage was made.
+`scripts/assemble_response.py` does it. Don't concatenate by hand — the strip is fiddly and the
+failure is invisible (internal scaffolding reaching an evaluator).
 
 ```bash
-pandoc volume2.md -o volume2.docx --resource-path=..:../figures \
-  --metadata mainfont=Arial --metadata fontsize=10pt
-soffice --headless --convert-to pdf volume2.docx && pdfinfo volume2.pdf | grep Pages
+python3 scripts/assemble_response.py --sections 3_drafting/sections \
+  --out 3_drafting/_render --name volume2_technical --format both
 ```
 
-**A missing figure renders silently.** Pandoc degrades a missing image to its alt text, so the
-document builds and the figure is simply absent — found for real on two sections that referenced
-figures never built. `eng_lint`'s `figure-missing` rule catches this before the render does.
+It orders the sections, **strips what is internal** — the scoring notes (`>` blocks), the
+traceability line, the review log — delegates conversion to pandoc and soffice, then prints each
+section's word count beside its page budget and the delivered page count.
 
-Rendering mechanics: the `docx` / `pptx` skills own the output artefact. Figures go in as the PNG
-rendered from their SVG source, never as a screenshot; the SVG stays in `figures/` so the next
-version regenerates rather than being redrawn. Re-check the page count **after** rendering — a
-word-count estimate is an estimate, and the limit is measured in pages of the delivered file.
+It **refuses to build** on three conditions, each of which was a real defect first:
+
+| Refusal | Why it exists |
+|---|---|
+| a referenced figure PNG is missing | pandoc degrades a missing image to its alt text, so the document builds and the figure is simply gone — found on two sections at once |
+| a section has not reached R2 | a `revise-r1` verdict means an unfixed finding; assembling hides that the response is not ready |
+| `[⚠VERIFY]` survives in body text | it is an open question wearing the clothes of an answer, and it is body prose, so stripping it would ship the unsupported claim silently |
+
+`--allow-unreviewed` overrides the last two for a working draft. Nothing overrides the first.
+
+Re-check the page count **after** rendering — a word-count estimate is an estimate, and the limit
+is measured in pages of the delivered file.
+
+### If the buyer wants slides
+
+**A deck is a different artefact, not a reformat of the response.** `--format pptx` converts the
+same markdown (pandoc writes native, editable slides), but a response section is prose sized to a
+page budget: it overflows onto untitled continuation slides and orphans the figure captions onto
+slides of their own. That output is an internal read-through and nothing more.
+
+For a client-facing deck — a bid defence, a shortlist presentation — build the slides through the
+figure pipeline above: HTML source in the same visual system, exported to native editable shapes.
+The deck then matches the figures instead of colliding with them.
 
 ## Compliance first, persuasion second
 
