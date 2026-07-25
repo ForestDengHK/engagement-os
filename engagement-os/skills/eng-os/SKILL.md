@@ -96,6 +96,7 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Finding schema — severity vs priority, evidence tags, body shapes** → [references/finding-standard.md](references/finding-standard.md)
 - **Source precedence (T1/T2/T3), `[⚠VERIFY]`/V-n register, conflict clusters** → [references/provenance-and-precedence.md](references/provenance-and-precedence.md)
 - **As-is / to-be assembly, versioning, the panel gate** → [references/deliverable-build.md](references/deliverable-build.md)
+- **Deck round trip — splice corrected slides back in, then verify the package** → [references/deck-assembly.md](references/deck-assembly.md)
 - **CLAUDE.md / project-context / DELIVERABLES / memory discipline (incl. AGENTS.md)** → [references/memory-discipline.md](references/memory-discipline.md)
 - **Guided elicitation — how to fill an artefact WITH the user instead of handing them a blank** → [references/guided-elicitation.md](references/guided-elicitation.md)
 - **RFP decomposition — compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
@@ -114,6 +115,7 @@ Keep these one level away; read the specific file when the stage needs it.
   - `eng_lint.py` — **the mechanical gate**. The rule set is the registry (`RULES`); read it with `python3 eng_lint.py --list` rather than trusting any prose copy — including this one. Every rule has clean-tree + violated-tree fixtures in `tests/run_tests.py`; run that after editing a rule. Lint exists so nobody asks a reviewer to check what a script can decide.
   - `section_contract.py` — machine form of `references/section-contract.md`: the status vocabulary, frontmatter fields, and id syntax that lint and `render_document.py` both import. Change doc and module in the same commit.
   - `render_document.py` — the render engine behind the **`eng-render`** skill (sections → docx/pdf via a pandoc reference.docx, or a deck manifest for `presentation-builder`). It lives here because eng-lint and the scaffolder are its siblings; `eng-render` is the skill facade and declares the dependency.
+  - `verify_deck.py` — **the mechanical gate on an assembled `.pptx`**, reading the OOXML with stdlib zipfile. Catches what a build log cannot show: a flattened picture-per-slide deck, a font neither standard nor embedded, a miscounted splice, a figure whose image did not come across. Assembly itself belongs to the `pptx` skill — see [references/deck-assembly.md](references/deck-assembly.md). Fixtures in `tests/test_verify_deck.py`.
   - `verify_scenarios.py` — self-test: scaffolds every documented mode, asserts the fresh tree lints with zero errors, and checks each command's targets resolve, every named skill exists, and every block-owned path exists (unknown top-level-looking paths fail — a typo is not allowed to pass silently). Run after editing a playbook, command, or the scaffolder.
 
 ## How the skills compose

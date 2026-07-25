@@ -105,10 +105,42 @@ def usage_scenario_numbers():
     return {int(n) for n in re.findall(r"^## Scenario (\d+)", USAGE.read_text(), re.M)}
 
 
+MD_LINK_RE = re.compile(r"\[[^\]]*\]\((?!https?:|#)([^)#]+)(?:#[^)]*)?\)")
+CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+
+
+def check_doc_links():
+    """Every relative markdown link in the pack resolves to a file that exists.
+
+    A pointer is how this pack avoids duplicating prose, so a rotted pointer is the
+    duplication problem wearing a disguise: the reader is sent nowhere and writes the
+    content again where they stand.
+
+    Link syntax inside code formatting is being SHOWN, not followed (the MEMORY.md index
+    line, a figure-naming pattern), so code spans and fences come out first — the same
+    outside-the-backticks rule the evidence-tag lint uses.
+    """
+    broken = []
+    for md in sorted(ROOT.rglob("*.md")):
+        if "node_modules" in md.parts:
+            continue
+        prose = CODE_RE.sub("", md.read_text(encoding="utf-8", errors="replace"))
+        for target in MD_LINK_RE.findall(prose):
+            if not (md.parent / target.strip()).exists():
+                broken.append(f"{md.relative_to(ROOT)} → {target.strip()}")
+    broken = sorted(set(broken))
+    print(f"  {'✓' if not broken else '✗'} markdown links resolve"
+          + ("" if not broken else f"  BROKEN={broken}"))
+    return broken
+
+
 def main():
     keep = "--keep" in sys.argv
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="engos-e2e-"))
     fails = []
+
+    if check_doc_links():
+        fails.append("doc-links")
 
     documented = usage_scenario_numbers()
     tested = {int(k.split()[0]) for k in SCENARIOS}

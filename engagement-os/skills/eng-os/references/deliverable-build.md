@@ -82,7 +82,8 @@ read the underlying documents.
 - A `SKELETON` is structure-only — it holds no real content (names / € / dates). That is the
   content deck's job (v0.5+).
 - Client deliverables stay **editable** (native shapes/text), never a stitched image-per-slide;
-  figures-as-images go *inside* native slides.
+  figures-as-images go *inside* native slides. Correcting an issued deck is a splice, and the
+  package is gated before it ships → [deck-assembly.md](deck-assembly.md).
 - Update `DELIVERABLES.md` the moment a new version is produced; move the prior version to
   `archived/superseded_decks_<DATE>/` — never delete.
 
