@@ -39,6 +39,8 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
 
 ## Stop gates
 
+- **No build before `eng_lint.py` is clean of ERRORs.** Mechanical failures (untagged findings,
+  dangling citations, unfilled spine) are cheaper to fix now than after they're in a deck.
 - **No build before step 1 passes.** Building on unvalidated findings contaminates
   the deliverable with un-arbitrated conflicts.
 - **No ship before step 4 passes.** A deliverable that skipped the panel gate is a

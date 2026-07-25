@@ -10,8 +10,11 @@ held-notes ─► eng-write-findings ─► eng-update-canonical ─► backlog 
  (human)        per topic             deltas only              per session
 ```
 
-1. **Held-notes** (human or agent-assisted): fill the session's held-notes file —
-   what was asked, what was answered, direct quotes, what was NOT covered.
+1. **Held-notes — you draft them from whatever raw material exists.** A transcript, a bullet
+   dump, recording notes, even a verbal recap in the invocation: turn it into the held-notes
+   file — what was asked, what was answered, direct quotes attributed, what was NOT covered.
+   Present it and ask only for what's genuinely missing ("nothing in the notes covers agenda
+   item 4 — was it run?"). **Never hand the user a blank held-notes template.**
    Verify: every agenda item is marked covered / deferred / not-run.
 2. **Findings — one per coherent topic** → `eng-write-findings`.
    New findings for new topics; extend existing findings where the session added

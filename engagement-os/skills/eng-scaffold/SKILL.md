@@ -52,10 +52,10 @@ not for the work tree that consumes it, so the same filing rule holds in every m
 Scaffold Progress:
 - [ ] 1. Confirm client / eng-id / name / root / MODE
 - [ ] 2. Run scaffold_engagement.py (creates tree + plants templates)
-- [ ] 3. Fill project-context.md from what's known
-- [ ] 4. [research] Write the questions + scope in 00_research/README.md
+- [ ] 3. DRAFT project-context.md from the invocation text → confirm inline
+- [ ] 4. [research] PROPOSE the question list in 00_research/README.md → confirm
 - [ ] 5. [pursuit]  Ingest the tender pack → eng-rfp-analyze
-- [ ] 6. [delivery] Set the backbone in 3_findings/README.md
+- [ ] 6. [delivery] PROPOSE the backbone in 3_findings/README.md → confirm
 - [ ] 7. [delivery] Align deliverable slots (prune/rename folders + DELIVERABLES rows)
 - [ ] 8. Stand up the panel if installed (/panel-init), else plan a manual review
 - [ ] 9. git init + first commit (if not already a repo)
@@ -77,28 +77,36 @@ block: `00_research/README.md` *(research)*; `rfp_analysis.md` + `compliance_mat
 blocks — `pre_award/` for pursuit, `engagement/` for research **or** delivery, planted once even
 when both are selected. Placeholders are substituted from the args.
 
-**On an additive re-run**, the scaffolder cannot extend the existing `CLAUDE.md` (it never
-clobbers). It prints a warning — add the new block's pointer-table rows and skill list by hand.
+**On an additive re-run**, the *script* cannot extend the existing `CLAUDE.md` (it never clobbers)
+and prints a warning. **You do it** — read the file, add the new block's pointer rows + skills
+line, update the "Scaffolded blocks" and `**Phase:**` lines, and show the diff. Never hand this
+back to the user as manual work.
 
-**Step 3 — fill `project-context.md`** with whatever is already known (client sector +
-regulatory posture, scope / out-of-scope, deliverables, tech stack, stakeholders, pre-decisions).
-Leave unknowns under "Open Questions". This file is the shared SSOT that `/panel-init` reuses.
+**Step 3 — DRAFT `project-context.md`, don't assign it.** Fill every section you can from the
+user's invocation text (it usually carries client, sector, the shape of the work, sometimes the
+sponsor), plus any tender/SOW already on disk. Show the filled file inline, flag what you
+**inferred** vs were told, and ask only the residual — each question with your proposed answer
+attached ("I've put the sector as regulated gas utility — right?"). Unknowns go under "Open
+Questions", not back to the user as homework. Then write it. This is the shared SSOT `/panel-init`
+reuses. → `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/guided-elicitation.md`
 
-**Step 4 — [research only] settle the questions** in `00_research/README.md`: the bounded,
-answerable question list this assignment exists to answer, plus what's explicitly out of scope.
-This is the research block's equivalent of the findings backbone — settle it **before** ingesting,
-or sourced facts land nowhere and the pack becomes unstructured reading. Our own analysis goes in
-`00_research/1_analysis/`, never in `_sources/`.
+**Step 4 — [research only] PROPOSE the question list** in `00_research/README.md` §1: the bounded,
+answerable questions this assignment exists to answer, plus what's out of scope. **Draft 5-8 from
+the stated goal** — don't ask the user to invent them. Show the list, ask what's wrong with it,
+reshape, write. This is the research block's spine; it must exist **before** ingesting or sourced
+facts land nowhere. Our own analysis goes in `00_research/1_analysis/`, never in `_sources/`.
 
 **Step 5 — [pursuit only] get the tender in.** Convert the RFP pack to anchored markdown into
 `01_pursuit/<ENG-ID>/1_received/_md/` via `eng-ingest-source`, then run `eng-rfp-analyze` to fill
 the planted `rfp_analysis.md` + `compliance_matrix.md`. Pre-award *background* research (published
 strategy, annual reports, market info) goes to `_sources/pre_award/`, not `1_received/`.
 
-**Step 6 — [delivery only] set the backbone** in `02_delivery/1_discovery/3_findings/README.md`:
-the fixed, defining problem list for this engagement (RFP limitations / audit objectives /
-hypothesis tree / capability gaps). Every finding will map to ≥1 backbone item. This is the one
-structural choice that must be made deliberately up front.
+**Step 6 — [delivery only] PROPOSE the backbone** in `02_delivery/1_discovery/3_findings/README.md`:
+the fixed, defining problem list every finding maps to. **Derive it, don't request it** — from the
+ingested RFP's stated limitations, the SOW objectives, or the deliverable list; if nothing is
+ingested yet, draft the sector-standard shape and say that's what you did. Show the numbered list,
+ask what to add/cut/rename, write it. This is the one structural choice that must be deliberate up
+front, which is exactly why the user should be reviewing a proposal rather than facing a blank table.
 
 **Step 7 — [delivery only] align deliverable slots.** The scaffolder plants the generic
 `2_assessment … 6_executive_summary` folders + a D1–D5 `DELIVERABLES.md`. **Prune/rename** these
@@ -122,7 +130,8 @@ D-number map.
 
 ## Guardrails
 - Idempotent + additive: re-running skips files that already exist — safe on a partial repo, and
-  the way to add a block later. Only `CLAUDE.md` needs a manual top-up after an added block.
+  the way to add a block later. After an added block, **you** top up `CLAUDE.md` (the script won't).
+- **Never end a step with "now go edit X.md".** Draft it, show it, ask the residual, write it.
 - **Don't build a block "just in case."** An empty `02_delivery/` in a bid repo sends every later
   skill hunting through folders that will never hold anything.
 - **Never pool source material across buckets.** Material under different confidentiality constraints stays apart —

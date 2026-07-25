@@ -14,3 +14,6 @@ Expect: which session, and the path to the held-notes / transcript.
 
 A finding is a **fact baseline, not a recommendation** — keep observation and interpretation
 visibly separate, and tag evidence by how it was obtained.
+
+Draft the held-notes from whatever raw material was supplied; ask only for what's
+missing. Do not hand the user a blank template.

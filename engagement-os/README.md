@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 11 skills + 6 playbook commands + 21 templates + 3 deterministic
+Packaged as 11 skills + 6 playbook commands + 21 templates + 4 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -65,12 +65,13 @@ Take either, both, or neither — see §4 for modes.
 | `eng-build-deliverable` | Validated findings → as-is / to-be deliverable (SKELETON → v0.x → v1.0) | "build D1/D2/…" |
 | `eng-maintain-memory` | Keep CLAUDE.md / project-context / DELIVERABLES / cross-session memory lean (anti-rot) | Milestones; recurring corrections |
 
-**Five load-bearing principles** (when a choice conflicts with one, the principle wins):
+**Six load-bearing principles** (when a choice conflicts with one, the principle wins):
 1. Source → derived separation — originals are never edited; every derivative traces back by path + page.
 2. Single source of truth, referenced not copied — each fact lives in exactly one file.
 3. A finding is a fact baseline, not a recommendation — observation and interpretation kept visibly separate.
 4. Precedence resolves conflict; nothing is deleted — T1 system-measured > T2 workshop > T3 reference; the loser is stamped `⚠ superseded-by` and kept.
 5. Lean by design — depth lives in dedicated files; indexes stay skimmable.
+6. Draft first, ask second — never send the user to an editor. The agent fills the templates from what it already has, shows them inline, and asks only the residual.
 
 ## 3. Composed workflows (Playbooks)
 
