@@ -118,12 +118,29 @@ def convert_docx(src, images_dir):
     except ImportError:
         return None, "python-docx not installed — run: pip install python-docx (or use the docx skill; PEP-668: add --user --break-system-packages)"
     d = docx.Document(src)
-    out = [header(src)]
+    # A .docx has no stable page concept — pagination is decided by the renderer, so a "page"
+    # anchor would not survive a font change. Anchor on SECTIONS instead (headings, or one
+    # implicit section for a heading-less doc) so a claim is still citable as `file.md §Section N`.
+    body, section, n = [], [], 0
     for para in d.paragraphs:
-        if para.text.strip():
-            style = (para.style.name or "").lower()
-            prefix = "## " if "heading" in style else ""
-            out.append(prefix + para.text.strip() + "\n")
+        text = para.text.strip()
+        if not text:
+            continue
+        if "heading" in (para.style.name or "").lower():
+            if section:
+                body.append("\n".join(section))
+            n += 1
+            section = [f"## Section {n}: {text}\n"]
+        else:
+            if not section:                       # text before the first heading
+                n += 1
+                section = [f"## Section {n}:\n"]
+            section.append(text + "\n")
+    if section:
+        body.append("\n".join(section))
+
+    out = [header(src, f"> **Sections:** {n}  ")]
+    out.extend(body)
     for t, table in enumerate(d.tables, 1):
         rows = [[c.text.strip() for c in r.cells] for r in table.rows]
         if rows:

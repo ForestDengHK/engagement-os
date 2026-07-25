@@ -98,7 +98,7 @@ def rule_mandatory_met(root, r):
 def rule_citations_resolve(root, r):
     """Every `file.md §Page N` citation must point at a file that exists."""
     r.ran()
-    pat = re.compile(r"`?([\w./-]+\.md)\s*§\s*(?:Page|Slide)\s*\d+")
+    pat = re.compile(r"`?([\w./-]+\.md)\s*§\s*(?:Page|Slide|Section|Sheet)\s*\S*")
     for rel in ("00_research", "02_delivery", "01_pursuit"):
         for p in text_files(root, rel):
             body = p.read_text(encoding="utf-8", errors="replace")
@@ -162,9 +162,73 @@ def rule_spine_filled(root, r):
                    "sourced facts have nothing to map onto")
 
 
+def rule_images_triaged(root, r):
+    """Extracted images start tagged [uncertain]; leaving them there breaks the lossless rule.
+
+    Found by running a real ingest: 52 images came out of four documents and nothing in the
+    pack noticed that none of them had been triaged. This is the silent-decay case — the
+    conversion "succeeded", so the gap never surfaces on its own.
+    """
+    for pack in root.glob("_sources/*/_md"):
+        r.ran()
+        for p in pack.rglob("*.md"):
+            if p.parent == pack:          # pack-root trio: the README *documents* the convention
+                continue
+            n = sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
+                    if line.lstrip().startswith("- `[uncertain]`"))
+            if n:
+                r.warn("images-untriaged", str(p.relative_to(root)),
+                       f"{n} extracted image(s) still `[uncertain]` — OCR them inline and retag "
+                       "`[ocr-done]`, or classify as `[decorative]`/`[content]`")
+
+
+def rule_manifest_complete(root, r):
+    """Every converted MD needs a manifest row, and every manifest row a file.
+
+    The manifest is hand-maintained, so a missed row is invisible: the MD is searchable but
+    nothing records where it came from, which is the one thing the manifest exists to hold.
+    """
+    for pack in root.glob("_sources/*/_md"):
+        readme = pack / "README.md"
+        if not readme.exists():
+            continue
+        r.ran()
+        listed = set(re.findall(r"`([\w./-]+\.md)`", readme.read_text(encoding="utf-8", errors="replace")))
+        listed = {os.path.basename(x) for x in listed}
+        for p in pack.rglob("*.md"):
+            if p.parent == pack:          # the trio at the pack root isn't manifest content
+                continue
+            if p.name not in listed:
+                r.error("manifest-missing", str(p.relative_to(root)),
+                        f"converted MD has no row in {readme.relative_to(root)} — "
+                        "its provenance isn't recorded anywhere")
+
+
+def rule_pointer_table_resolves(root, r):
+    """CLAUDE.md's pointer table must point at files that exist.
+
+    This is where an added block breaks things: the scaffolder won't touch an existing
+    CLAUDE.md, so the rows for the new block are added by the agent — and a row naming a
+    path that was never created sends every later lookup somewhere empty.
+    """
+    f = root / "CLAUDE.md"
+    if not f.exists():
+        return
+    r.ran()
+    for i, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if not line.startswith("| ") or "`" not in line:
+            continue
+        for ref in re.findall(r"`([\w./_-]+\.md)`", line):
+            if not (root / ref).exists():
+                r.error("pointer-dangling", f"CLAUDE.md:{i}",
+                        f"pointer table names '{ref}', which doesn't exist — "
+                        "a block was probably added without topping up the table")
+
+
 RULES = [rule_bucket_leak, rule_verify_not_shipped, rule_mandatory_met,
          rule_citations_resolve, rule_findings_conform, rule_live_index_resolves,
-         rule_spine_filled]
+         rule_spine_filled, rule_images_triaged, rule_manifest_complete,
+         rule_pointer_table_resolves]
 
 
 def main():

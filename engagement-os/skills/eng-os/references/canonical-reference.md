@@ -32,7 +32,7 @@ _sources/<bucket>/                   ← SOURCE tier (originals, never edited)
 ## The five load-bearing rules
 
 1. **Source → derived separation.** Originals stay untouched under the client's own folder names; every generated `.md` lives under `_md/`. Provenance = the derived file always names its source path + page count, both in the README row and in its own header.
-2. **One MD per source file**, with `## Page N:` / `## Slide N:` anchors, so any downstream claim can cite `file.md §Page 12`.
+2. **One MD per source file**, with a citable anchor per unit — `## Page N:` (pdf) · `## Slide N:` (pptx) · `## Sheet: <name>` (xlsx) · `## Section N:` (docx, since a .docx has no stable page) — so any downstream claim can cite `file.md §Page 12`.
 3. **Lossless image rule** (see next section) — no information lost, but noise stripped.
 4. **Canonical = multiple files split by kind**, not one mega-file (see below) — and split by **bucket** on top of that. A fact never migrates between buckets by being restated; it is re-established from a source in the new bucket or it stays where it is.
 5. **New-document flow is fixed** (see below): choose the bucket by how the doc was obtained → drop original → convert to MD in the matching `_md/` group → add a README row → fold facts/deltas into **that bucket's** SUMMARY/INSIGHTS.
