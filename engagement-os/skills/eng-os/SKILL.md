@@ -109,6 +109,7 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` anchors + image extraction for triage.
+  - `verify_scenarios.py` — self-test: scaffolds every documented mode and checks each command resolves to a playbook whose named skills and block-owned paths all exist. Run after editing a playbook, command, or the scaffolder.
 
 ## How the skills compose
 

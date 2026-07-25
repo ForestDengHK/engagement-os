@@ -2,12 +2,14 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 11 skills + 6 playbook commands + 21 templates + 2 deterministic
+Packaged as 11 skills + 6 playbook commands + 21 templates + 3 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
-> The agent-facing entry point is `skills/eng-os/SKILL.md` (auto-triggers). This file
-> is the human-facing manual.
+> **Just want the commands?** → [`USAGE.md`](USAGE.md) — every scenario as a 2–4 line sequence.
+>
+> The agent-facing entry point is `skills/eng-os/SKILL.md` (auto-triggers). This file is the
+> human-facing manual: the same material with the reasoning attached.
 
 ---
 

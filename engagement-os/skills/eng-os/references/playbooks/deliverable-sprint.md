@@ -1,6 +1,15 @@
 # Playbook: deliverable sprint (as-is or to-be)
 
-From "findings are ready" to "deliverable shipped". The panel gate is not optional.
+From "the analysis is ready" to "output shipped". The panel gate is not optional.
+
+**Works in both the delivery and research blocks** — same chain, different paths:
+
+| | delivery block | research block |
+|---|---|---|
+| The corpus validated in step 1 | `02_delivery/1_discovery/3_findings/` | `00_research/1_analysis/` |
+| Mapped against | the findings backbone (`3_findings/README.md`) | the question list (`00_research/README.md` §1) |
+| Built into | `02_delivery/<n>_<slot>/` | `00_research/2_output/` |
+| Live-file index rev'd in step 5 | `02_delivery/DELIVERABLES.md` | `00_research/README.md` §4 |
 
 ## Chain
 
@@ -24,9 +33,9 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
    Multi-role review; every red-line resolved or explicitly deferred with an owner.
    Verify: review record saved; no unresolved red-lines.
 5. **Rev the index + memory** → `eng-maintain-memory`.
-   `DELIVERABLES.md` points at the new live version; superseded versions archived
-   (never deleted); engagement log records the sprint; memory notes any new
-   recurring correction that emerged.
+   The live-file index (see the table above) points at the new version; superseded
+   versions archived (never deleted); engagement log records the sprint; memory notes
+   any new recurring correction that emerged.
 
 ## Stop gates
 

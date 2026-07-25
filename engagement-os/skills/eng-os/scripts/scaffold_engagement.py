@@ -68,7 +68,9 @@ RESEARCH_DIRS = [
 
 PURSUIT_DIRS = [
     "01_pursuit/_shared",
-    "01_pursuit/{ENG_ID}/1_received",
+    # The tender pack is not a _sources bucket (it's the contractual artefact of one tender),
+    # but it gets the same anchored-markdown treatment so requirements cite by clause/page.
+    "01_pursuit/{ENG_ID}/1_received/_md/images",
     "01_pursuit/{ENG_ID}/2_analysis",
     "01_pursuit/{ENG_ID}/3_drafting",
     "01_pursuit/{ENG_ID}/4_final",
