@@ -251,7 +251,40 @@ def rule_asset_refs_resolve(root, r):
                         f"cites {ref}, which has no row in firm_assets.md")
 
 
-RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_verify_not_shipped, rule_mandatory_met,
+def rule_section_budget(root, r):
+    """Draft sections must declare a page budget and stay inside it.
+
+    The page limit is the one format rule that changes what you write rather than how it looks,
+    and it is checkable while drafting instead of after rendering — which is when a breach is
+    expensive. At Arial 10, ~525 words fill one side of A4; a full-width figure costs ~half a page.
+    """
+    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    if not secs:
+        return
+    r.ran()
+    for p in secs:
+        body = p.read_text(encoding="utf-8", errors="replace")
+        fm = re.match(r"^---\n(.*?)\n---\n", body, re.S)
+        if not fm:
+            r.error("section-nofrontmatter", str(p.relative_to(root)),
+                    "draft section has no frontmatter — marks, page budget and req mapping are unrecorded")
+            continue
+        if "page_budget:" not in fm.group(1):
+            r.warn("section-nobudget", str(p.relative_to(root)),
+                   "no page_budget declared — the limit can't be tracked while drafting")
+        prose = re.sub(r"^---\n.*?\n---\n", "", body, flags=re.S)
+        prose = re.sub(r"^[>|].*$", "", prose, flags=re.M)          # our own notes + tables
+        words = len(prose.split())
+        figs = len(re.findall(r"^!\[", prose, re.M))
+        pages = words / 525 + figs * 0.5
+        m = re.search(r"(\d+)\s*A4", fm.group(1))
+        if m and pages > int(m.group(1)):
+            r.error("section-overlength", str(p.relative_to(root)),
+                    f"~{pages:.1f} A4 estimated against a stated limit of {m.group(1)} — "
+                    "format non-compliance is a common auto-reject")
+
+
+RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_budget, rule_verify_not_shipped, rule_mandatory_met,
          rule_citations_resolve, rule_findings_conform, rule_live_index_resolves,
          rule_spine_filled, rule_images_triaged, rule_manifest_complete,
          rule_pointer_table_resolves]
