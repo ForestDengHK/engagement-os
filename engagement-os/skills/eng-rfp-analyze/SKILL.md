@@ -11,7 +11,10 @@ Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/rfp-analysis.md`.
 
 ## Prerequisite
 The RFP pack is ingested to markdown first (`eng-ingest-source` → `01_pursuit/<ENG-ID>/1_received/_md/`)
-so every requirement can be cited by clause/page. Work in `01_pursuit/<ENG-ID>/2_analysis/`, which holds four artefacts, not two:
+so every requirement can be cited by clause/page.
+**If missing:** no `_md/` pack → run `eng-ingest-source` first (no pursuit tree at all →
+`eng-scaffold`, or just run `/eng-rfp`, which chains both). Analysing from the raw PDF is how
+clause citations get invented. Work in `01_pursuit/<ENG-ID>/2_analysis/`, which holds four artefacts, not two:
 `rfp_analysis.md` (this skill's output) · `compliance_matrix.md` (the completeness spine) ·
 `clarification_log.md` (questions to the buyer + our settled readings, **query deadline is
 earlier than submission**) · `bid_reuse_analysis.md` (what carries over from a prior bid — check

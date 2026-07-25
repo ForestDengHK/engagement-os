@@ -29,20 +29,26 @@ section number. Not one document — separate files, because each section is sco
 reviewed separately, and revised on its own clock. A single growing document hides which parts
 are finished and forces every review to re-read everything.
 
-Each file opens with frontmatter carrying what the section is accountable for:
+Each file opens with frontmatter carrying what the section is accountable for (illustrative
+values — the real ones come from THIS tender's RFT, never from an example):
 
 ```yaml
-section: "5.1.3 Q1 — Key Deliverables"
-rft_clause: "§Section 60"
-marks: 180
-pass_mark: 90
-scoring: "each deliverable assessed individually, out of 30"
-answers_reqs: [R-013]
-page_budget: "shared 5 A4 across 5.1.3 Q1-Q3, Arial 10"
+section: "3.2 Q1 — Example Section"
+rft_clause: "§Section 12"
+marks: 40
+pass_mark: 20
+scoring: "each item assessed individually, out of 10"
+answers_reqs: [R-007]
+page_budget: "3 A4 shared across 3.2 Q1-Q2, Arial 10"
 figures: [F-01]
-evidence: [A-001, A-002]
+evidence: [A-004]
 status: draft
 ```
+
+The fields, the status vocabulary, the scaffolding markers and the figure rule are defined ONCE
+in `references/section-contract.md` — the template plants them, `eng_lint.py` enforces them,
+`eng-render` gates and strips by them. `answers_reqs`, `evidence` and `figures` are
+cross-checked against their registers; an id naming nothing is an error.
 
 `scoring` earns its place: a section marked **per item** must satisfy the criteria per item — six
 deliverables scored out of 30 each means six self-contained answers, and a flowing narrative that
@@ -69,7 +75,7 @@ paragraphs that do it worse.
 **Use the `designing-figures` skill.** Do not hand-draw. Its first rule is the one that matters:
 pick the archetype from the message before drawing anything. Hand-rolling this for real produced
 the anti-pattern the skill names explicitly — a flat row of boxes — when the message ("six
-deliverables, each scored individually, together covering the buyer's own eleven limitations")
+deliverables, each scored individually, together covering the limitations the buyer itself listed")
 called for a **coverage grid**. Swapping the archetype changed what the figure proved; that is the
 test for having picked the right one.
 
@@ -85,54 +91,12 @@ A flattened image is not enough: review rounds produce figure corrections, and a
 cannot edit sends the change back as prose instead. Generate the PPTX from the same HTML, so the
 three never diverge.
 
-```bash
-cd 3_drafting/figures && (python3 -m http.server 4321 &) ; sleep 1
-CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-"$CH" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
-  --window-size=1920,1080 --default-background-color=FFFFFFFF \
-  --screenshot=F-01.png "http://localhost:4321/F-01.html"
-node ~/.claude/skills/baoyu-design/agents/gen-pptx/dist/cli.mjs \
-  --url "http://localhost:4321/F-01.html" --config cfg.json --out .
-pkill -f "http.server 4321"
-```
-
-### What breaks the editable export
-
-- **No CSS pseudo-elements or masked icons.** `::before` / `::after` and `mask`-recoloured icons
-  do not convert. Draw dots, bullets and markers as **real elements** (`<i class="dot">`) —
-  otherwise they vanish from the PPTX while looking fine in the PNG.
-- **Text that fits in HTML can clip in the export.** PowerPoint's text metrics differ, so a label
-  sized to its box in the browser loses its last characters as a shape. Found for real:
-  "CARRIES THE DECISION" arrived as "CARRIES THE DECISIO".
-- CSS gradients become a picture, not a shape. Fine for a brand bar; don't rely on one for content.
-
-### What breaks the PNG
-
-- **Never pin the footer with `margin-top:auto`.** On a fixed 1080px canvas the surrounding column
-  flex collapses that row to a few pixels: the legend and the source line disappear from the render
-  while the page looks correct in a browser tab. Pin the footer with `position:absolute` and an
-  explicit `top`, inside a `position:relative` wrapper. Cost the first time this was hit: three
-  figures shipped a render with no source line, and a long detour chasing a phantom cache bug.
-- **`timeout` is not on macOS.** A render wrapped in it never runs, and the *previous* PNG is still
-  on disk — so the verification passes against a stale image. If a re-render produces a
-  byte-identical file after a real CSS change, suspect the harness before the browser.
-
-### Verify both outputs, every time
-
-Look at the PNG **and** round-trip the PPTX back to an image before moving on:
-
-```bash
-soffice --headless --convert-to pdf F-01.pptx --outdir /tmp/v && pdftoppm -png -r 100 /tmp/v/F-01.pdf /tmp/v/rt
-```
-
-Then confirm it is genuinely editable rather than a flattened page:
-
-```bash
-python3 -c "from pptx import Presentation; s=Presentation('F-01.pptx').slides[0]; \
-print(len(s.shapes),'shapes;',sum(1 for x in s.shapes if x.has_text_frame and x.text_frame.text.strip()),'with text')"
-```
-A one-slide export with 1-2 shapes is a screenshot in a wrapper. The figure above came out as 174
-native shapes, 44 of them carrying editable text.
+**The mechanics — canvas conventions, the headless-Chrome render, the editable export, and the
+verification of both outputs — live in `designing-figures/references/render-pipeline.md`. Do not
+copy them here; that document owns them, including the traps this pack hit the hard way
+(pseudo-elements vanishing from the export, text clipping on PowerPoint metrics, the collapsed
+footer, the stale-PNG trap). The pack-specific policy is only what is above: three artefacts,
+one HTML source, figure ids from the contract.**
 
 ## Review rounds, not a review
 
@@ -165,20 +129,12 @@ independently invokable step — it works on any directory of markdown and knows
 tenders except what the profile tells it. Don't concatenate by hand: the strip is fiddly and the
 failure is invisible (internal scaffolding reaching an evaluator).
 
-It orders the sections, **strips what is internal** — the scoring notes (`>` blocks), the
-traceability line, the review log — delegates conversion to pandoc and soffice, then prints each
-section's word count beside its page budget and the delivered page count.
-
-Under `--profile bid` it **refuses to build** on three conditions, each of which was a real
-defect first:
-
-| Refusal | Why it exists |
-|---|---|
-| a referenced figure PNG is missing | pandoc degrades a missing image to its alt text, so the document builds and the figure is simply gone — found on two sections at once |
-| a section has not reached R2 | a `revise-r1` verdict means an unfixed finding; assembling hides that the response is not ready |
-| `[⚠VERIFY]` survives in body text | it is an open question wearing the clothes of an answer, and it is body prose, so stripping it would ship the unsupported claim silently |
-
-`--force` overrides the last two for a working draft. Nothing overrides the first.
+What it strips, what it refuses to build on, and how typography is enforced are owned by
+`eng-render`'s SKILL.md and the section contract — not restated here, because a copied policy
+rots. The one thing worth knowing at this desk: every refusal exists because it was a real
+defect first (a figure silently degraded to alt text; an unfixed R1 verdict reaching the
+evaluator; an open `[⚠VERIFY]` shipped as a claim), and `--force` exists for working drafts,
+never for submissions.
 
 Re-check the page count **after** rendering — a word-count estimate is an estimate, and the limit
 is measured in pages of the delivered file.

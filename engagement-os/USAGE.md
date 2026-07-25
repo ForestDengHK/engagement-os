@@ -75,6 +75,11 @@ acme-27-010/
 
 ## Scenario 2 — Pursuit only (bid a tender)
 
+> **Variant:** default is a full open RFP. For a **framework mini-competition**, scaffold with
+> `--variant mini-comp` — the route is planted into `rfp_analysis.md` and the pursuit loop
+> adjusts (go/no-go shrinks to capacity + conflict, call-off terms pre-agreed, possibly no
+> clarification window). Tested as scenario 7 in `verify_scenarios.py`.
+
 ```
 ▸ You type
     /eng-new   ACME, tender 27-010, "DWH Strategic Assessment", bid only
@@ -83,7 +88,7 @@ acme-27-010/
     [asks]  fills project-context.md
 
 ▸ You type
-    /eng-rfp   ~/Downloads/26-002-tender/
+    /eng-rfp   ~/Downloads/27-010-tender/
 
     [auto]  ingests the whole tender pack → 01_pursuit/27-010/1_received/_md/
             (anchored, so every requirement cites by clause/page)
@@ -161,7 +166,7 @@ Note there is **no `engagement/` bucket** — a bid has no post-award material y
 ```
 ▸ You type
     /eng-new   ACME, 27-010, "DWH Strategic Assessment", bid and delivery
-    /eng-rfp   ~/Downloads/26-002-tender/
+    /eng-rfp   ~/Downloads/27-010-tender/
     ──────────── you win ────────────
     /eng-source     ~/client-docs/
     /eng-workshop   week_1/session_2

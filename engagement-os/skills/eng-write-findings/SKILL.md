@@ -42,10 +42,12 @@ map the finding `#provisional` and flag it in "Gaps still owed" — never skip t
 `[T3:REF]`/`[T3:OWN]`), or a **query** (result file, tag `[T1:SYS]`). A finding from a PDF is as
 valid as one from a workshop — it just cites the source-md, not a transcript.
 
-**Step 4 — tag every factual claim:** `[Observed]` (verified directly, assertive language) ·
-`[Reported]` (a person said it — attribute speaker + session + line; corroborate before treating
-as established) · `[Assumed]` (our inference — hedged, `⚐` marker) · `[RFP]` (from the brief).
-Quantify (counts / % / dates / object names).
+**Step 4 — tag every factual claim** with the closed evidence-tag set and precedence tags —
+defined ONCE in the project's planted `_FINDING_STANDARD.md` (source:
+`references/finding-standard.md`). Don't re-enumerate the set here; apply it. Assertive
+language only for directly-verified claims; anything reported is attributed
+(speaker + session + line); anything inferred is hedged. Quantify (counts / % / dates /
+object names).
 
 **Step 5 — two axes, never collapsed.** Severity = intrinsic badness (Likelihood × Impact) on
 evidence alone, set first. Priority = engagement relevance, set after. A Critical item can be Low

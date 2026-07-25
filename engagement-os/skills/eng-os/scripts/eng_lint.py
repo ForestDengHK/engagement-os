@@ -8,10 +8,15 @@ and they don't get less reliable on a smaller model.
 Judgment-bearing rules (did we miss a requirement? is this claim defensible? is the backbone the
 right backbone?) are NOT here and can't be — those stay with a reviewer.
 
+The section-file contract (status vocabulary, frontmatter fields, id syntax) lives in
+references/section-contract.md with its machine form in section_contract.py — imported,
+never re-declared here.
+
 Usage:
-    python3 eng_lint.py [repo-root] [--strict]
+    python3 eng_lint.py [repo-root] [--strict] [--list]
 
     --strict   treat warnings as failures too (use before shipping)
+    --list     print the rule registry and exit (docs point here instead of enumerating)
 
 Exit: 0 clean · 1 errors found · 2 repo doesn't look like an engagement repo
 """
@@ -20,6 +25,9 @@ import os
 import pathlib
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import section_contract as sc
 
 EVIDENCE_TAGS = {"[Observed]", "[Reported]", "[Assumed]", "[RFP]"}
 TEXT_EXT = {".md", ".txt"}
@@ -46,77 +54,177 @@ def text_files(root, *rel):
     return [p for p in base.rglob("*") if p.is_file() and p.suffix in TEXT_EXT]
 
 
+# ── shared helpers ─────────────────────────────────────────────────────────────
+
+def resolve_in_repo(root, ref):
+    """Does `ref` resolve to a real file? Root-relative first, then basename search.
+
+    `archived/` and `.git/` are excluded: a reference that resolves ONLY into the
+    archive points at a superseded file — the last thing a citation should hit.
+    """
+    if (root / ref).exists():
+        return True
+    name = os.path.basename(ref)
+    for p in root.rglob(name):
+        parts = set(p.relative_to(root).parts)
+        if "archived" not in parts and ".git" not in parts:
+            return True
+    return False
+
+
+def frozen_finals(root):
+    """4_final directories that hold at least one real file (dotfiles don't count —
+    a Finder .DS_Store must not flip a directory to 'frozen')."""
+    out = []
+    for d in root.rglob("4_final"):
+        if d.is_dir() and any(f.is_file() and not f.name.startswith(".")
+                              for f in d.rglob("*")):
+            out.append(d)
+    return out
+
+
+def matrix_paths(root):
+    return sorted(root.glob("01_pursuit/*/2_analysis/compliance_matrix.md"))
+
+
+def matrix_req_ids(root):
+    """Every R-nnn id present in any compliance matrix (None if there is no matrix)."""
+    mats = matrix_paths(root)
+    if not mats:
+        return None
+    ids = set()
+    for m in mats:
+        ids |= set(sc.REQ_ID_RE.findall(m.read_text(encoding="utf-8", errors="replace")))
+    return ids
+
+
+def firm_asset_ids(root):
+    """Ids the firm-assets index actually holds (None if there is no index).
+
+    The gaps section lists what we do NOT hold — ids harvested from the whole file
+    counted a known-gap as held, so a matrix could cite the very asset we lack.
+    """
+    idx = root / "01_pursuit/_shared/firm_assets.md"
+    if not idx.exists():
+        return None
+    text = idx.read_text(encoding="utf-8", errors="replace")
+    parts = re.split(r"^#{1,3}\s+.*gap.*$", text, flags=re.M | re.I)
+    return set(sc.ASSET_ID_RE.findall(parts[0]))
+
+
+def matrix_table(root, m):
+    """Parse a compliance matrix into (header-index map, [(lineno, cells)] real rows).
+
+    Columns are located BY HEADER NAME, never by position — a reordered or extended
+    matrix must not silently shift what 'status' means. A row is a template row when
+    its id cell holds a placeholder (<...> or R-0xx); a literal '<' anywhere else in
+    a real row ('limit < 10 pages') must not exempt the row.
+    """
+    lines = m.read_text(encoding="utf-8", errors="replace").splitlines()
+    header, hmap, rows = None, {}, []
+    for i, line in enumerate(lines, 1):
+        raw = [c.strip() for c in line.split("|")]
+        if header is None:
+            lowered = [c.lower() for c in raw]
+            if any("mandatory" in c or c in ("m / d", "m/d") for c in lowered) and \
+               any("status" in c for c in lowered):
+                header = i
+                for n, c in enumerate(raw):
+                    cl = c.lower()
+                    if "mandatory" in cl or cl in ("m / d", "m/d"):
+                        hmap["mandatory"] = n
+                    elif "status" in cl:
+                        hmap["status"] = n
+                    elif re.fullmatch(r"(?:#|id|req(?:uirement)?\s*id?|ref)", cl):
+                        hmap.setdefault("id", n)
+                hmap.setdefault("id", 1)   # RFP matrices conventionally lead with the id
+            continue
+        if not sc.REQ_ID_RE.search(line):
+            continue
+        idcell = raw[hmap["id"]] if hmap["id"] < len(raw) else ""
+        if "<" in idcell or re.fullmatch(r"R-0+x+", idcell.strip("`")):
+            continue                                # planted template row
+        rows.append((i, raw))
+    return hmap, rows
+
+
 # ── rules ────────────────────────────────────────────────────────────────────────
 
-#: A leak cites a FILE inside the bucket; a guardrail only names the bucket. Requiring a path
-#: segment after `engagement/` separates them, which matters because the pack's own reuse-analysis
-#: template ends with "Nothing in `_sources/engagement/` is [reusable]" — a prohibition that the
-#: naive substring check reported as the very violation it warns against.
-LEAK_RE = re.compile(r"_sources/engagement/\S*[\w.-]")
+#: A leak cites a FILE inside the bucket; a guardrail only names the bucket. Requiring a
+#: content directory + path segment after `engagement/` separates them, which matters because
+#: the pack's own reuse-analysis template ends with "Nothing in `_sources/engagement/` is
+#: [reusable]" — a prohibition the naive substring check reported as the very violation it
+#: warns against. The `_sources/` prefix is optional: a relative `engagement/_md/…` mention
+#: in a bid document is the same leak.
+LEAK_RE = re.compile(r"(?:_sources/)?engagement/(?:_md|_raw|raw)/\S*[\w.-]")
 
 
 def rule_bucket_leak(root, r):
-    """engagement/ material must never be cited from a bid. The most expensive failure here."""
+    """engagement/ material must never be cited from a bid or pre-award research."""
     r.ran()
-    for p in text_files(root, "01_pursuit"):
-        for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            if LEAK_RE.search(line):
-                r.error("bucket-leak", f"{p.relative_to(root)}:{i}",
-                        "bid document cites engagement-bound material — "
-                        "source it independently or drop the claim")
+    for rel in ("01_pursuit", "00_research"):
+        for p in text_files(root, rel):
+            for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                if LEAK_RE.search(line):
+                    r.error("bucket-leak", f"{p.relative_to(root)}:{i}",
+                            "bid-side document cites engagement-bound material — "
+                            "source it independently or drop the claim")
 
 
 def rule_verify_not_shipped(root, r):
     """[⚠VERIFY] must not survive into a frozen/submitted or live-issued artefact."""
     r.ran()
-    for rel in ("01_pursuit", "00_research/2_output"):
-        for p in text_files(root, rel):
-            if rel == "01_pursuit" and "4_final" not in str(p):
-                continue
-            for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-                if "⚠VERIFY" in line:
-                    r.error("verify-shipped", f"{p.relative_to(root)}:{i}",
-                            "unverified claim in a shipped artefact — close it or cut it")
+    targets = [p for d in frozen_finals(root) for p in text_files(d)]
+    targets += text_files(root, "00_research/2_output")
+    for p in targets:
+        for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if "⚠VERIFY" in line:
+                r.error("verify-shipped", f"{p.relative_to(root)}:{i}",
+                        "unverified claim in a shipped artefact — close it or cut it")
 
 
 def rule_mandatory_met(root, r):
     """Every Mandatory compliance-matrix row must reach `met` before a response is frozen."""
-    matrices = list(root.glob("01_pursuit/*/2_analysis/compliance_matrix.md"))
-    if not matrices:
+    mats = matrix_paths(root)
+    if not mats:
         return
     r.ran()
-    for m in matrices:
-        frozen = list((m.parent.parent / "4_final").glob("*")) if (m.parent.parent / "4_final").exists() else []
-        frozen = [f for f in frozen if f.name != ".gitkeep"]
-        for i, line in enumerate(m.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            cells = [c.strip() for c in line.split("|")]
-            if len(cells) < 10 or not cells[1].startswith("R-"):
-                continue
-            if any("<" in c for c in cells) or cells[4] == "M / D":
-                continue          # still the planted template row, not a real requirement
-            mandatory, status = cells[4], cells[9]
+    for m in mats:
+        frozen = bool(frozen_finals(m.parent.parent))
+        hmap, rows = matrix_table(root, m)
+        if not rows:
+            # not-started is normal early (a fresh scaffold plants only the template
+            # row) — but a frozen response over an empty matrix is a vacuous pass
+            (r.error if frozen else r.warn)(
+                "matrix-empty", str(m.relative_to(root)),
+                "no real requirement rows — an empty matrix passes every check vacuously"
+                + (" — and a response is already frozen" if frozen else ""))
+            continue
+        mi, si = hmap.get("mandatory", 4), hmap.get("status", 9)
+        for i, cells in rows:
+            mandatory = cells[mi] if mi < len(cells) else ""
+            status = cells[si] if si < len(cells) else ""
+            req = sc.REQ_ID_RE.search("|".join(cells))
             if mandatory.upper().startswith("M") and status.lower() != "met":
                 where = f"{m.relative_to(root)}:{i}"
-                msg = f"mandatory requirement {cells[1]} is '{status}', not 'met'"
+                msg = f"mandatory requirement {req.group(0) if req else '?'} is '{status}', not 'met'"
                 (r.error if frozen else r.warn)("mandatory-open", where,
                                                 msg + (" — and a response is already frozen" if frozen else ""))
 
 
 def rule_citations_resolve(root, r):
-    """Every `file.md §Page N` citation must point at a file that exists."""
+    """Every `file.md §Page N` citation must point at a file that exists — outside the archive."""
     r.ran()
     pat = re.compile(r"`?([\w./-]+\.md)\s*§\s*(?:Page|Slide|Section|Sheet)\s*\S*")
     for rel in ("00_research", "02_delivery", "01_pursuit"):
         for p in text_files(root, rel):
-            body = p.read_text(encoding="utf-8", errors="replace")
-            for i, line in enumerate(body.splitlines(), 1):
+            for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
                 for cited in pat.findall(line):
-                    name = os.path.basename(cited)
-                    if name.startswith("<") or "<" in cited:
+                    if "<" in cited:
                         continue          # template placeholder
-                    if not any(root.rglob(name)):
+                    if not resolve_in_repo(root, cited):
                         r.warn("dangling-citation", f"{p.relative_to(root)}:{i}",
-                               f"cites '{cited}' — no such file in the repo")
+                               f"cites '{cited}' — no such live file (archive doesn't count)")
 
 
 def rule_findings_conform(root, r):
@@ -125,47 +233,67 @@ def rule_findings_conform(root, r):
     if not fdir.exists():
         return
     r.ran()
-    for p in fdir.rglob("*.md"):
-        if p.name.startswith("_") or p.name == "README.md":
-            continue
+    tag_re = re.compile(r"\[(Observed|Reported|Assumed|RFP)\]")
+    findings = [p for p in fdir.rglob("*.md")
+                if not p.name.startswith("_") and p.name != "README.md"]
+    if not findings:
+        r.warn("findings-empty", str(fdir.relative_to(root)),
+               "no findings yet — the directory passing vacuously is not the same as conforming")
+    dset = None
+    dreg = root / "02_delivery/DELIVERABLES.md"
+    if dreg.exists():
+        dset = set(re.findall(r"\bD\d+\b", dreg.read_text(encoding="utf-8", errors="replace")))
+    for p in findings:
         body = p.read_text(encoding="utf-8", errors="replace")
-        if not any(t in body for t in EVIDENCE_TAGS):
+        # strip code spans first: quoting the standard's own tag list must not count as tagging
+        prose = re.sub(r"`[^`]*`", "", body)
+        if not tag_re.search(prose):
             r.error("finding-untagged", str(p.relative_to(root)),
                     f"no evidence tag — expected one of {' '.join(sorted(EVIDENCE_TAGS))}")
-        if not re.search(r"^\s*(\*\*)?(Backbone|Maps to|Feeds)(\*\*)?\s*:", body, re.M | re.I):
+        feeds = re.search(r"^\s*(?:\*\*)?(?:Backbone|Maps to|Feeds)(?:\*\*)?\s*:(.*)$",
+                          body, re.M | re.I)
+        if not feeds:
             r.error("finding-unmapped", str(p.relative_to(root)),
                     "no Backbone:/Maps to:/Feeds: line — every finding maps to the backbone")
+        elif dset is not None:
+            for d in set(re.findall(r"\bD\d+\b", feeds.group(1))) - dset:
+                r.warn("finding-feeds-unknown", str(p.relative_to(root)),
+                       f"feeds {d}, which is not in the DELIVERABLES.md register")
 
 
 def rule_live_index_resolves(root, r):
-    """A live-file index must point at files that exist."""
-    for idx, pat in ((root / "02_delivery/DELIVERABLES.md", r"`([^`]+\.(?:pptx|xlsx|docx|pdf|md))`"),
-                     (root / "00_research/README.md", r"`([^`]+\.(?:pptx|xlsx|docx|pdf|md))`")):
+    """A live-file index must exist when its phase does, and must point at live files."""
+    for idx in (root / "02_delivery/DELIVERABLES.md", root / "00_research/README.md"):
         if not idx.exists():
+            if idx.parent.exists():
+                r.warn("live-index-missing", str(idx.relative_to(root)),
+                       "the phase directory exists but its live-file index does not — "
+                       "nobody can tell which file is current")
             continue
         r.ran()
         for i, line in enumerate(idx.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            for ref in re.findall(pat, line):
-                if "<" in ref or ref.endswith("…") or "…" in ref:
+            for ref in re.findall(r"`([^`]+\.(?:pptx|xlsx|docx|pdf|md))`", line):
+                if "<" in ref or "…" in ref:
                     continue          # template placeholder
-                if not (root / ref).exists() and not any(root.rglob(os.path.basename(ref))):
+                if not resolve_in_repo(root, ref):
                     r.warn("dangling-live-file", f"{idx.relative_to(root)}:{i}",
-                           f"index points at '{ref}' which doesn't exist")
+                           f"index points at '{ref}' which doesn't exist (archive doesn't count)")
 
 
 def rule_spine_filled(root, r):
     """The spine must be real, not the planted placeholder — everything downstream depends on it."""
     checks = [
-        (root / "02_delivery/1_discovery/3_findings/README.md", "<label>", "findings backbone"),
-        (root / "00_research/README.md", "<the question, answerable and bounded>", "research question list"),
+        (root / "02_delivery/1_discovery/3_findings/README.md", "findings backbone"),
+        (root / "00_research/README.md", "research question list"),
     ]
-    for f, placeholder, label in checks:
+    for f, label in checks:
         if not f.exists():
             continue
         r.ran()
-        if placeholder in f.read_text(encoding="utf-8", errors="replace"):
+        leftover = re.search(r"<[a-z][^>\n]{2,}>", f.read_text(encoding="utf-8", errors="replace"))
+        if leftover:
             r.warn("spine-unfilled", str(f.relative_to(root)),
-                   f"{label} is still the planted placeholder — "
+                   f"{label} still holds a placeholder ({leftover.group(0)[:40]}…) — "
                    "sourced facts have nothing to map onto")
 
 
@@ -176,13 +304,14 @@ def rule_images_triaged(root, r):
     pack noticed that none of them had been triaged. This is the silent-decay case — the
     conversion "succeeded", so the gap never surfaces on its own.
     """
+    tag = re.compile(r"^\s*-\s*`?\[uncertain\]`?", re.I)
     for pack in root.glob("_sources/*/_md"):
         r.ran()
         for p in pack.rglob("*.md"):
             if p.parent == pack:          # pack-root trio: the README *documents* the convention
                 continue
             n = sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
-                    if line.lstrip().startswith("- `[uncertain]`"))
+                    if tag.match(line))
             if n:
                 r.warn("images-untriaged", str(p.relative_to(root)),
                        f"{n} extracted image(s) still `[uncertain]` — OCR them inline and retag "
@@ -192,23 +321,34 @@ def rule_images_triaged(root, r):
 def rule_manifest_complete(root, r):
     """Every converted MD needs a manifest row, and every manifest row a file.
 
-    The manifest is hand-maintained, so a missed row is invisible: the MD is searchable but
-    nothing records where it came from, which is the one thing the manifest exists to hold.
+    The manifest is hand-maintained, so drift is invisible in BOTH directions: a missed row
+    leaves a MD with no provenance, and a stale row points at a file that was renamed away.
+    And a pack whose README is missing entirely must fail — 'no manifest' is the accident
+    this rule exists to catch, not an exemption from it.
     """
     for pack in root.glob("_sources/*/_md"):
+        content = [p for p in pack.rglob("*.md") if p.parent != pack]
         readme = pack / "README.md"
         if not readme.exists():
+            if content:
+                r.error("manifest-absent", str(pack.relative_to(root)),
+                        f"{len(content)} converted MD(s) and no README.md manifest — "
+                        "their provenance isn't recorded anywhere")
             continue
         r.ran()
-        listed = set(re.findall(r"`([\w./-]+\.md)`", readme.read_text(encoding="utf-8", errors="replace")))
-        listed = {os.path.basename(x) for x in listed}
-        for p in pack.rglob("*.md"):
-            if p.parent == pack:          # the trio at the pack root isn't manifest content
-                continue
+        listed = {os.path.basename(x) for x in re.findall(
+            r"`([\w./-]+\.md)`", readme.read_text(encoding="utf-8", errors="replace"))}
+        present = {p.name for p in content}
+        for p in content:
             if p.name not in listed:
                 r.error("manifest-missing", str(p.relative_to(root)),
                         f"converted MD has no row in {readme.relative_to(root)} — "
                         "its provenance isn't recorded anywhere")
+        for name in sorted(listed - present - {"README.md"}):
+            if not (pack / name).exists():
+                r.warn("manifest-stale-row", str(readme.relative_to(root)),
+                       f"manifest row names '{name}', which no longer exists under the pack — "
+                       "renamed or deleted without updating the manifest")
 
 
 def rule_pointer_table_resolves(root, r):
@@ -218,18 +358,21 @@ def rule_pointer_table_resolves(root, r):
     CLAUDE.md, so the rows for the new block are added by the agent — and a row naming a
     path that was never created sends every later lookup somewhere empty.
     """
-    f = root / "CLAUDE.md"
-    if not f.exists():
-        return
-    r.ran()
-    for i, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-        if not line.startswith("| ") or "`" not in line:
+    for name in ("CLAUDE.md", "AGENTS.md"):
+        f = root / name
+        if not f.exists():
             continue
-        for ref in re.findall(r"`([\w./_-]+\.md)`", line):
-            if not (root / ref).exists():
-                r.error("pointer-dangling", f"CLAUDE.md:{i}",
-                        f"pointer table names '{ref}', which doesn't exist — "
-                        "a block was probably added without topping up the table")
+        r.ran()
+        for i, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if not line.startswith("| ") or "`" not in line:
+                continue
+            for ref in re.findall(r"`([\w./_-]+\.(?:md|pptx|xlsx|docx|pdf))`", line):
+                if "<" in ref:
+                    continue
+                if not (root / ref).exists():
+                    r.error("pointer-dangling", f"{name}:{i}",
+                            f"pointer table names '{ref}', which doesn't exist — "
+                            "a block was probably added without topping up the table")
 
 
 def rule_asset_refs_resolve(root, r):
@@ -237,18 +380,73 @@ def rule_asset_refs_resolve(root, r):
 
     The Evidence column is where a bid quietly goes wrong: "case studies" reads as evidence but
     names nothing, and an id pointing at a row that was never written is worse — it looks checked.
+    A matrix that cites assets while the index itself is missing is an error, not an exemption.
     """
-    idx = root / "01_pursuit/_shared/firm_assets.md"
-    matrices = list(root.glob("01_pursuit/*/2_analysis/compliance_matrix.md"))
-    if not idx.exists() or not matrices:
+    mats = matrix_paths(root)
+    known = firm_asset_ids(root)
+    if not mats:
         return
     r.ran()
-    known = set(re.findall(r"\bA-\d{3}\b", idx.read_text(encoding="utf-8", errors="replace")))
-    for m in matrices:
+    if known is None:
+        for m in mats:
+            if sc.ASSET_ID_RE.search(m.read_text(encoding="utf-8", errors="replace")):
+                r.error("asset-index-missing", str(m.relative_to(root)),
+                        "cites A-nnn assets but 01_pursuit/_shared/firm_assets.md does not exist")
+        return
+    for m in mats:
         for i, line in enumerate(m.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-            for ref in set(re.findall(r"\bA-\d{3}\b", line)) - known:
+            for ref in set(sc.ASSET_ID_RE.findall(line)) - known:
                 r.error("asset-unknown", f"{m.relative_to(root)}:{i}",
                         f"cites {ref}, which has no row in firm_assets.md")
+
+
+def section_files(root):
+    base = root / "01_pursuit"
+    if not base.exists():
+        return []
+    return sorted(base.glob("*/3_drafting/sections/*.md"))
+
+
+def rule_section_frontmatter(root, r):
+    """The frontmatter's load-bearing fields must reconcile with their registers.
+
+    answers_reqs ↔ compliance matrix · evidence ↔ firm_assets.md · figures ↔ files on disk.
+    A field that names an id nothing else knows is worse than an empty field — it reads as
+    cross-checked. (Contract: references/section-contract.md.)
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    r.ran()
+    req_ids, asset_ids = matrix_req_ids(root), firm_asset_ids(root)
+    for p in secs:
+        meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        if not meta:
+            continue                        # rule_section_budget already reports missing frontmatter
+        where = str(p.relative_to(root))
+        if req_ids is not None:
+            for req in sorted(sc.fm_list(meta, "answers_reqs", sc.REQ_ID_RE) - req_ids):
+                r.error("section-req-unknown", where,
+                        f"answers_reqs names {req} — no such row in the compliance matrix")
+        if asset_ids is not None:
+            for a in sorted(sc.fm_list(meta, "evidence", sc.ASSET_ID_RE) - asset_ids):
+                r.error("section-asset-unknown", where,
+                        f"evidence names {a} — no such row in firm_assets.md")
+        declared = sc.fm_list(meta, "figures", sc.FIG_ID_RE)
+        fdir = p.parent.parent / "figures"
+        on_disk = {m.group(1) for f in (fdir.glob("F-*") if fdir.exists() else [])
+                   for m in [sc.FIG_FILE_RE.match(f.name)] if m}
+        in_body = {m.group(1) for ref in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", body)
+                   for m in [sc.FIG_FILE_RE.match(os.path.basename(ref))] if m}
+        for f in sorted(declared - on_disk):
+            r.error("section-figure-unknown", where,
+                    f"figures names {f} — no {f}_* file in {fdir.relative_to(root)}")
+        for f in sorted(declared - in_body):
+            r.warn("section-figure-unreferenced", where,
+                   f"figures declares {f} but the body never references it")
+        for f in sorted(in_body - declared):
+            r.warn("section-figure-undeclared", where,
+                   f"body references {f} but the frontmatter doesn't declare it")
 
 
 def rule_section_budget(root, r):
@@ -258,39 +456,35 @@ def rule_section_budget(root, r):
     and it is checkable while drafting instead of after rendering — which is when a breach is
     expensive. At Arial 10, ~525 words fill one side of A4; a full-width figure costs ~half a page.
     """
-    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    secs = section_files(root)
     if not secs:
         return
     r.ran()
     shared = {}
     for p in secs:
-        body = p.read_text(encoding="utf-8", errors="replace")
-        fm = re.match(r"^---\n(.*?)\n---\n", body, re.S)
-        if not fm:
+        meta, prose = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        if not meta:
             r.error("section-nofrontmatter", str(p.relative_to(root)),
                     "draft section has no frontmatter — marks, page budget and req mapping are unrecorded")
             continue
-        if "page_budget:" not in fm.group(1):
+        if "page_budget" not in meta:
             r.warn("section-nobudget", str(p.relative_to(root)),
                    "no page_budget declared — the limit can't be tracked while drafting")
-        prose = re.sub(r"^---\n.*?\n---\n", "", body, flags=re.S)
         prose = re.sub(r"^[>|].*$", "", prose, flags=re.M)          # our own notes + tables
         words = len(prose.split())
-        figs = len(re.findall(r"^!\[", prose, re.M))
+        figs = len(re.findall(r"^\s*!\[", prose, re.M))
         pages = words / 525 + figs * 0.5
-        # Read the page_budget VALUE, not the whole frontmatter: grouping on the full block gave
-        # every file its own group, so a shared budget was silently checked per-file after all.
-        bm = re.search(r"^page_budget:\s*[\"']?(.+?)[\"']?\s*$", fm.group(1), re.M)
-        budget = bm.group(1).strip() if bm else ""
+        budget = meta.get("page_budget", "")
         m = re.search(r"(\d+)\s*A4", budget)
         if not m:
             continue
         limit = int(m.group(1))
         if "shared" in budget.lower():
             # A shared budget spans several files, so per-file checking always passes while the
-            # group overruns — the exact confusion the RFT wording invites. Pool by the declared
-            # budget string and check the total once.
-            shared.setdefault(budget, []).append((p, pages))
+            # group overruns. Pool on the NORMALIZED budget string — pooling on the raw string
+            # let two spellings of the same pool each pass per-file (the original silent-pass,
+            # one level down).
+            shared.setdefault(sc.normalize_budget(budget), []).append((p, pages))
         elif pages > limit:
             r.error("section-overlength", str(p.relative_to(root)),
                     f"~{pages:.1f} A4 estimated against a stated limit of {limit} — "
@@ -298,7 +492,7 @@ def rule_section_budget(root, r):
 
     for budget, members in shared.items():
         total = sum(pg for _p, pg in members)
-        limit = int(re.search(r"(\d+)\s*A4", budget).group(1))
+        limit = int(re.search(r"(\d+)\s*a4", budget).group(1))
         if total > limit:
             r.error("section-overlength", ", ".join(str(f.name) for f, _ in members),
                     f"~{total:.1f} A4 across {len(members)} sections sharing a {limit}-page budget "
@@ -306,41 +500,62 @@ def rule_section_budget(root, r):
 
 
 def rule_review_status(root, r):
-    """A section's `status` must agree with its review log, and nothing unfinished may be frozen.
+    """A section's `status` must agree with its LATEST review verdict, and nothing unfinished
+    may be frozen.
 
-    Review rounds only work if their outcome is visible at a glance. A verdict buried in a table
-    while the frontmatter still says `draft` means the next person re-reads six files to learn
-    that one is blocked.
+    Review rounds only work if their outcome is visible at a glance. The verdict column is
+    located by header name (never position), and EVERY status is checked against the latest
+    round — checking only the two extremes let `reviewed-r1` survive a later R2 'blocked'.
     """
-    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    secs = section_files(root)
     if not secs:
         return
     r.ran()
-    OK = {"draft", "reviewed-r1", "reviewed-r2", "revise-r1", "revise-r2", "blocked-r1",
-          "blocked-r2", "approved"}
     for p in secs:
         body = p.read_text(encoding="utf-8", errors="replace")
+        where = str(p.relative_to(root))
         m = re.search(r"^status:\s*(\S+)", body, re.M)
-        if not m:
-            continue
-        st = m.group(1)
-        if st not in OK:
-            r.warn("status-unknown", str(p.relative_to(root)),
-                   f"status '{st}' is not one of {sorted(OK)}")
-        rounds = re.findall(r"^\|\s*R\d\s*\|.*?\|.*?\|\s*\*?\*?(\w[\w-]*)", body, re.M)
-        done = [v for v in rounds if v.lower() not in ("", "verdict")]
-        if st == "approved" and any(v.lower().startswith(("revise", "blocked")) for v in done):
-            r.error("status-contradicts-review", str(p.relative_to(root)),
-                    "marked approved while a review round recorded revise/blocked")
-        if st == "draft" and done:
-            r.warn("status-stale", str(p.relative_to(root)),
-                   f"review recorded a verdict ({done[0]}) but status is still 'draft'")
+        st = m.group(1) if m else None
+        if st and st not in sc.ALL_STATUSES:
+            r.warn("status-unknown", where,
+                   f"status '{st}' is not one of {sorted(sc.ALL_STATUSES)}")
 
-    frozen = [f for f in (root / "01_pursuit").glob("*/4_final/*") if f.name != ".gitkeep"]
-    if frozen:
-        unfinished = [str(p.name) for p in secs
-                      if (re.search(r"^status:\s*(\S+)", p.read_text(encoding="utf-8", errors="replace"), re.M)
-                          or [None]) and not re.search(r"^status:\s*approved", p.read_text(encoding="utf-8", errors="replace"), re.M)]
+        # latest verdict from the review-log table, verdict column located by header
+        verdicts = []   # (round, verdict)
+        lines = body.splitlines()
+        vcol = None
+        for line in lines:
+            cells = [c.strip() for c in line.split("|")]
+            if vcol is None:
+                lowered = [c.lower().strip("*") for c in cells]
+                if "verdict" in lowered:
+                    vcol = lowered.index("verdict")
+                continue
+            if len(cells) > vcol and re.fullmatch(r"R\d+", cells[1] if len(cells) > 1 else ""):
+                v = cells[vcol].strip("*").lower()
+                if v in sc.VERDICT_STATUS:
+                    verdicts.append((cells[1], v))
+        if st and verdicts:
+            latest_round, latest = verdicts[-1]
+            if st == "draft":
+                r.warn("status-stale", where,
+                       f"{latest_round} recorded '{latest}' but status is still 'draft'")
+            elif st not in sc.VERDICT_STATUS[latest]:
+                kind = (r.error if latest in ("revise", "blocked") and st == "approved"
+                        else r.warn)
+                kind("status-contradicts-review", where,
+                     f"status '{st}' does not match the latest verdict "
+                     f"({latest_round}: '{latest}')")
+        elif st == "approved" and not verdicts:
+            r.warn("status-unreviewed", where, "approved with no review-log verdicts")
+
+    if frozen_finals(root / "01_pursuit"):
+        unfinished = []
+        for p in secs:
+            m = re.search(r"^status:\s*approved\s*$",
+                          p.read_text(encoding="utf-8", errors="replace"), re.M)
+            if not m:       # no status line at all = never entered review = unfinished
+                unfinished.append(str(p.name))
         if unfinished:
             r.error("frozen-unapproved", "01_pursuit/*/4_final/",
                     f"a response is frozen while {len(unfinished)} section(s) are not approved: "
@@ -355,15 +570,15 @@ def rule_figures_exist(root, r):
     Pandoc degrades a missing image to its alt text, so the document renders and the figure is
     simply gone — the failure is silent in exactly the place it costs most.
     """
-    secs = sorted((root / "01_pursuit").glob("*/3_drafting/sections/*.md")) if (root / "01_pursuit").exists() else []
+    secs = section_files(root)
     if not secs:
         return
     r.ran()
     for p in secs:
         for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             for ref in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", line):
-                if "<" in ref:
-                    continue                      # template placeholder
+                if "<" in ref or ref.startswith(("http://", "https://")):
+                    continue                      # template placeholder / external
                 target = (p.parent / ref).resolve()
                 if not target.exists():
                     r.error("figure-missing", f"{p.relative_to(root)}:{i}",
@@ -377,11 +592,11 @@ def rule_figures_exist(root, r):
                                "edit sends the correction back as prose")
 
 
-RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_budget, rule_review_status,
-         rule_figures_exist, rule_verify_not_shipped, rule_mandatory_met,
-         rule_citations_resolve, rule_findings_conform, rule_live_index_resolves,
-         rule_spine_filled, rule_images_triaged, rule_manifest_complete,
-         rule_pointer_table_resolves]
+RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
+         rule_section_budget, rule_review_status, rule_figures_exist,
+         rule_verify_not_shipped, rule_mandatory_met, rule_citations_resolve,
+         rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
+         rule_images_triaged, rule_manifest_complete, rule_pointer_table_resolves]
 
 
 def main():
@@ -389,7 +604,14 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("root", nargs="?", default=".", help="engagement repo root (default: cwd)")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
+    ap.add_argument("--list", action="store_true", help="print the rule registry and exit")
     args = ap.parse_args()
+
+    if args.list:
+        for rule in RULES:
+            first = (rule.__doc__ or "").strip().splitlines()[0]
+            print(f"  {rule.__name__}\t{first}")
+        return 0
 
     root = pathlib.Path(args.root).resolve()
     if not (root / "_sources").exists() and not (root / "CLAUDE.md").exists():

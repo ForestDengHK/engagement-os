@@ -15,6 +15,10 @@ Research is scoped by the **materials-needed list** and every `gap` in `complian
 high-weight win-themes. Each task names the Req ID / theme it serves. Log findings in
 `2_analysis/bid_research_log.md` (template in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`).
 
+**If missing:** no compliance matrix / materials-needed list → run `eng-rfp-analyze` first.
+Without the gap list there is no scope to research against; an unscoped "general pass" produces
+plausible-looking findings nobody asked for — the worst failure mode under zero-fabrication.
+
 ## Workflow
 
 ```

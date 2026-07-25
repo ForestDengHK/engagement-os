@@ -1,6 +1,6 @@
 ---
 name: eng-os
-description: Use when starting or running a document-heavy consulting / advisory engagement across both the pursuit/bid side (analyse an RFP, research, write a tender response) and the delivery side (assessment, target architecture, roadmap, cost model, exec summary); when you need the pipeline map, the shared conventions (finding schema, source-precedence, directory rules, memory discipline), or a composed multi-stage playbook (new source, post-workshop, deliverable sprint, new engagement, RFP-arrived); or when deciding which eng-* stage skill applies (pursuit: rfp-analyze / bid-research / bid-respond; delivery: scaffold / ingest / canonicalize / findings / validate / build).
+description: Use when running a document-heavy consulting / advisory engagement across both the pursuit/bid side (analyse an RFP, research, write a tender response) and the delivery side (assessment, target architecture, roadmap, cost model, exec summary); when you need the pipeline map, the shared conventions (finding schema, source-precedence, directory rules, memory discipline), or a composed multi-stage playbook (new source, post-workshop, deliverable sprint, new engagement, RFP-arrived); or when deciding which eng-* stage skill applies. (Starting a repo from scratch is `eng-scaffold` — this skill is the map, not the shovel.)
 ---
 
 # Engagement OS
@@ -111,8 +111,10 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Scripts** (`scripts/`):
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` / `## Sheet:` / `## Section N:` anchors + image extraction for triage.
-  - `eng_lint.py` — **the mechanical gate**: bucket-leak (engagement/ cited from a bid), `[⚠VERIFY]` in a shipped artefact, unmet mandatory requirements, dangling citations, untagged/unmapped findings, dangling live-file index, unfilled spine. Run it instead of asking a reviewer to check what a script can decide.
-  - `verify_scenarios.py` — self-test: scaffolds every documented mode and checks each command resolves to a playbook whose named skills and block-owned paths all exist. Run after editing a playbook, command, or the scaffolder.
+  - `eng_lint.py` — **the mechanical gate**. The rule set is the registry (`RULES`); read it with `python3 eng_lint.py --list` rather than trusting any prose copy — including this one. Every rule has clean-tree + violated-tree fixtures in `tests/run_tests.py`; run that after editing a rule. Lint exists so nobody asks a reviewer to check what a script can decide.
+  - `section_contract.py` — machine form of `references/section-contract.md`: the status vocabulary, frontmatter fields, and id syntax that lint and `render_document.py` both import. Change doc and module in the same commit.
+  - `render_document.py` — the render engine behind the **`eng-render`** skill (sections → docx/pdf via a pandoc reference.docx, or a deck manifest for `presentation-builder`). It lives here because eng-lint and the scaffolder are its siblings; `eng-render` is the skill facade and declares the dependency.
+  - `verify_scenarios.py` — self-test: scaffolds every documented mode, asserts the fresh tree lints with zero errors, and checks each command's targets resolve, every named skill exists, and every block-owned path exists (unknown top-level-looking paths fail — a typo is not allowed to pass silently). Run after editing a playbook, command, or the scaffolder.
 
 ## How the skills compose
 

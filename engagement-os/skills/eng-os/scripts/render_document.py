@@ -38,28 +38,39 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import section_contract as sc   # the single source for the section-file contract
+
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 FIG_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 H1_RE = re.compile(r"^#\s+(.+)$", re.M)
 
 # A profile is policy, not mechanism. Each entry says which section states are
-# shippable and whether unresolved markers block the build. Add a profile here;
-# do not add an `if bid:` anywhere below.
+# shippable, whether unresolved markers block the build, and whether the drafting
+# scaffolding is stripped. Add a profile here; do not add an `if bid:` anywhere below.
+#
+# `strip` is per-profile because the scaffolding convention (a blockquote is a scoring
+# note) belongs to the bid/deliverable section contract — applied to arbitrary
+# markdown it silently deletes legitimate quotations, the same failure class as
+# pandoc degrading a missing image to its alt text.
 PROFILES = {
     "plain": {
         "shippable": None,             # no status gate
         "block_markers": [],
+        "strip": False,                # render whatever is there, quotes included
         "why": "no gates — render whatever is there",
     },
     "bid": {
         "shippable": {"reviewed-r2", "approved"},
         "block_markers": ["[⚠VERIFY]"],
+        "strip": True,
         "why": "a tender is scored once; an unfixed R1 finding or an open VERIFY "
                "reaches the evaluator as a claim",
     },
     "deliverable": {
         "shippable": {"reviewed", "approved", "issued"},
         "block_markers": ["[⚠VERIFY]"],
+        "strip": True,
         "why": "a client deliverable carries our name; unvalidated facts do not ship in it",
     },
 }
@@ -111,10 +122,17 @@ def discover(sec_dir, order=None):
 
 # ---------------------------------------------------------------- strip
 
-def strip_internal(body: str) -> str:
-    """Remove everything that exists to make the draft checkable, not to be read."""
+def strip_internal(body: str, scaffolding: bool = True):
+    """Remove everything that exists to make the draft checkable, not to be read.
+
+    Returns (text, n_blockquote_lines_removed). With scaffolding=False nothing is
+    removed — the plain profile renders what is there, because the blockquote =
+    scoring-note convention only holds for sections written under the contract.
+    """
+    if not scaffolding:
+        return body, 0
     lines = body.splitlines()
-    out, i = [], 0
+    out, i, n_quotes = [], 0, 0
     while i < len(lines):
         line = lines[i]
 
@@ -123,6 +141,8 @@ def strip_internal(body: str) -> str:
                 if not lines[i].strip() and i + 1 < len(lines) \
                         and not lines[i + 1].lstrip().startswith(">"):
                     break
+                if lines[i].lstrip().startswith(">"):
+                    n_quotes += 1
                 i += 1
             continue
 
@@ -145,7 +165,7 @@ def strip_internal(body: str) -> str:
         out.append(line)
         i += 1
 
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n"
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n", n_quotes
 
 
 # ---------------------------------------------------------------- gate
@@ -173,9 +193,12 @@ def gate(sections, profile, override):
             if s["status"] not in pol["shippable"]:
                 blocking.append(f"{s['file']}: status={s['status']}, not in "
                                 f"{sorted(pol['shippable'])}")
+            if s["status"] not in sc.ALL_STATUSES:
+                advisory.append(f"{s['file']}: status '{s['status']}' is not in the "
+                                "section-contract vocabulary")
     for marker in pol["block_markers"]:
         for s in sections:
-            n = strip_internal(s["body"]).count(marker)
+            n = strip_internal(s["body"], pol["strip"])[0].count(marker)
             if n:
                 blocking.append(f"{s['file']}: {n}x unresolved {marker} in body text")
     return blocking, advisory
@@ -183,14 +206,59 @@ def gate(sections, profile, override):
 
 # ---------------------------------------------------------------- report
 
-def report(sections):
+def report(sections, strip=True):
     print(f"{'section':42s} {'status':13s} {'words':>6s}  {'figs':>4s}  page budget")
     for s in sections:
-        words = len(strip_internal(s["body"]).split())
+        words = len(strip_internal(s["body"], strip)[0].split())
         figs = "".join("!" if not f["exists"] else ("e" if f["editable"] else "p")
                        for f in s["figures"]) or "—"
         print(f"{s['title'][:42]:42s} {s['status']:13s} {words:6d}  {figs:>4s}  {s['budget']}")
     print("  figures:  e = editable source present · p = png only · ! = MISSING")
+
+
+# ---------------------------------------------------------------- typography
+
+def reference_docx(font: str, size: str, workdir: str) -> str:
+    """Build a pandoc reference.docx whose default typography is `font`/`size`.
+
+    `--metadata mainfont=`/`fontsize=` only reach LaTeX/PDF output; the docx writer
+    takes ALL typography from the reference document, so passing those flags for a
+    docx target looked like enforcement and did nothing. Here we take pandoc's own
+    default reference and rewrite the docDefaults in word/styles.xml with stdlib
+    zipfile — no python-docx dependency. OOXML font sizes are in half-points.
+    """
+    half = str(int(float(size.rstrip("pt")) * 2))
+    src = os.path.join(workdir, "reference-default.docx")
+    subprocess.run(["pandoc", "-o", src, "--print-default-data-file", "reference.docx"],
+                   check=True)
+
+    import zipfile
+    with zipfile.ZipFile(src) as z:
+        members = {i.filename: z.read(i.filename) for i in z.infolist()}
+    xml = members["word/styles.xml"].decode("utf-8")
+
+    rfonts = (f'<w:rFonts w:ascii="{font}" w:hAnsi="{font}" w:eastAsia="{font}" '
+              f'w:cs="{font}"/>')
+    # docDefaults is the root of the style inheritance tree; overriding there covers
+    # every style that doesn't set its own fonts (pandoc's defaults don't).
+    m = re.search(r"<w:docDefaults>.*?</w:docDefaults>", xml, re.S)
+    if not m:
+        print("warning: reference.docx has no docDefaults — font not enforceable",
+              file=sys.stderr)
+    else:
+        dd = m.group(0)
+        dd = re.sub(r"<w:rFonts[^>]*/>", rfonts, dd, count=1)
+        if f'<w:sz w:val="{half}"' not in dd:
+            dd = re.sub(r'<w:sz w:val="\d+"\s*/>', f'<w:sz w:val="{half}"/>', dd, count=1)
+            dd = re.sub(r'<w:szCs w:val="\d+"\s*/>', f'<w:szCs w:val="{half}"/>', dd, count=1)
+        xml = xml[:m.start()] + dd + xml[m.end():]
+
+    members["word/styles.xml"] = xml.encode("utf-8")
+    out = os.path.join(workdir, "reference.docx")
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in members.items():
+            z.writestr(name, data)
+    return out
 
 
 # ---------------------------------------------------------------- main
@@ -210,6 +278,11 @@ def main() -> int:
     ap.add_argument("--profile", choices=sorted(PROFILES), default="plain")
     ap.add_argument("--font", default="Arial")
     ap.add_argument("--size", default="10pt")
+    ap.add_argument("--reference-doc",
+                    help="a mandated .docx template — overrides --font/--size and is the "
+                         "only typography mechanism that reaches the docx writer")
+    ap.add_argument("--audience", help="who the deck is for (recorded in the deck manifest)")
+    ap.add_argument("--decision", help="the decision the deck must produce (deck manifest)")
     ap.add_argument("--force", action="store_true",
                     help="build despite policy gates (never overrides a missing figure)")
     args = ap.parse_args()
@@ -224,7 +297,8 @@ def main() -> int:
         print(f"no .md sections in {sec_dir}", file=sys.stderr)
         return 1
 
-    report(sections)
+    pol = PROFILES[args.profile]
+    report(sections, pol["strip"])
     blocking, advisory = gate(sections, args.profile, args.force)
 
     for a in advisory:
@@ -255,9 +329,13 @@ def main() -> int:
         manifest = {
             "source": sec_dir,
             "profile": args.profile,
+            # The two things presentation-builder needs most, recorded in the file so
+            # the handoff survives being re-run from the manifest alone.
+            "audience": args.audience,
+            "decision": args.decision,
             "sections": [{
                 "title": s["title"], "file": s["file"], "status": s["status"],
-                "body": strip_internal(s["body"]),
+                "body": strip_internal(s["body"], pol["strip"])[0],
                 "figures": [{"png": f["path"],
                              "html_source": os.path.splitext(f["path"])[0] + ".html",
                              "editable_pptx": os.path.splitext(f["path"])[0] + ".pptx",
@@ -277,8 +355,19 @@ def main() -> int:
 
     # ---- route: document.
     md_path = os.path.join(out_dir, args.name + ".md")
+    parts, stripped_notes = [], []
+    for s in sections:
+        text, n_quotes = strip_internal(s["body"], pol["strip"])
+        if n_quotes:
+            # visible, not silent: under a strict profile a blockquote is BY CONTRACT a
+            # scaffolding note, but a legitimate quotation would be deleted here too
+            stripped_notes.append(f"{s['file']}: stripped {n_quotes} blockquote line(s) "
+                                  "as drafting scaffolding")
+        parts.append(text)
+    for note in stripped_notes:
+        print(f"  note: {note}", file=sys.stderr)
     with open(md_path, "w", encoding="utf-8") as fh:
-        fh.write("\n\n\\newpage\n\n".join(strip_internal(s["body"]) for s in sections))
+        fh.write("\n\n\\newpage\n\n".join(parts))
     print(f"\nwrote {md_path}")
     if args.to == "md":
         return 0
@@ -287,11 +376,12 @@ def main() -> int:
         print("pandoc not found — markdown written, conversion skipped", file=sys.stderr)
         return 4
 
-    docx_path = os.path.join(out_dir, args.name + ".docx")
-    subprocess.run(["pandoc", md_path, "-o", docx_path,
-                    f"--resource-path={sec_dir}:{os.path.dirname(sec_dir)}",
-                    "--metadata", f"mainfont={args.font}",
-                    "--metadata", f"fontsize={args.size}"], check=True)
+    with tempfile.TemporaryDirectory() as td:
+        ref = args.reference_doc or reference_docx(args.font, args.size, td)
+        docx_path = os.path.join(out_dir, args.name + ".docx")
+        subprocess.run(["pandoc", md_path, "-o", docx_path,
+                        f"--resource-path={sec_dir}:{os.path.dirname(sec_dir)}",
+                        "--reference-doc", ref], check=True)
     print(f"wrote {docx_path}")
 
     if args.to in ("pdf", "both") and shutil.which("soffice"):
