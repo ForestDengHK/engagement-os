@@ -87,6 +87,12 @@ Each command is a thin router to `skills/eng-os/references/playbooks/<name>.md` 
 holds the content, the command is just an explicit entry point. Saying the situation in words
 works too; the commands exist for when you'd rather be deterministic than descriptive.
 
+"Source arrives → OCR → canonical → finding" is exactly the first playbook. It is a
+playbook rather than one fat skill because each stage also has its own standalone
+trigger surface (findings also arise from workshops, bypassing ingest); duplicating
+the stage content into a mega-skill would create a second truth that rots. Thin
+orchestration gives the chained experience without duplication.
+
 ## 3b. Invoking things explicitly
 
 Two surfaces, both typed with `/`. Skills auto-trigger from natural language; commands and skills
@@ -123,12 +129,6 @@ doc arrived", "we won") — it carries the ordering and the stop gates, which ar
 easy to skip. Reach for the **skill** when you want exactly one stage and nothing else. When in
 doubt use the command: running one stage of a chain in isolation is how a deliverable ends up
 built on unvalidated findings.
-
-"Source arrives → OCR → canonical → finding" is exactly the first playbook. It is a
-playbook rather than one fat skill because each stage also has its own standalone
-trigger surface (findings also arise from workshops, bypassing ingest); duplicating
-the stage content into a mega-skill would create a second truth that rots. Thin
-orchestration gives the chained experience without duplication.
 
 ## 4. Pick your lane
 
