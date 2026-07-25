@@ -55,6 +55,10 @@ The gate itself is mandatory; the tool is the Panel Framework **if installed**.
 Update `DELIVERABLES.md` the moment a version is produced; move the prior to
 `archived/superseded_decks_<DATE>/`.
 
+**Producing the file is a separate step** — hand off to the `eng-render` skill with
+`--profile deliverable`. It owns discover/gate/strip/measure and routes the rest to
+`presentation-builder` (deck) or the `docx` skill (document). Build the content here; render there.
+
 ## Guardrails
 No client-facing headline rests on an unverified figure. Provenance travels with the claim.
 Don't bake a recommendation back into a finding. Apply the project's CLAUDE.md "ALWAYS apply"
