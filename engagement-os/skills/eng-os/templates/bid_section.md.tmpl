@@ -1,0 +1,46 @@
+---
+section: "<the buyer's own section number + title>"
+rft_clause: "§Section N"
+marks: <n>
+pass_mark: <n>
+scoring: "<how it is scored — e.g. 'each deliverable assessed individually, out of 30'>"
+answers_reqs: [R-0xx]
+page_budget: "<the limit AND whether it is per-question or shared across questions>"
+figures: [F-0x]
+evidence: [A-0xx]
+status: draft            # draft → reviewed-r1 → reviewed-r2 → approved
+---
+
+# <section number + title>
+
+> **Scoring note.** <How this section is actually marked, in one sentence — it changes how the
+> answer is shaped. A section scored per-item must satisfy the criteria per item; a section
+> scored as a whole can carry one argument. Getting this wrong is the most expensive structural
+> mistake available, and it is stated in the RFT.>
+
+<Answer the question the buyer asked, in the order they asked it. If they enumerate required
+elements, use their enumeration — an evaluator scoring against a checklist should not have to
+hunt for the items.>
+
+![<caption>](../figures/F-0x_<name>.svg)
+*Figure N — <what it shows, not what it is called>.*
+
+---
+
+**Traceability.** <Every claim above → `[RFP §x]` for a requirement, `A-nnn` for a firm asset,
+or a closed row in `bid_research_log.md`. A claim with none of these is cut before review.>
+
+## Review log
+
+One row per pass. A section is not finished when it is written; it is finished when the rounds
+stop producing changes.
+
+| Round | Reviewer / lens | Date | Verdict | What changed |
+|---|---|---|---|---|
+| R1 | panel red-team (evaluator / legal / finance / delivery) | | | |
+| R2 | <named human — the one who has done this before> | | | |
+| R3 | <final read> | | | |
+
+**Rounds are not a formality.** R1 catches whether it scores; R2 catches what only experience
+sees — a claim that will not survive a client conversation, a promise the delivery team cannot
+staff, a tone that reads wrong for this buyer. Do not collapse them.

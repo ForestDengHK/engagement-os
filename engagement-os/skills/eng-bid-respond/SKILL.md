@@ -11,20 +11,40 @@ response. Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/bid-response.m
 ## Prerequisite
 Build only from a closed analysis (`compliance_matrix.md`) and a cited research log
 (`bid_research_log.md`). Draft in `01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`.
-Start the section map from `bid_response_outline.md.tmpl` in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
+Start the section map from `bid_response_outline.md.tmpl`, and each section file from
+`bid_section.md.tmpl` — both in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
 ## Workflow
 
+**Content first, format last.** Write and review the content as per-section markdown; only when it
+is approved do you render into the buyer's required output. Mixing the two costs both — you trim
+an argument to fit a slide before knowing whether the argument is right.
+
 ```
 Bid Response Progress:
-- [ ] 1. Match the RFP's mandated format/volumes/limits/forms EXACTLY (build the section map)
-- [ ] 2. Assemble FROM the matrix — every requirement row → a response section (not free-written)
-- [ ] 3. Compliance first: every mandatory fully met; state exceptions plainly, never bury them
-- [ ] 4. Weave the 3–5 win-themes, each backed by a cited research-log item, at high-weight criteria
-- [ ] 5. Traceability: every claim → [RFP §x] or a closed research-log row; kill any [⚠VERIFY]
-- [ ] 6. Panel red-team gate (or manual multi-lens) → clear red-lines
-- [ ] 7. Freeze the submitted version to 4_final/ + record date; matrix fully closed
+- [ ] 1. Build the section map from the matrix (bid_response_outline.md) — every requirement row
+        lands in exactly one section, and no section exists without a row
+- [ ] 2. One MD per section in 3_drafting/sections/, from bid_section.md.tmpl — frontmatter carries
+        marks, scoring basis, page budget, reqs answered, figures, evidence
+- [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
+        build its figures alongside it in 3_drafting/figures/ (SVG source + rendered PNG)
+- [ ] 4. Weave the 3–5 win-themes at the high-weight criteria, each backed by a cited log row or
+        an indexed firm asset (A-nnn)
+- [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a closed research-log row; kill any [⚠VERIFY]
+- [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
+        R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
+        → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
+- [ ] 7. ONLY NOW render to the mandated format (docx/pptx skills); re-check page counts on the
+        rendered file, not the word estimate
+- [ ] 8. Freeze the submitted version to 4_final/ + record date; matrix fully closed
 ```
+
+**Watch the `scoring` line.** A section marked **per item** needs self-contained answers per item —
+six deliverables scored out of 30 each means six complete answers, and a flowing narrative that
+blurs them loses marks six times over.
+
+**Page budgets: per-question or shared?** "Max 5 A4 for 3 questions" is a shared budget; "max 3 A4
+per question response" is not. Confusing them always errs toward writing too much.
 
 **Requirement-driven, not narrative-driven.** The response is assembled from the compliance
 matrix; when every row is `met` and every mandatory satisfied, it's complete. The matrix is the
@@ -33,13 +53,24 @@ fact base; the response adds the persuasion.
 **Match the buyer's format exactly** — volume split, page/word limits, mandated forms. Format
 non-compliance is a common auto-reject; don't impose our own structure.
 
-## The red-team gate (not optional)
-Before submission, red-team with the Panel Framework (`panel-review`) if installed, else a manual
-multi-lens pass: **evaluator's eye** (does it score?), **legal** (exceptions clean, exposure?),
-**finance** (priceable/deliverable at margin?), **architect/delivery** (deliverable as staffed?).
-Fix red-lines before calling it submission-ready.
+## Review rounds (not one gate)
+A section is finished when the rounds stop producing changes, not when it is written. Each section
+carries its own log, because sections finish at different times.
+
+- **R1 — panel red-team** (`panel-review` if installed, else a manual multi-lens pass): does it
+  score? **evaluator's eye** · **legal** (exceptions clean, exposure?) · **finance**
+  (priceable/deliverable at margin?) · **architect/delivery** (deliverable as staffed?).
+- **R2 — experienced human.** What only experience sees: a claim that won't survive a client
+  conversation, a promise delivery cannot staff, a tone wrong for this buyer.
+- **R3 — final read.** Cross-section consistency, format compliance, nothing left `[⚠VERIFY]`.
+
+**Do not collapse R1 and R2** — they fail differently. R1 is structural and can be reasoned about
+from the RFT; R2 is judgement and cannot.
 
 ## Guardrails
 - No unsupported claim, no fabricated credential — ever. Anything `[⚠VERIFY]` is cut or closed first.
 - Every mandatory requirement is `met`; exceptions stated openly with rationale.
 - Never edit a submitted volume in place — a post-submission change is a new dated version.
+- **Look at every rendered figure.** An SVG that parses is not an SVG that reads correctly — a
+  mis-sized canvas clips the last element silently. Escape `&` as `&amp;` or the file won't parse
+  at all.
