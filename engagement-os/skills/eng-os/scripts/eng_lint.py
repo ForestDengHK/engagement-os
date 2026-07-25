@@ -232,7 +232,26 @@ def rule_pointer_table_resolves(root, r):
                         "a block was probably added without topping up the table")
 
 
-RULES = [rule_bucket_leak, rule_verify_not_shipped, rule_mandatory_met,
+def rule_asset_refs_resolve(root, r):
+    """Every `A-nnn` the matrix cites must exist in the firm-assets index.
+
+    The Evidence column is where a bid quietly goes wrong: "case studies" reads as evidence but
+    names nothing, and an id pointing at a row that was never written is worse — it looks checked.
+    """
+    idx = root / "01_pursuit/_shared/firm_assets.md"
+    matrices = list(root.glob("01_pursuit/*/2_analysis/compliance_matrix.md"))
+    if not idx.exists() or not matrices:
+        return
+    r.ran()
+    known = set(re.findall(r"\bA-\d{3}\b", idx.read_text(encoding="utf-8", errors="replace")))
+    for m in matrices:
+        for i, line in enumerate(m.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            for ref in set(re.findall(r"\bA-\d{3}\b", line)) - known:
+                r.error("asset-unknown", f"{m.relative_to(root)}:{i}",
+                        f"cites {ref}, which has no row in firm_assets.md")
+
+
+RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_verify_not_shipped, rule_mandatory_met,
          rule_citations_resolve, rule_findings_conform, rule_live_index_resolves,
          rule_spine_filled, rule_images_triaged, rule_manifest_complete,
          rule_pointer_table_resolves]

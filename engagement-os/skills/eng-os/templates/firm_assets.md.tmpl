@@ -1,0 +1,62 @@
+# Firm Assets Index — {{CLIENT}} {{ENG_ID}}
+
+> What we already hold that a bid can draw on: methodology, case studies, CVs, credentials,
+> diagrams, financials. These are **ours**, not sourced material — they live in
+> `01_pursuit/_shared/`, never in `_sources/`. This index exists so the compliance matrix's
+> *Evidence* column can name a specific file instead of saying "case studies", and so a claim's
+> **expiry** is visible before it fails a mandatory requirement.
+
+**Updated:** {{DATE}} · **Asset root:** `01_pursuit/_shared/`
+
+## Why an index and not just a folder
+
+A folder answers "what do we have"; a bid needs "**what proves this requirement, and is it still
+valid**". Those are different questions, and the second one is where bids fail: a case study that
+is one year outside a three-year window, a certificate that lapsed, a named referee who left.
+Each row below carries the date and the constraint, so the check is a lookup rather than a memory.
+
+## 1. Index
+
+| ID | Asset | Category | What it proves | Dated | In-window? | Constraints | Used for |
+|---|---|---|---|---|---|---|---|
+| A-001 | `<path under _shared/>` | methodology / case study / CV / credential / diagram / financial | <the specific claim it can back, not the title> | <YYYY-MM> | <vs this RFP's recency rule> | <client permission? anonymised? NDA?> | R-0xx |
+
+**Category** is what the asset *is*; **What it proves** is what it can be cited for. A case study
+whose "what it proves" restates its title has not been read — write the claim a evaluator would
+score, e.g. "end-to-end DWH assessment for a regulated utility, delivered in 12 weeks".
+
+**In-window** is checked against *this* tender's rule, not in the abstract. Restate the rule at
+the top of §2 so the column has a meaning.
+
+## 2. Recency rule for this tender
+
+**Rule:** <quote it — e.g. "reference projects shall be within the last 3 years" `[RFP §x]`>
+**Measured from:** <submission date / completion date — if unclear, this is a clarification question>
+**Therefore the cut-off is:** <date>
+
+| Asset | Date | Verdict |
+|---|---|---|
+| A-00x | | ✅ in / ❌ out / ⚠ borderline — confirm |
+
+An asset that fails here is not a weaker option, it is **not an option**. Say so plainly rather
+than carrying it forward and hoping.
+
+## 3. Gaps — what we do NOT hold
+
+The point of an index is that it makes absence visible. List what this bid needs and we cannot
+evidence, so it becomes a research task or an upload request rather than a silent hole.
+
+| Need | Requirement | Why nothing here covers it | Action |
+|---|---|---|---|
+| <e.g. utility-sector reference within 3 yrs> | R-0xx | <the nearest asset and why it falls short> | research / request / **cut the claim** |
+
+## Guardrails
+
+- **An asset is not evidence until someone has read it.** "We have a case study on that" is how a
+  win-theme gets built on a document that turns out to say something else.
+- **Client permission is a real constraint.** A case study naming a client may need their consent
+  to cite; an anonymised version may be the only usable form. Record which, per row.
+- **Firm assets are ours; sourced material is not.** Anything from `_sources/engagement/` stays
+  out of a bid regardless of how useful it looks — see `_sources/README.md`.
+- **Update on use, not on schedule.** When a bid finds a gap or discovers an asset is stale, fix
+  the row then — an index nobody trusts is worse than no index.

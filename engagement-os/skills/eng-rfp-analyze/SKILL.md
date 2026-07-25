@@ -15,7 +15,10 @@ so every requirement can be cited by clause/page. Work in `01_pursuit/<ENG-ID>/2
 `rfp_analysis.md` (this skill's output) · `compliance_matrix.md` (the completeness spine) ·
 `clarification_log.md` (questions to the buyer + our settled readings, **query deadline is
 earlier than submission**) · `bid_reuse_analysis.md` (what carries over from a prior bid — check
-for one **before** drafting; most tenders are a variant of one already answered).
+for one **before** drafting; most tenders are a variant of one already answered). A fifth lives
+one level up: `01_pursuit/_shared/firm_assets.md` — the index of what the firm already holds, so
+the matrix's Evidence column names a file rather than a category, and an expiring credential is
+visible before it fails a mandatory row.
 
 ## Workflow
 
