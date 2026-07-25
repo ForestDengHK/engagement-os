@@ -11,9 +11,9 @@ Sources: the tender pack lives in `1_received/`; pre-award background we gather 
 ## Chain
 
 ```
-eng-ingest-source ─► reuse check ─► eng-rfp-analyze ─► clarify ─► eng-bid-research ─► eng-bid-respond ─► red-team
-   RFP → md          prior bid?      2_analysis        by the      close the gaps     3_drafting → 4_final
-                                                       deadline
+eng-ingest-source ─► reuse + assets ─► eng-rfp-analyze ─► clarify ─► eng-bid-research ─► eng-bid-respond ─► red-team
+   RFP → md          prior bid? what     2_analysis        by the      close the gaps     3_drafting → 4_final
+                     do we hold?                           deadline
 ```
 
 1. **Ingest the RFP pack** → `eng-ingest-source`.
@@ -27,6 +27,14 @@ eng-ingest-source ─► reuse check ─► eng-rfp-analyze ─► clarify ─�
    UPDATE / NEW, with a field-level diff of the old clause against the new one.
    Verify: every section of the prior response has a verdict; every scope delta is named.
    Skip only when there genuinely is no prior bid — say so rather than assuming.
+1c. **Index what we already hold** → `01_pursuit/_shared/firm_assets.md`.
+   Methodology, case studies, CVs, credentials, diagrams, financials. One row per asset: what it
+   **proves** (the claim an evaluator would score, not the title), its **date**, whether it is
+   **in-window** against this tender's recency rule, and any permission/confidentiality constraint.
+   A folder answers "what do we have"; a bid needs "what proves this requirement, and is it still
+   valid" — the second is where bids fail.
+   Verify: every asset has a date and an in-window verdict; the **gaps** section names what we
+   cannot evidence, so it becomes a research task or an upload request rather than a silent hole.
 2. **Analyse the RFP** → `eng-rfp-analyze`.
    Extract every requirement (ID + clause cite), build the `compliance_matrix.md`, map evaluation
    weights, run the multi-role read, derive evidence-backed win-themes, flag risks/deal-breakers,
@@ -42,8 +50,9 @@ eng-ingest-source ─► reuse check ─► eng-rfp-analyze ─► clarify ─�
 3. **Go/No-Go gate — human decision.** If no-go, stop and log the rationale. If go-if, resolve the
    conditions first. Only proceed to research/response on a go.
 4. **Research the gaps** → `eng-bid-research`.
-   Close every matrix `gap` and arm the win-themes: external research `[T3:OWN]` + firm-held
-   materials the user uploads. Every finding cited in `bid_research_log.md`; zero fabrication.
+   Close every matrix `gap` and arm the win-themes. The **firm-assets index tells you which gaps
+   are real** — a gap already covered by an indexed asset needs a citation, not research; a gap the
+   index shows we cannot evidence needs external research `[T3:OWN]` or an upload request. Every finding cited in `bid_research_log.md`; zero fabrication.
    Sourced documents are ingested to `_sources/pre_award/` (buyer-specific) or `_sources/public/`
    (sector/regulatory/benchmark), never to `_sources/engagement/`.
    Verify: every gap is either closed with a citation or explicitly `[⚠VERIFY]` (and thus cut).
