@@ -198,6 +198,17 @@ CASES = [
     ("manifest-missing-row",
      lambda t: t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n"),
      {"manifest-missing"}, set(), set()),
+    # The tender pack gets the same anchored-markdown treatment, so it gets the same rules.
+    # Its _md/ has no topic subfolders — the converted documents sit directly in it.
+    ("images-untriaged in the tender pack itself",
+     lambda t: (t.__setitem__("01_pursuit/27-010/1_received/_md/rft.md",
+                              "# RFT\n\n- `[uncertain]` the scoring table\n"),
+                t.__setitem__("01_pursuit/27-010/1_received/_md/README.md",
+                              "| File | Source |\n|---|---|\n| `rft.md` | RFT.pdf |\n")),
+     set(), {"images-untriaged"}, set()),
+    ("tender pack converted with no manifest",
+     lambda t: t.__setitem__("01_pursuit/27-010/1_received/_md/rft.md", "# RFT\n"),
+     {"manifest-absent"}, set(), set()),
     ("manifest-absent",
      lambda t: (t.pop("_sources/public/_md/README.md"),
                 t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n")),

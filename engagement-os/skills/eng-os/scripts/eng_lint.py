@@ -297,19 +297,40 @@ def rule_spine_filled(root, r):
                    "sourced facts have nothing to map onto")
 
 
+PACK_ROOT_FILES = {"README.md", "00_REFERENCE_SUMMARY.md", "01_REFERENCE_INSIGHTS.md"}
+
+
+def md_packs(root):
+    """Every directory of converted markdown, with its content files.
+
+    Two shapes, and both need policing. `_sources/<bucket>/_md/` groups by topic subfolder and
+    keeps the summary/insights/README trio at its root. A tender pack's `1_received/_md/` has
+    no topic grouping — the converted documents sit directly in it. Selecting content by
+    "not in the pack root" is correct for the first shape and silently empties the second,
+    which is how the most important document set in a bid escaped both rules.
+
+    Yields (pack_dir, [content .md files]).
+    """
+    areas = list(root.glob("_sources/*/_md"))
+    areas += list(root.glob("01_pursuit/*/1_received/_md"))
+    for pack in areas:
+        content = [p for p in pack.rglob("*.md") if p.name not in PACK_ROOT_FILES]
+        yield pack, content
+
+
 def rule_images_triaged(root, r):
     """Extracted images start tagged [uncertain]; leaving them there breaks the lossless rule.
 
     Found by running a real ingest: 52 images came out of four documents and nothing in the
     pack noticed that none of them had been triaged. This is the silent-decay case — the
-    conversion "succeeded", so the gap never surfaces on its own.
+    conversion "succeeded", so the gap never surfaces on its own. A second real run found the
+    rule was only looking at `_sources/` — an untriaged figure in the RFP itself is worse,
+    because scoring tables and requirement matrices arrive as images.
     """
     tag = re.compile(r"^\s*-\s*`?\[uncertain\]`?", re.I)
-    for pack in root.glob("_sources/*/_md"):
+    for pack, content in md_packs(root):
         r.ran()
-        for p in pack.rglob("*.md"):
-            if p.parent == pack:          # pack-root trio: the README *documents* the convention
-                continue
+        for p in content:
             n = sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
                     if tag.match(line))
             if n:
@@ -326,8 +347,7 @@ def rule_manifest_complete(root, r):
     And a pack whose README is missing entirely must fail — 'no manifest' is the accident
     this rule exists to catch, not an exemption from it.
     """
-    for pack in root.glob("_sources/*/_md"):
-        content = [p for p in pack.rglob("*.md") if p.parent != pack]
+    for pack, content in md_packs(root):
         readme = pack / "README.md"
         if not readme.exists():
             if content:
