@@ -418,11 +418,129 @@ def converter_tests():
 
     for name, ok in checks:
         print(f"  {'✓' if ok else '✗'} converter:{name}")
-    if all(ok for _, ok in checks):
-        print("✓ converter manifest-writer passes")
-        return 0
-    print("✗ converter manifest-writer FAILING")
-    return 1
+    manifest_ok = all(ok for _, ok in checks)
+    print("✓ converter manifest-writer passes" if manifest_ok
+          else "✗ converter manifest-writer FAILING")
+
+    # Scanner identity must be the exact path, never a basename substring. The real GNI
+    # tree contains both `1_General_DataMod Quals.pdf` and `others/Quals.pdf`; the latter
+    # was silently treated as indexed by the former until this fixture existed.
+    scan_root = pathlib.Path(tempfile.mkdtemp(prefix="engos-scan-"))
+    shared = scan_root / "01_pursuit/_shared"
+    (shared / "case_studies/others").mkdir(parents=True)
+    (shared / "contracts_ref").mkdir()
+    (shared / "team_structure").mkdir()
+    (shared / "case_studies/1_General_DataMod Quals.pdf").write_text("a", encoding="utf-8")
+    (shared / "case_studies/others/Quals.pdf").write_text("b", encoding="utf-8")
+    (shared / "PTSB SoW.docx").write_text("c", encoding="utf-8")
+    (shared / "contracts_ref/PTSB SoW.docx").write_text("c", encoding="utf-8")
+    (shared / "team_structure/create_pptx.js").write_text("helper", encoding="utf-8")
+    (shared / "case_studies/needed.pdf").write_text("gap", encoding="utf-8")
+    (shared / "firm_assets.md").write_text(
+        "# Firm assets\n\n"
+        "| ID | Asset |\n|---|---|\n"
+        "| A-001 | `case_studies/1_General_DataMod Quals.pdf` |\n"
+        "| A-002 | `PTSB SoW.docx` |\n\n"
+        "## 1b. Handled companion/support files\n\n"
+        "| File | Disposition |\n|---|---|\n"
+        "| `team_structure/create_pptx.js` | build helper |\n\n"
+        "## Gaps — what we do not hold\n\n"
+        "The account team should upload `case_studies/needed.pdf`.\n",
+        encoding="utf-8")
+    _, waiting = cs.scan(scan_root)
+    waiting_rel = {p.relative_to(shared).as_posix() for _, p in waiting}
+    scan_checks = [
+        ("exact path avoids substring collision",
+         "case_studies/others/Quals.pdf" in waiting_rel),
+        ("same basename in another folder remains visible",
+         "contracts_ref/PTSB SoW.docx" in waiting_rel),
+        ("indexed exact path is excluded",
+         "case_studies/1_General_DataMod Quals.pdf" not in waiting_rel),
+        ("handled helper is excluded",
+         "team_structure/create_pptx.js" not in waiting_rel),
+        ("path mentioned only in gaps is still waiting",
+         "case_studies/needed.pdf" in waiting_rel),
+    ]
+    for name, ok in scan_checks:
+        print(f"  {'✓' if ok else '✗'} scanner:{name}")
+    scan_ok = all(ok for _, ok in scan_checks)
+    print("✓ asset scanner exact-path tests pass" if scan_ok
+          else "✗ asset scanner exact-path tests FAILING")
+
+    anchored, heading_count = cs.number_headings(
+        "# Executive Summary\n"
+        "## 2.1 Timetable\n"
+        "### Section 4.2 Relevant Experience\n"
+        "## **4.5. DECLARATION OF COMPLIANCE**\n"
+        "## <u>5.2. COST EVALUATION</u>\n"
+        "## 2026 Outlook\n"
+        "## §5.1 Already Anchored\n")
+    anchor_checks = [
+        ("native decimal clause preserved", "## §2.1 Timetable" in anchored),
+        ("native prefixed clause preserved", "### §4.2 Relevant Experience" in anchored),
+        ("formatted bold clause detected", "## §4.5 DECLARATION OF COMPLIANCE" in anchored),
+        ("formatted underline clause detected", "## §5.2 COST EVALUATION" in anchored),
+        ("four-digit year is not a clause", "## Section 6: 2026 Outlook" in anchored),
+        ("existing native anchor not doubled", "## §5.1 Already Anchored" in anchored),
+        ("all headings counted", heading_count == 7),
+    ]
+    for name, ok in anchor_checks:
+        print(f"  {'✓' if ok else '✗'} anchors:{name}")
+    anchors_ok = all(ok for _, ok in anchor_checks)
+    print("✓ native-clause anchor tests pass" if anchors_ok
+          else "✗ native-clause anchor tests FAILING")
+
+    # Lint and render share one frontmatter parser. The shipped template puts an inline
+    # lifecycle comment on `status`; treating it as part of the value made every planted
+    # section unknown to the render gate while lint accepted the first token.
+    sc_spec = importlib.util.spec_from_file_location(
+        "section_contract", PLUGIN / "skills/eng-os/scripts/section_contract.py")
+    sc = importlib.util.module_from_spec(sc_spec)
+    sc_spec.loader.exec_module(sc)
+    meta, _ = sc.parse_frontmatter(
+        "---\n"
+        'section: "Workstream #2"\n'
+        "status: blocked-r1  # draft → reviewed-r1\n"
+        "---\n\n# Body\n")
+    contract_checks = [
+        ("inline comment stripped", meta.get("status") == "blocked-r1"),
+        ("hash inside quoted value preserved", meta.get("section") == "Workstream #2"),
+    ]
+
+    render_spec = importlib.util.spec_from_file_location(
+        "render_document", PLUGIN / "skills/eng-os/scripts/render_document.py")
+    render = importlib.util.module_from_spec(render_spec)
+    # render_document imports section_contract by module name.
+    sys.modules["section_contract"] = sc
+    render_spec.loader.exec_module(render)
+    sec_dir = scan_root / "sections"
+    sec_dir.mkdir()
+    (sec_dir / "s.md").write_text(
+        "---\nsection: Test\nstatus: reviewed-r2  # lifecycle note\n---\n\n# Test\n",
+        encoding="utf-8")
+    contract_checks.append(
+        ("render uses contract parser", render.discover(str(sec_dir))[0]["status"] == "reviewed-r2"))
+
+    import zipfile
+    ref_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-refdoc-"))
+    ref = render.reference_docx("Arial", "10pt", "a4", str(ref_dir))
+    with zipfile.ZipFile(ref) as z:
+        styles = z.read("word/styles.xml").decode("utf-8")
+        document = z.read("word/document.xml").decode("utf-8")
+    contract_checks += [
+        ("reference enforces Arial 10",
+         'w:ascii="Arial"' in styles and 'w:sz w:val="20"' in styles),
+        ("reference enforces A4",
+         'w:pgSz w:w="11906" w:h="16838"' in document),
+    ]
+
+    for name, ok in contract_checks:
+        print(f"  {'✓' if ok else '✗'} contract:{name}")
+    contract_ok = all(ok for _, ok in contract_checks)
+    print("✓ shared frontmatter parser tests pass" if contract_ok
+          else "✗ shared frontmatter parser tests FAILING")
+
+    return 0 if manifest_ok and scan_ok and anchors_ok and contract_ok else 1
 
 
 if __name__ == "__main__":

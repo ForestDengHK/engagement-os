@@ -33,6 +33,14 @@ for R-004 is the finding, and it is more useful early than complete-but-late.
           In-window = yes / no / UNKNOWN against step 1's rule.
           Constraints = client permission? anonymisation needed? NDA? Unresolved permission
             is a blocker on the section that cites it, so it is recorded now, not at freeze.
+        Treat one logical asset as one A-nnn row even when several files represent it
+        (PDF + editable PPTX, workbook + preview image). Put the primary citable file in the
+        Asset cell; list every companion's exact relative path in the row's Constraints.
+        Build helpers and non-evidence sidecars (for example `create_pptx.js`,
+        `package-lock.json`) go in §1b "Handled companion/support files" with a reason and no
+        A-nnn. The scan reads exact backticked paths from both places, so every file is either
+        indexed or explicitly excluded — never silently ignored and never padded into the
+        evidence register.
 - [ ] 3. Draft every row you can, THEN ask only the residual — with your best guess attached
         ("A-006 looks like 2023-11 from the report footer — confirm?"). Never hand back a
         blank table to fill in.

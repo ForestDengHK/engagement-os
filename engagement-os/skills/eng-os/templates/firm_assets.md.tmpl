@@ -32,6 +32,17 @@ score, e.g. "end-to-end DWH assessment for a regulated utility, delivered in 12 
 **In-window** is checked against *this* tender's rule, not in the abstract. Restate the rule at
 the top of §2 so the column has a meaning.
 
+## 1b. Handled companion/support files — not separate evidence assets
+
+Every file found by `/eng-source` gets an explicit disposition. List editable companions,
+previews, duplicates and build helpers here by their **exact relative path** when they do not
+deserve a separate A-nnn row. This keeps them visible without padding the evidence register.
+
+| File | Disposition | Related asset |
+|---|---|---|
+| `case_studies/<editable-source>.pptx` | Editable source for the indexed PDF; not separate evidence | A-00x |
+| `diagrams/<build-helper>.js` | Build helper only; proves no bid requirement | — |
+
 ## 2. Recency rule for this tender
 
 **Rule:** <quote it — e.g. "reference projects shall be within the last 3 years" `[RFP §x]`>

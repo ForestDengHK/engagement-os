@@ -57,6 +57,22 @@ def parse_frontmatter(text):
         for line in m.group(1).splitlines():
             if ":" in line and not line.startswith((" ", "\t", "#")):
                 k, v = line.split(":", 1)
+                # The planted template documents lifecycle values with an inline comment:
+                # `status: draft  # draft → reviewed-r1 ...`. The comment is YAML
+                # documentation, not part of the value. Strip only an unquoted `#` preceded
+                # by whitespace so a quoted title such as "Workstream #2" survives.
+                quoted, cut = None, None
+                for i, ch in enumerate(v):
+                    if ch in ("'", '"'):
+                        if quoted == ch:
+                            quoted = None
+                        elif quoted is None:
+                            quoted = ch
+                    elif ch == "#" and quoted is None and i > 0 and v[i - 1].isspace():
+                        cut = i
+                        break
+                if cut is not None:
+                    v = v[:cut]
                 meta[k.strip()] = v.strip().strip('"').strip("'")
     return meta, body
 

@@ -158,19 +158,40 @@ def _run(cmd):
 
 
 def number_headings(md, label="Section"):
-    """Give every markdown heading a stable, citable number, keeping its level.
+    """Give every markdown heading a stable, citable anchor, keeping its level.
 
     The extraction tools return the document's real heading hierarchy; what they can't give is
-    an anchor a downstream claim can cite. Numbering in place adds one without flattening the
-    structure: `## Minimum Requirements` becomes `## Section 12: Minimum Requirements`, so
-    `file.md §Section 12` resolves and the outline still reads as an outline.
+    an anchor a downstream claim can cite. A buyer's native clause number is the strongest
+    anchor because it survives pagination and matches what an evaluator sees: `## 2.1 Timetable`
+    becomes `## §2.1 Timetable`. Only headings without a native number get the synthetic
+    fallback (`## Section 12: Minimum Requirements`). The outline hierarchy is never flattened.
     """
     out, n = [], 0
+    native = re.compile(
+        r"^(?:(?:section|clause)\s+)?"
+        r"(?P<num>\d{1,3}(?:\.\d{1,3}){0,5})"
+        r"(?:\s*[.):\-–—]\s*|\s+)(?P<title>.+)$",
+        re.I)
     for line in md.splitlines():
         m = re.match(r"^(#{1,6})\s+(.*)$", line)
         if m and m.group(2).strip():
             n += 1
-            out.append(f"{m.group(1)} {label} {n}: {m.group(2).strip()}")
+            title = m.group(2).strip()
+            if title.startswith("§"):
+                out.append(f"{m.group(1)} {title}")
+                continue
+            # Pandoc faithfully keeps inline formatting in headings, so a real Word
+            # heading often arrives as `**4.5. DECLARATION...**` or
+            # `<u>5.2. COST EVALUATION</u>`. Detect against the visible text, not the
+            # Markdown/HTML wrapper.
+            probe = re.sub(r"^(?:(?:\*\*|__|<u>|\[)\s*)+", "", title, flags=re.I)
+            probe = re.sub(r"(?:\s*(?:\*\*|__|</u>|\]))+$", "", probe, flags=re.I)
+            clause = native.match(probe)
+            if clause:
+                out.append(f"{m.group(1)} §{clause.group('num')} "
+                           f"{clause.group('title').strip()}")
+            else:
+                out.append(f"{m.group(1)} {label} {n}: {title}")
         else:
             out.append(line)
     return "\n".join(out), n
@@ -438,7 +459,25 @@ def scan(root):
     to_index = []
     for shared in root.glob("01_pursuit/_shared"):
         index_file = shared / "firm_assets.md"
-        indexed = index_file.read_text(encoding="utf-8", errors="replace") if index_file.exists() else ""
+        index_text = (index_file.read_text(encoding="utf-8", errors="replace")
+                      if index_file.exists() else "")
+        # A path mentioned under "Gaps — what we do NOT hold" is not handled evidence.
+        # Keep the same boundary the lint uses when deciding which A-nnn ids are real assets.
+        index_text = re.split(r"^#{1,3}\s+.*gap.*$", index_text,
+                              flags=re.M | re.I)[0]
+        # A basename substring is not an identity. On the real GNI asset tree,
+        # `case_studies/others/Quals.pdf` disappeared because the index already contained
+        # `case_studies/1_General_DataMod Quals.pdf`. Read exact, backticked paths instead.
+        # The same mechanism lets the index mark editable companions and build helpers as
+        # handled without pretending each one is a separate A-nnn evidence asset.
+        indexed = set()
+        for token in re.findall(r"`([^`\n]+)`", index_text):
+            rel = token.strip().replace("\\", "/")
+            prefix = "01_pursuit/_shared/"
+            if rel.startswith(prefix):
+                rel = rel[len(prefix):]
+            if rel and not rel.startswith(("/", "../")) and "<" not in rel:
+                indexed.add(pathlib.PurePosixPath(rel).as_posix())
         # Walk ALL of _shared/, not a whitelist of kinds. The scaffold plants six, and the
         # folder's own README tells the user to add a new one rather than force a bad fit —
         # so a whitelist makes exactly the assets someone thought about hardest invisible.
@@ -450,7 +489,8 @@ def scan(root):
             if asset.name in ("README.md", "firm_assets.md"):
                 continue
             # any file type — a rate card or a CV is an asset whether or not we can convert it
-            if asset.name not in indexed:
+            rel = asset.relative_to(shared).as_posix()
+            if rel not in indexed:
                 where = asset.parent.relative_to(root)
                 to_index.append((str(where), asset))
     return to_ingest, to_index

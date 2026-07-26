@@ -1,6 +1,6 @@
 {
   "name": "engagement-os",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "description": "Engagement OS — a composable operating system for document-heavy consulting engagements: research-only, bid-only, delivery-only, or both",
   "owner": {
     "name": "Forest Deng",

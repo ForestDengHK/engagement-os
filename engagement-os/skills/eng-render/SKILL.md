@@ -49,7 +49,9 @@ converter written here would be a worse pandoc.
 - [ ] 4. DOCUMENT: same script, --to docx|pdf|both. Typography: --font/--size are
         enforced through a generated pandoc reference.docx (the docx writer ignores
         pandoc's mainfont/fontsize metadata — that mechanism never worked); if the
-        buyer mandates a template, pass it as --reference-doc instead. Re-check the
+        buyer mandates a template, pass it as --reference-doc instead. Generated documents
+        default to `--paper a4`; use `--paper letter` only when the recipient requires it.
+        A buyer-supplied reference document controls its own paper size. Re-check the
         PAGE COUNT the build prints against the budgets — a word estimate is an estimate.
 - [ ] 5. DECK, first build: --to deck-manifest --audience "..." --decision "...", then
         invoke the `presentation-builder` skill with the manifest. Audience and decision

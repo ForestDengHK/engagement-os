@@ -56,6 +56,11 @@ PACK=_sources/<bucket>          # public | pre_award | engagement
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <source_path> \
   --out "$PACK/_md/<NN_topic>/<slug>.md" --images-dir "$PACK/_md/images/<topic>"
 ```
+
+For Word sources, a heading that already carries the buyer's clause number is preserved as a
+native clause anchor (`## 2.1 Timetable` → `## §2.1 Timetable`). Only unnumbered headings receive
+the synthetic `§Section N` fallback. Cite the native clause wherever it exists; page/section
+fallbacks are for documents whose author supplied no stable numbering.
 Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · `## Slide N:` pptx ·
 `## Sheet:` xlsx · `## Section N:` docx). It walks grouped shapes and pulls speaker notes, and it
 auto-drops images that are decorative by construction (repeated across units, or under 6KB),
