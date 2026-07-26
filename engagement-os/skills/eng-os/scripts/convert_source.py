@@ -28,10 +28,14 @@ tracked changes, comments, chart data labels, or a scanned PDF needing real OCR.
 Usage:
     python convert_source.py <source_path> [--out <md_path>] [--images-dir <dir>]
 
-Supported: .pdf .pptx .ppsx .docx .xlsx .csv .png .jpg .jpeg
+Supported: .pdf .pptx .ppsx .docx .xlsx .csv .png .jpg .jpeg .html .htm
 Dependencies are imported lazily; a missing one degrades that format with a clear message
 rather than crashing. Install as needed: pip install pymupdf python-pptx python-docx openpyxl
 (PEP-668/Homebrew Python: add --user --break-system-packages, or use a venv.)
+
+A sourced-from-the-web document has an origin URL that the file itself does not carry, and a
+research claim has to cite something retrievable. Pass `--source-url` and it lands in the
+provenance header next to the path and the md5.
 """
 import argparse
 import hashlib
@@ -50,10 +54,18 @@ def md5(path):
     return h.hexdigest()
 
 
+# Set from --source-url. A document we downloaded has an origin the file does not record, and
+# a research claim must cite something a reader can retrieve — so it belongs in the header,
+# beside the path and the md5, for every format and not just HTML.
+SOURCE_URL = None
+
+
 def header(src, extra=""):
+    origin = f"> **Origin URL:** {SOURCE_URL}  \n" if SOURCE_URL else ""
     return (
         f"# {os.path.basename(src)}\n\n"
         f"> **Source:** `{src}`  \n"
+        f"{origin}"
         f"> **Converted:** {_dt.date.today().isoformat()}  \n"
         f"> **md5:** `{md5(src)}`  \n"
         f"{extra}\n---\n\n"
@@ -62,6 +74,12 @@ def header(src, extra=""):
 
 MIN_IMG_BYTES = 6 * 1024        # below this is an icon, bullet, rule or spacer
 MIN_IMG_PIXELS = 120            # narrowest side; logos and dividers fall under this
+
+
+def img_prefix(src):
+    """Namespace for one document's extracted images inside a shared pack images dir."""
+    stem = os.path.splitext(os.path.basename(src))[0]
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", stem) + "__"
 
 
 class ImageCollector:
@@ -80,11 +98,20 @@ class ImageCollector:
     Links are written relative to **the markdown file**, not to the images dir's parent. Those
     two coincide only when the images dir is exactly `<md_dir>/images`; every other layout the
     skill actually instructs (`_md/images/<topic>/`) produced links that resolved nowhere.
+
+    Names are namespaced by source document. The per-unit name a converter generates
+    (`p6_img1.png`) is unique only *within* one document, but a reference pack points every
+    document at ONE shared images dir — so the eleventh document's page 6 quietly overwrote the
+    first document's page 6. The markdown still rendered, still had a plausible caption stub, and
+    now showed a different report's figure under our citation. Found on the Deloitte research
+    E2E: 27 names claimed by 2-5 documents each. Prefixing with the source stem makes the
+    filename mean what the citation says it means.
     """
 
-    def __init__(self, images_dir, link_base=None):
+    def __init__(self, images_dir, link_base=None, prefix=""):
         self.dir = images_dir
         self.link_base = link_base or os.path.dirname(images_dir.rstrip("/"))
+        self.prefix = prefix
         self.kept = []                  # (relpath, unit) in emit order
         self._by_digest = {}            # digest -> [(path, rel, unit), ...]
         self._names = {}                # emitted filename -> relpath (for inline placement)
@@ -95,6 +122,7 @@ class ImageCollector:
         if len(blob) < MIN_IMG_BYTES:
             self.dropped_small += 1
             return False
+        name = self.prefix + os.path.basename(name)
         digest = hashlib.md5(blob).hexdigest()
         path = os.path.join(self.dir, name)
         os.makedirs(self.dir, exist_ok=True)
@@ -124,8 +152,13 @@ class ImageCollector:
 
     def link_for(self, name):
         """Relative link for a kept image by filename, or None if it was dropped.
-        `finalise()` must have run — decorative-drop is only decidable across the whole doc."""
-        return self._names.get(os.path.basename(name))
+        `finalise()` must have run — decorative-drop is only decidable across the whole doc.
+
+        Callers hold the un-prefixed name they generated, while `_names` is keyed by the
+        namespaced one, so try both rather than making every call site know about the prefix.
+        """
+        base = os.path.basename(name)
+        return self._names.get(self.prefix + base) or self._names.get(base)
 
 
 IMG_TOKEN = "<!--ENGOS-IMG:%s-->"
@@ -306,7 +339,7 @@ def convert_pdf(src, images_dir, link_base=None):
         return None, "pymupdf not installed — run: pip install pymupdf (PEP-668: add --user --break-system-packages)"
     doc = fitz.open(src)
     out = [header(src, f"> **Pages:** {doc.page_count}  ")]
-    coll = ImageCollector(images_dir, link_base)
+    coll = ImageCollector(images_dir, link_base, img_prefix(src))
     for i, page in enumerate(doc, 1):
         out.append(f"## Page {i}:\n")
         text = page.get_text("text").strip()
@@ -334,7 +367,7 @@ def convert_pptx(src, images_dir, link_base=None):
     except ImportError:
         return None, "python-pptx not installed — run: pip install python-pptx (PEP-668: add --user --break-system-packages)"
     prs = Presentation(src)
-    coll = ImageCollector(images_dir, link_base)
+    coll = ImageCollector(images_dir, link_base, img_prefix(src))
 
     # markitdown owns the text: it reaches shape types python-pptx makes you hunt for and
     # carries each picture's embedded accessibility description, which is often the only
@@ -419,7 +452,7 @@ def convert_docx(src, images_dir, link_base=None):
         tmp = tempfile.mkdtemp(prefix="engos-media-")
         md = _run(["pandoc", "-t", "gfm", "--wrap=none", f"--extract-media={tmp}", src])
         if md:
-            coll = ImageCollector(images_dir, link_base)
+            coll = ImageCollector(images_dir, link_base, img_prefix(src))
             for root, _dirs, files in os.walk(tmp):
                 for fn in sorted(files):
                     src_img = os.path.join(root, fn)
@@ -545,6 +578,59 @@ def convert_csv(src, images_dir, link_base=None):
     return "\n".join(out), None
 
 
+def convert_html(src, images_dir, link_base=None):
+    """A saved web page — the research lane's most common source, and the one with no file format.
+
+    `defuddle` owns the de-cluttering, the way pandoc owns document order. A page saved from a
+    corporate site is 90% navigation, cookie wall, share widgets and script tags; pandoc converts
+    all of it faithfully into noise, which is worse than losing it. Defuddle is the same tool the
+    `defuddle` skill reads pages with, so this is reuse, not a second implementation. We add only
+    the provenance header and the citable section numbering.
+
+    Images are remote here, not embedded, so there is nothing to extract to disk. Absolute links
+    survive because they still resolve; relative ones are dropped, because a page saved without
+    its origin turns `/content/dam/x.png` into a reference that points nowhere — the same dead-link
+    failure convert_docx fixes for embedded media.
+    """
+    if _tool("defuddle"):
+        md = _run(["defuddle", "parse", src, "-m"])
+        extractor = "defuddle (page furniture removed)"
+    else:
+        md, extractor = None, None
+    if not md and _tool("pandoc"):
+        md = _run(["pandoc", "-f", "html", "-t", "gfm", "--wrap=none", src])
+        extractor = ("pandoc (fallback — navigation, cookie banners and share widgets are "
+                     "converted along with the article; install defuddle for a clean read)")
+    if not md:
+        return None, ("no defuddle and no pandoc — install either: "
+                      "npm i -g defuddle-cli | brew install pandoc")
+
+    kept, dropped = [0], [0]
+
+    def _keep_absolute(m):
+        url = m.group(2).strip()
+        if url.lower().startswith(("http://", "https://", "data:")):
+            kept[0] += 1
+            return m.group(0)
+        dropped[0] += 1
+        return ""
+
+    md = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _keep_absolute, md)
+
+    # Unglue headings fused onto the previous paragraph. Web markup routinely closes a block
+    # without a break, so the converter emits `...scales as your needs evolve.#### Zora AI for
+    # Finance`. A heading that is not at line start is not a heading to any markdown parser, so
+    # it silently skips the anchor numbering below — and a section with no anchor cannot be
+    # cited, which is the whole point of ingesting it. Require a non-space before the hashes so
+    # a legitimate mid-sentence `# ` is left alone.
+    md = re.sub(r"([^\s])(#{1,6} )", r"\1\n\n\2", md)
+
+    md = flatten_internal_links(md)
+    body, n = number_headings(md, "Section")
+    note = f"> **Images:** {kept[0]} remote link(s) kept, {dropped[0]} relative link(s) dropped  \n"
+    return header(src, f"> **Sections:** {n}  \n{note}> **Extractor:** {extractor}  ") + body, None
+
+
 def convert_image(src, images_dir, link_base=None):
     rel = os.path.relpath(src, link_base or os.path.dirname(images_dir)) if images_dir else src
     body = header(src) + (
@@ -558,6 +644,7 @@ DISPATCH = {
     ".pdf": convert_pdf, ".pptx": convert_pptx, ".ppsx": convert_pptx,
     ".docx": convert_docx, ".xlsx": convert_xlsx, ".csv": convert_csv,
     ".png": convert_image, ".jpg": convert_image, ".jpeg": convert_image,
+    ".html": convert_html, ".htm": convert_html,
 }
 
 
@@ -672,7 +759,13 @@ def main():
                          "and exit. Answers 'what arrived that I haven't ingested?'")
     ap.add_argument("--out", help="output .md path (default: source with .md next to it)")
     ap.add_argument("--images-dir", help="dir for extracted images (default: <out_dir>/images)")
+    ap.add_argument("--source-url", help="the URL this document was downloaded from — recorded "
+                                         "in the provenance header so a claim can cite something "
+                                         "retrievable, not just a local path")
     args = ap.parse_args()
+
+    global SOURCE_URL
+    SOURCE_URL = args.source_url
 
     if args.scan is not None:
         root = pathlib.Path(args.scan).resolve()

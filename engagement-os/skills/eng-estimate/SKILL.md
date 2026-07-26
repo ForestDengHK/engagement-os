@@ -22,19 +22,37 @@ reconciling three guesses.
 Also read before starting: `bid_reuse_analysis.md` if it exists (a prior lump sum is the cheapest
 sanity check available) and `01_pursuit/_shared/firm_assets.md` for the rate card.
 
-**Two outputs, one model.** `estimation.md` is the narrative — assumptions, the overlap audit's
-reasoning, the decision framing. `estimation.xlsx` is the model — the same numbers as **live
-formulas**, which is what a reviewer needs: change an input, everything recalculates. Write the
-markdown from
-`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/estimation.md.tmpl`, then build the workbook:
+**One maintained artefact: the workbook.** `estimation.xlsx` holds the numbers as live formulas
+*and* the judgement — basis of estimate, techniques and their reconciliation, the outside view,
+calibration, contingency, the pricing-document mapping, re-baseline triggers — each on its own
+sheet. `estimation.md` is a **generated snapshot**, never edited by hand.
+
+```
+workbook (source of truth)  ──  --to-md  ─►  markdown snapshot (generated, read-only)
+```
+
+Seed the workbook once from
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/estimation.md.tmpl`, then work in the workbook:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/build_estimate_workbook.py \
-    01_pursuit/<ENG-ID>/2_analysis/estimation.md          # → estimation.xlsx
-    # --check       recompute the markdown's own arithmetic and report drift
+B=${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/build_estimate_workbook.py
+python3 $B 01_pursuit/<ENG-ID>/2_analysis/estimation.md      # seed the workbook — ONCE
+python3 $B --out .../estimation.xlsx --to-md                 # after every workbook edit
+    # --reseed      rebuild FROM the markdown, discarding workbook edits (destructive)
+    # --check       recompute the seed markdown's arithmetic and report drift
     # --zero-rates  emit the rate card at 0 when no real card exists
     # --blank       starter workbook before any markdown
 ```
+
+**Re-seeding is destructive and the script refuses it by default.** It used to rebuild from the
+markdown on every run, so a reviewer's workbook edits vanished on the next build while the docs
+told them the workbook was the model. An existing workbook is now never overwritten without
+`--reseed`.
+
+**Why keep a markdown snapshot at all** when the workbook is the source: `eng_lint` reads text,
+so an xlsx-only estimate falls out of every mechanical gate; and `git diff` on a binary shows
+nothing, which matters on a bid re-priced three times. The snapshot is regenerated after each
+edit and carries a DO-NOT-EDIT banner.
 
 **Use the `xlsx` skill for anything spreadsheet-shaped beyond running this script** — editing the
 workbook by hand, adding a sheet, changing formatting, or diagnosing a formula. It owns the

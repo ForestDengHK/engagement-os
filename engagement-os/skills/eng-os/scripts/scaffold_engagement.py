@@ -169,6 +169,13 @@ CORE_FILES = [
 
 RESEARCH_FILES = [
     ("research-README.md.tmpl", "00_research/README.md", {}),
+    # The research README's §5 says the evidence tags and the T1/T2/T3 rule are unchanged, and
+    # names `_FINDING_STANDARD.md` as where they are defined — but the standard was a delivery-only
+    # file, so a research repo asserted a vocabulary it did not contain and lint flagged the
+    # reference as dangling on a freshly scaffolded tree. The sprint playbook already treats
+    # 1_analysis/ and 3_findings/ as the same corpus in two blocks; they get the same standard,
+    # from the ONE template, so the closed tag set cannot drift between them.
+    ("FINDING_STANDARD.md.tmpl", "00_research/_FINDING_STANDARD.md", {}),
 ]
 
 PURSUIT_FILES = [
