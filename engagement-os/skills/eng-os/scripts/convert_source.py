@@ -406,19 +406,28 @@ DISPATCH = {
 }
 
 
+ASSET_KINDS = ("approaches", "case_studies", "cvs", "credentials", "diagrams", "finance")
+
+
 def scan(root):
-    """List source files sitting in the tree that have no converted markdown yet.
+    """What showed up in the tree that hasn't been dealt with yet.
 
     Asking the user to type a path for every arriving document is asking them to do what a
-    directory listing can decide. A source file is un-ingested when nothing named after it
-    exists under the matching `_md/` — that is the whole test, and it needs no manifest.
+    directory listing can decide. Two kinds of "not dealt with", because the two kinds of
+    material have different destinations:
 
-    Returns [(bucket_label, source_path)], in arrival-agnostic sorted order.
+      INGEST — sourced material (given to us or found by us, plus the tender pack). Un-ingested
+        when nothing named after it exists under the matching `_md/`. Needs no manifest.
+      INDEX  — our OWN reusable assets under `01_pursuit/_shared/<kind>/`. These are never
+        converted and never bucketed; they belong in `firm_assets.md`, and one that has no row
+        there is invisible to the bid — which is how the only sector-matching case study in a
+        pack turns out to be undated on submission week.
+
+    Returns (to_ingest, to_index), each [(area_label, path)].
     """
-    pending = []
+    to_ingest = []
     areas = [(p, p / "_md") for p in root.glob("_sources/*") if p.is_dir()]
     areas += [(p, p / "_md") for p in root.glob("01_pursuit/*/1_received") if p.is_dir()]
-    areas += [(p, p / "_md") for p in root.glob("01_pursuit/archive-*/1_received") if p.is_dir()]
     for area, md_dir in areas:
         converted = {p.stem.lower() for p in md_dir.rglob("*.md")} if md_dir.exists() else set()
         for src in sorted(area.rglob("*")):
@@ -427,8 +436,21 @@ def scan(root):
             if md_dir in src.parents:            # already inside _md/ — an extracted image
                 continue
             if src.stem.lower() not in converted:
-                pending.append((str(area.relative_to(root)), src))
-    return pending
+                to_ingest.append((str(area.relative_to(root)), src))
+
+    to_index = []
+    for shared in root.glob("01_pursuit/_shared"):
+        index_file = shared / "firm_assets.md"
+        indexed = index_file.read_text(encoding="utf-8", errors="replace") if index_file.exists() else ""
+        for kind in ASSET_KINDS:
+            kind_dir = shared / kind
+            if not kind_dir.is_dir():
+                continue
+            for asset in sorted(kind_dir.rglob("*")):
+                # any file type — a rate card or a CV is an asset whether or not we can convert it
+                if asset.is_file() and not asset.name.startswith(".") and asset.name not in indexed:
+                    to_index.append((str(kind_dir.relative_to(root)), asset))
+    return to_ingest, to_index
 
 
 def main():
@@ -444,17 +466,27 @@ def main():
 
     if args.scan is not None:
         root = pathlib.Path(args.scan).resolve()
-        pending = scan(root)
-        if not pending:
-            print("  nothing waiting — every source file in the tree has markdown")
+        to_ingest, to_index = scan(root)
+        if not to_ingest and not to_index:
+            print("  nothing waiting — every source file has markdown, every asset has a row")
             return 0
-        print(f"  {len(pending)} document(s) waiting to be ingested:\n")
-        area = None
-        for label, src_path in pending:
-            if label != area:
-                area, _ = label, print(f"  {label}/")
-            print(f"      {src_path.relative_to(root / label)}")
-        print("\n  Ingest each one, then update that bucket's canonical pair.")
+
+        def show(items, heading, follow_up):
+            if not items:
+                return
+            print(f"  {len(items)} {heading}:\n")
+            area = None
+            for label, path in items:
+                if label != area:
+                    area, _ = label, print(f"  {label}/")
+                print(f"      {path.relative_to(root / label)}")
+            print(f"\n  → {follow_up}\n")
+
+        show(to_ingest, "document(s) waiting to be INGESTED",
+             "convert each, then update that bucket's canonical pair (eng-update-canonical).")
+        show(to_index, "asset(s) of OURS waiting to be INDEXED",
+             "eng-index-assets — what each proves, its date, whether it is in-window. "
+             "An asset with no row is invisible to the bid.")
         return 0
 
     if not args.source:
