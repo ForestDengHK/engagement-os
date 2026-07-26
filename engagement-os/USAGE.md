@@ -228,7 +228,7 @@ or drop the claim.
 | `/eng-validate-findings` | the precedence + `[⚠VERIFY]` sweep |
 | `/eng-build-deliverable` | assemble from validated findings |
 | `/eng-maintain-memory` | re-index CLAUDE.md / DELIVERABLES / project-context |
-| `/eng-index-assets` | index what the firm holds — what each asset PROVES, dated, in-window |
+| `/eng-index-assets` | index what the firm holds — what each asset PROVES, dated, in-window. Usually reached *via* `/eng-source`'s scan rather than typed |
 | `/eng-rfp-analyze` · `/eng-bid-research` · `/eng-bid-respond` | the three bid stages individually |
 | `/eng-check` | run every mechanical gate that applies and report what is blocking |
 
