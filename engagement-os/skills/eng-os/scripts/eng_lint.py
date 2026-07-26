@@ -357,7 +357,10 @@ def rule_manifest_complete(root, r):
             continue
         r.ran()
         listed = {os.path.basename(x) for x in re.findall(
-            r"`([\w./-]+\.md)`", readme.read_text(encoding="utf-8", errors="replace"))}
+            r"`([^`]+\.md)`", readme.read_text(encoding="utf-8", errors="replace"))}
+        # [^`]+ not [\w./-]+ — real filenames have spaces ("26-002 - DataWarehouse ....md").
+        # The [\w./-]+ version read zero rows from a manifest the converter had just written:
+        # writer and reader each "worked", and together they reported every file as unlisted.
         present = {p.name for p in content}
         for p in content:
             if p.name not in listed:

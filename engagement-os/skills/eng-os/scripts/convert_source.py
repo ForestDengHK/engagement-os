@@ -459,6 +459,39 @@ def scan(root):
     return to_ingest, to_index
 
 
+def update_manifest(out_path, src):
+    """Upsert this conversion's provenance row in the pack's README.md manifest.
+
+    Only fires when the output lands in a `_md/` pack directory — anywhere else there is no
+    manifest convention to maintain. eng_lint's manifest-complete rule errors on a converted
+    MD with no row, so if the converter doesn't write the row, every conversion lands the
+    user in a lint error they can only clear by hand. Found on the real GNI tender pack:
+    four documents converted, no manifest anywhere, and the error had no automated path out.
+
+    Row format matches what rule_manifest_complete greps for: the .md name in backticks.
+    """
+    pack = pathlib.Path(out_path).parent
+    if pack.name != "_md":
+        return
+    readme = pack / "README.md"
+    row = (f"- `{os.path.basename(out_path)}` — converted from "
+           f"`{os.path.basename(src)}` ({_dt.date.today().isoformat()})")
+    if not readme.exists():
+        readme.write_text(
+            "# Conversion manifest\n\n"
+            "One row per converted document: which source file it came from and when. "
+            "Written by convert_source.py on each conversion; keep rows in sync on renames.\n\n"
+            + row + "\n", encoding="utf-8")
+        return
+    text = readme.read_text(encoding="utf-8", errors="replace")
+    name = os.path.basename(out_path)
+    if f"`{name}`" in text:                      # re-conversion: refresh the row, don't duplicate
+        text = re.sub(rf"^- `{re.escape(name)}`.*$", row, text, flags=re.M)
+    else:
+        text = text.rstrip("\n") + "\n" + row + "\n"
+    readme.write_text(text, encoding="utf-8")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("source", nargs="?",
@@ -519,10 +552,11 @@ def main():
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(body)
+    update_manifest(out_path, src)
     print(f"Wrote {out_path}")
     print(f"md5(source) = {md5(src)}")
-    print("Next: triage extracted images, OCR any [uncertain] ones inline, add the manifest "
-          "row in _md/README.md, then run `eng-update-canonical`.")
+    print("Next: triage extracted images, OCR any [uncertain] ones inline "
+          "(the manifest row was written), then run `eng-update-canonical`.")
     return 0
 
 

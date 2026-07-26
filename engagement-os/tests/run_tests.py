@@ -209,6 +209,13 @@ CASES = [
     ("tender pack converted with no manifest",
      lambda t: t.__setitem__("01_pursuit/27-010/1_received/_md/rft.md", "# RFT\n"),
      {"manifest-absent"}, set(), set()),
+    # Real tender filenames have spaces — the row reader must match what the writer writes.
+    ("manifest row with spaces in the filename",
+     lambda t: (t.__setitem__("01_pursuit/27-010/1_received/_md/27-010 - Main RFT.md",
+                              "# RFT\n"),
+                t.__setitem__("01_pursuit/27-010/1_received/_md/README.md",
+                              "- `27-010 - Main RFT.md` — converted from `27-010 - Main RFT.docx`\n")),
+     set(), set(), {"manifest-missing", "manifest-absent", "manifest-stale-row"}),
     ("manifest-absent",
      lambda t: (t.pop("_sources/public/_md/README.md"),
                 t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n")),
@@ -366,7 +373,56 @@ def main():
         print(f"✗ FAILING: {fails}")
         return 1
     print("✓ all fixture cases pass")
-    return 0
+    return converter_tests()
+
+
+def converter_tests():
+    """convert_source.update_manifest: the lint manifest rule errors on a converted MD with
+    no row, so the converter must write the row itself — else every conversion is a manual
+    lint fix. Found on the real GNI pack: 4 MDs, no manifest, no automated path to green.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "convert_source", PLUGIN / "skills/eng-os/scripts/convert_source.py")
+    cs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cs)
+
+    root = pathlib.Path(tempfile.mkdtemp(prefix="engos-conv-"))
+    pack = root / "01_pursuit/x-001/1_received/_md"
+    pack.mkdir(parents=True)
+    src = root / "01_pursuit/x-001/1_received/RFT.pdf"
+    src.write_text("fake", encoding="utf-8")
+    out = pack / "RFT.md"
+    out.write_text("# RFT", encoding="utf-8")
+    checks = []
+
+    cs.update_manifest(str(out), str(src))                    # 1. creates README + row
+    text = (pack / "README.md").read_text(encoding="utf-8")
+    checks.append(("creates manifest", "`RFT.md`" in text and "RFT.pdf" in text))
+
+    out2 = pack / "Appendix.md"                               # 2. appends a second row
+    out2.write_text("# App", encoding="utf-8")
+    cs.update_manifest(str(out2), str(src))
+    text = (pack / "README.md").read_text(encoding="utf-8")
+    checks.append(("appends row", "`RFT.md`" in text and "`Appendix.md`" in text))
+
+    cs.update_manifest(str(out), str(src))                    # 3. re-conversion: no duplicate
+    text = (pack / "README.md").read_text(encoding="utf-8")
+    checks.append(("upserts not duplicates", text.count("`RFT.md`") == 1))
+
+    plain = root / "notes/outside.md"                         # 4. outside _md/: no manifest
+    plain.parent.mkdir()
+    plain.write_text("x", encoding="utf-8")
+    cs.update_manifest(str(plain), str(src))
+    checks.append(("ignores non-pack output", not (plain.parent / "README.md").exists()))
+
+    for name, ok in checks:
+        print(f"  {'✓' if ok else '✗'} converter:{name}")
+    if all(ok for _, ok in checks):
+        print("✓ converter manifest-writer passes")
+        return 0
+    print("✗ converter manifest-writer FAILING")
+    return 1
 
 
 if __name__ == "__main__":
