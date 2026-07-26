@@ -26,7 +26,8 @@ bottom-up, cited, cross-checked, and honest about its own error bar.
 ingest RFP ─► analyse (eng-rfp-analyze) ─┬─► §3 scope decomposition (S-IDs + volumetrics)
                                           │            │
                                           │            ▼
-                                          │      ESTIMATE (eng-estimate → estimation.md)  ← this file
+                                          │      ESTIMATE (eng-estimate → estimation.xlsx
+                                          │                + generated estimation.md)     ← this file
                                           │            │
                                           └─► §4 solution ─┘   ─► price posture → bid_response §pricing
 ```

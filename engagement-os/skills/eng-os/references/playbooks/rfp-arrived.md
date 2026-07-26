@@ -2,7 +2,8 @@
 
 The bid lifecycle, from a tender landing to a submission-ready response. Each step names the
 skill that owns it — follow that skill, don't reproduce it here. Runs in the `01_pursuit/<ENG-ID>/`
-tree (`eng-scaffold --mode pursuit`; no delivery block is needed to bid).
+tree (created through `Skill(engagement-os:eng-scaffold)` for the pursuit block; no delivery
+block is needed to bid).
 
 ## The shape: a spine, a loop, and two one-way gates
 
@@ -17,15 +18,16 @@ analyse, then write" describes a bid nobody has ever run.
     this one first)                   │   material arrives                       │
          │                            │        ↓                                 │
          ▼                            │   ingest → canonical → matrix rows move  │
-   ingest → analyse → GO/NO-GO 🛑 ────┤        ↓                                 │
-         │                            │   the sections it touches get written    │
-         ▼                            │   or revised → reviewed                  │
+   ingest → analyse → assets          │        ↓                                 │
+      → estimate → GO/NO-GO 🛑 ───────┤   the sections it touches get written    │
+         │                            │   or revised → reviewed                  │
+         ▼                            │                                          │
    compliance_matrix.md ◄─────────────┤                                          │
    (the spine, always current)        └──────────────────────────────────────────┘
                                                        │
                                         every section reviewed-r2/approved
                                                        ▼
-                                                   SHIP 🛑 render, once, last
+                                  SHIP 🛑 check → render → verify → freeze
 ```
 
 - **The spine** — `compliance_matrix.md`. One row per requirement, always current. It is what
@@ -52,32 +54,40 @@ alone; don't wait for the rest of the material to arrive.
    so the go/no-go shrinks to capacity + conflict of interest; call-off terms are pre-agreed
    (commercial risk review is narrower, not absent); and there may be **no clarification
    window** — check before planning step 5.
-3. **Analyse it** → `eng-rfp-analyze`. Every requirement extracted with an ID + clause cite into
+3. **Analyse it** → `Skill(engagement-os:eng-rfp-analyze)`. Every requirement extracted with an
+   ID + clause cite into
    `compliance_matrix.md`; the **scope decomposed into S-IDs with effort drivers** and a cited
    volumetric baseline; **our understanding and our solution** per client challenge, including
    what it does *not* solve; evaluation weights mapped; multi-role read; evidence-backed
    win-themes; risks and deal-breakers; the **materials-needed list** (research vs upload); a
-   go/no-go. This is the spine's first version, not its last.
+   provisional set of non-commercial go/no-go conditions. This is the spine's first version,
+   not its last; the final recommendation waits for the estimate in step 5.
 4. **Check for a prior bid — before drafting anything.** A re-issue, a follow-on, or the same
    buyer asking again means most of the answer already exists *and already survived an
-   evaluation*. Convert it (`eng-ingest-source` → `01_pursuit/archive-<PRIOR-ID>/`) and fill
+   evaluation*. Convert it (`Skill(engagement-os:eng-ingest-source)` →
+   `01_pursuit/archive-<PRIOR-ID>/`) and fill
    `bid_reuse_analysis.md`: per section, FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW, with a
    field-level diff of the old clause against the new one.
    **If there is none, create no file** — write *"searched X, none found"* into `rfp_analysis.md`
    §9 instead. A speculative reuse analysis reads as completed work and the next reader trusts
    it; a recorded negative is a checked fact.
-4b. **Size it** → `eng-estimate` (priced tenders — i.e. nearly all of them). The S-ID table
-   becomes a bottom-up effort model, the client-side hours ask, itemised contingency, and a
-   cost→price build; where the buyer publishes a cost formula, price converts to marks
-   arithmetically. Do this **before** the go/no-go: "can we win it at a price above our cost
-   base" is a go/no-go question, and it cannot be answered by feel.
-5. **Index what we hold** → `eng-index-assets` → `01_pursuit/_shared/firm_assets.md`. What each
+4b. **Index what we hold** → `Skill(engagement-os:eng-index-assets)` →
+   `01_pursuit/_shared/firm_assets.md`. What each
    asset **proves** (the claim an evaluator scores, not the title), its date, whether it is
    **in-window** against this tender's recency rule, and its permission constraints. This is
    what makes the gap list real: a requirement covered by an indexed, in-window asset is a
    **citation, not a gap**. Undated is unusable — recency rules are pass/fail.
-6. **Raise clarifications before the query deadline** → `eng-rfp-analyze` step 6b →
-   `clarification_log.md`. Questions are **derived by a dimension sweep** (scope · solution ·
+5. **Size it — invoke, do not merely mention, the plugin skill
+   `engagement-os:eng-estimate` through the Skill tool.** (`Skill(engagement-os:eng-estimate)`;
+   priced tenders — i.e. nearly all of them.) The S-ID table and indexed rate card become a
+   bottom-up effort model, the client-side hours ask, itemised contingency, and a cost→price
+   build; where the buyer publishes a cost formula, price converts to marks arithmetically. Do
+   this **before** the go/no-go: "can we win it at a price above our cost base" is a go/no-go
+   question, and it cannot be answered by feel.
+6. **Raise clarifications before the query deadline** →
+   `Skill(engagement-os:eng-rfp-analyze)` step 6b →
+   `clarification_log.md`, and finalise the go/no-go recommendation using the returned cost
+   base. Questions are **derived by a dimension sweep** (scope · solution ·
    evidence/qualification · commercial · delivery · evaluation-process), then run through the
    multi-role lens (`panel-discuss` if installed), then **the human decides what actually
    goes** — some questions reveal more about our position than the answer is worth. The query
@@ -110,22 +120,25 @@ a case study, a CV, an answer to a question you raised.
    another client's. `eng_lint.py` enforces the boundary.
 
 2. **Ingest and canonicalise** → [new-source-arrived.md](new-source-arrived.md), which owns
-   bucketing → `eng-ingest-source` → `eng-update-canonical`. **A bid needs the canonical pair as
-   much as a delivery does**: each bucket's `00_REFERENCE_SUMMARY.md` (facts, cited) and
+   bucketing → `Skill(engagement-os:eng-ingest-source)` →
+   `Skill(engagement-os:eng-update-canonical)`. **A bid needs the canonical pair as much as a
+   delivery does**: each bucket's `00_REFERENCE_SUMMARY.md` (facts, cited) and
    `01_REFERENCE_INSIGHTS.md` (what it means for us) are where a fact lands once instead of
    being re-read out of the source every time a section needs it.
    *Our own* assets don't go through the buckets — they go to `eng-index-assets`, which gives
-   each one a row in `01_pursuit/_shared/firm_assets.md`. An asset nobody indexed is one nobody
-   finds under deadline, and one `eng_lint.py` will fail the moment a section cites it.
+   each one a row in `01_pursuit/_shared/firm_assets.md` through
+   `Skill(engagement-os:eng-index-assets)`. An asset nobody indexed is one nobody finds under
+   deadline, and one `eng_lint.py` will fail the moment a section cites it.
 
 3. **Move the spine.** Which matrix rows does this arrival close, weaken, or newly expose? A
    requirement covered by an indexed, in-window asset is a **citation, not a gap** — this is why
    the assets index has to exist before you can trust the gap list. Gaps that survive are the
-   scope for `eng-bid-research`, which closes them with cited findings in `bid_research_log.md`
+   scope for `Skill(engagement-os:eng-bid-research)`, which closes them with cited findings in `bid_research_log.md`
    (`[T3:OWN]` for our own research) — zero fabrication, and anything unsourceable is marked
    `[⚠VERIFY]` and kept out of the response.
 
-4. **Write or revise the sections it touches** → `eng-bid-respond`. Only the sections whose
+4. **Write or revise the sections it touches** →
+   `Skill(engagement-os:eng-bid-respond)`. Only the sections whose
    `answers_reqs` include the moved rows. Sections are built *from the matrix*, not free-written.
 
 5. **Review what you touched.** Per section, not per document — that is the point of the next
@@ -164,12 +177,16 @@ a finished document for the first time the night before submission.
 
 The output format is the *last* step, not a thing you build toward incrementally.
 
-1. **Check** → `eng-check` (`--strict` before a freeze). It runs the gates and reports what is
-   blocking; nobody types a script path to reach them.
-2. **Freeze** to `4_final/`; record the submitted version + date.
-3. **Render** → `eng-render --profile bid`, which refuses to build unless every section is
+1. **Check** → `Skill(engagement-os:eng-check)` in strict mode. It runs the gates and reports
+   what is blocking; nobody types a script path to reach them.
+2. **Render** → `Skill(engagement-os:eng-render)` with the `bid` profile, which refuses to build
+   unless every section is
    `reviewed-r2`/`approved` and no `[⚠VERIFY]` survives in body text, then strips the internal
    scaffolding and produces the buyer's required format (`verify_deck.py` if it is a deck).
+3. **Verify the rendered artefact**, not the build log: required pages/slides present, figures
+   intact, internal markings gone, and the submitted pricing numbers agree with the workbook.
+4. **Freeze the exact verified submission package** to `4_final/`; record version + date. Do not
+   freeze an intermediate markdown set and call it the submission.
 
 ## Stop gates
 

@@ -35,6 +35,7 @@ FIELDS = {
     "page_budget":  "lint (per-file and shared-pool checks)",
     "figures":      "lint (ids must exist in figures/ and be referenced in the body)",
     "evidence":     "lint (ids must exist in firm_assets.md)",
+    "depends_on":   "eng-propagate-change (additional load-bearing dependencies)",
     "status":       "lint + render gate",
 }
 

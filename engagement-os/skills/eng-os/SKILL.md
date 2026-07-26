@@ -37,6 +37,24 @@ they carry the same constraint. Boundary + flow rules:
 **`_sources/` is what we were given or found; work trees are what we write.** Never put our own
 analysis in `_sources/`.
 
+## Standalone research — the short route
+
+When the task is **sources in → evidence-based report or deck out**, with no RFP and no delivery
+programme, use the composed route rather than invoking stage skills one by one:
+
+```text
+/eng-new <topic>, research only
+  → approve the drafted question spine
+/eng-source <files-or-folder>      repeat per source batch
+/eng-sprint the research output
+  → choose Markdown, Word/PDF, PowerPoint, or workbook
+```
+
+Default repo name: `research-<project-slug>`. The question list in `00_research/README.md` is
+locked before ingest; sourced facts and interpretations are canonicalised by bucket; our analysis
+goes in `00_research/1_analysis/`; reviewed output goes in `00_research/2_output/`. `/eng-sprint`
+owns validation, structure, build, review, live-index update and the final format question.
+
 ## The delivery pipeline (one job per stage)
 
 ```
@@ -57,6 +75,7 @@ scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─�
 | **Validate** | `eng-validate-findings` | Provenance/validation sweep: evidence-tag audit, precedence arbitration, `[⚠VERIFY]` register, backbone + canonical alignment. |
 | **Build** | `eng-build-deliverable` | Assemble an as-is / to-be deliverable from *validated* findings, provenance intact; add each deliverable's own so-what. |
 | **Memory** | `eng-maintain-memory` | Keep CLAUDE.md / project-context / DELIVERABLES / cross-session memory canonical and lean (anti-rot). Runs throughout. |
+| **Change impact** | `eng-propagate-change` | Detect manual edits since the last reconciled checkpoint, refresh deterministic projections through their owning skills, and reopen only affected review. Cross-cutting across every lane. |
 | **Review** | Panel Framework (companion) | `panel-discuss` locks a deliverable's structure; `panel-review` is the hard red-line gate before anything ships; `panel-debrief` after workshops. |
 
 ## The pursuit pipeline (bid side — win the work first)
@@ -75,10 +94,11 @@ ingest RFP ─► index assets ─► analyse ─► research gaps ─► write 
 |---|---|---|
 | **Index assets** | `eng-index-assets` | Turn our own reusable material into something a bid can cite: what each asset **proves**, dated, in-window against this tender's recency rule, with its permission constraints — plus the gaps we cannot evidence. Decides which matrix rows are genuinely `gap`. |
 | **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, **scope decomposition + volumetric baseline**, our-understanding-and-solution read, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, clarification sweep by dimension, materials-needed list, go/no-go. |
-| **Estimate** | `eng-estimate` | Turn the scope decomposition into a bottom-up effort model with an overlap audit, a P50/P80 range kept separate from scope-variance scenarios, the client-side hours ask, and the price-vs-marks decision table. Ships a **formula-live workbook** alongside the narrative. Priced tenders only — and it needs §3 of the analysis to exist. |
+| **Estimate** | `eng-estimate` | Turn the scope decomposition into a bottom-up effort model with an overlap audit, a P50/P80 range kept separate from scope-variance scenarios, the client-side hours ask, and the price-vs-marks decision table. Maintains a **formula-live workbook** plus its generated markdown snapshot. Priced tenders only — and it needs §3 of the analysis to exist. |
 | **Research** | `eng-bid-research` | Close the analysis gaps with comprehensive, cited, zero-fabrication research (external `[T3:OWN]` + firm-held uploads). |
 | **Respond** | `eng-bid-respond` | Assemble the response from the matrix, matching the RFP's mandated format; compliance-first, proof-backed win-themes, every claim traceable. One markdown file per section, each carrying its own review status through **two rounds** — R1 panel red-team (does it score?), R2 experienced human. |
 | **Check** | `eng-check` | Run every mechanical gate that applies and report what is blocking, grouped by what the user must do. Runs throughout, not only before submission — nobody should type a script path to reach a gate. |
+| **Propagate change** | `eng-propagate-change` | Hash the reconciled dependency graph, detect edited R/S/A/BR/F inputs and maintained files, refresh deterministic outputs through existing skills, reopen affected review, and leave frozen packages immutable. |
 
 (RFP intake reuses `eng-ingest-source`; the RFP is the pursuit-side source of record — tag facts `[RFP §x]`.)
 
@@ -117,7 +137,9 @@ Keep these one level away; read the specific file when the stage needs it.
   - *core* — `CLAUDE.md.tmpl` (mode-aware: `<!--IF:block-->` fences), `project-context.md.tmpl`, `sources-README.md.tmpl`, the per-bucket source trio (`SOURCES_GO_HERE` + `reference-pack-README` + `REFERENCE_SUMMARY` + `REFERENCE_INSIGHTS`, planted once per bucket), `engagement_log.md.tmpl`, `raid_and_decisions.md.tmpl`, `source_precedence_register.md.tmpl`, `MEMORY.md.tmpl`.
   - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`, `clarification_log.md.tmpl` (the query deadline lands before the submission deadline, so this one is needed from day 1). On demand — **created because the condition held, never because the list names it**: `estimation.md.tmpl` (the tender is priced), `bid_reuse_analysis.md.tmpl` (a prior bid exists — **check whether one does before drafting, and record the negative when it doesn't**), `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
   - *delivery* — `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, `finding.md.tmpl`, `discovery_questions.md.tmpl`.
-- **Scripts** (`scripts/`). **Reuse before building.** Where a capability already has a skill —
+- **Scripts** (`scripts/`) are agent-only engines, never user entry points. Users invoke skills
+  and commands in natural language; do not relay a Python command or CLI flags unless they
+  explicitly ask about implementation. **Reuse before building.** Where a capability already has a skill —
   `xlsx`, `docx`, `pptx`, `pdf` — these scripts *call* it rather than reimplement it, and own only
   the packaging the pack's discipline needs and no general tool provides: provenance headers,
   citable anchors, the estimation formula graph, the deliverable gates. Extraction goes through
@@ -127,8 +149,9 @@ Keep these one level away; read the specific file when the stage needs it.
   that starts re-teaching one of those skills is a bug.
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` / `## Sheet:` / `## Section N:` anchors + image extraction for triage. `--scan <root>` answers "what arrived that I haven't ingested?" by diffing source files against their `_md/` outputs — so nobody types a path for a file already in the tree.
-  - `build_estimate_workbook.py` — turns `estimation.md` into a **formula-live** `.xlsx`: rate card → grade lookup → effort → P50/P80 → cost base → the price/marks decision table, every derived cell a real formula so a reviewer can move an input and watch it recalculate. Reads the tables marked `<!--table:KIND-->`; `--check` re-runs the arithmetic and reports drift without writing. Behind the **`eng-estimate`** skill.
-  - `eng_lint.py` — **the mechanical gate**. The rule set is the registry (`RULES`); read it with `python3 eng_lint.py --list` rather than trusting any prose copy — including this one. Every rule has clean-tree + violated-tree fixtures in `tests/run_tests.py`; run that after editing a rule. Lint exists so nobody asks a reviewer to check what a script can decide.
+  - `build_estimate_workbook.py` — private deterministic engine behind **`eng-estimate`**, never a user entry point. It seeds and refreshes the **formula-live** `.xlsx` + generated markdown snapshot: rate card → grade lookup → effort → P50/P80 → cost base → the price/marks decision table. Every derived cell is a real formula so a reviewer can move an input and watch it recalculate.
+  - `change_impact.py` — private deterministic engine behind **`eng-propagate-change`**. Records hash-only reconciled checkpoints, maps changed R/S/A/BR/F dependencies to affected sections, mechanically invalidates stale review, and rejects direct edits to generated or frozen outputs. It orchestrates existing skills; it does not edit Excel/Word/PPT itself.
+  - `eng_lint.py` — **the mechanical gate**. The rule set is the registry (`RULES`); read it with `python3 eng_lint.py --list` rather than trusting any prose copy — including this one. Rules have clean/violated fixtures in `tests/run_tests.py`; the stateful change-impact rule is exercised in `tests/test_change_impact.py`. Lint exists so nobody asks a reviewer to check what a script can decide.
   - `section_contract.py` — machine form of `references/section-contract.md`: the status vocabulary, frontmatter fields, and id syntax that lint and `render_document.py` both import. Change doc and module in the same commit.
   - `render_document.py` — the render engine behind the **`eng-render`** skill (sections → docx/pdf via a pandoc reference.docx, or a deck manifest for `presentation-builder`). It lives here because eng-lint and the scaffolder are its siblings; `eng-render` is the skill facade and declares the dependency.
   - `verify_deck.py` — **the mechanical gate on an assembled `.pptx`**, reading the OOXML with stdlib zipfile. Catches what a build log cannot show: a flattened picture-per-slide deck, a font neither standard nor embedded, a miscounted splice, a figure whose image did not come across. Assembly itself belongs to the `pptx` skill — see [references/deck-assembly.md](references/deck-assembly.md). Fixtures in `tests/test_verify_deck.py`.
@@ -145,7 +168,7 @@ Keep these one level away; read the specific file when the stage needs it.
 
 Composition is **by reference, never by duplication**: a playbook is a thin checklist
 that names the owning skill per step and sets the stop gates. When a task matches one
-of these four recurring situations, open the playbook and run the chain:
+of these recurring situations, open the playbook and run the chain:
 
 Each playbook also has a **slash command** that just routes to it — same content, explicit entry.
 
@@ -153,10 +176,11 @@ Each playbook also has a **slash command** that just routes to it — same conte
 |---|---|---|---|
 | A new source doc / batch arrived | `/eng-source` | [references/playbooks/new-source-arrived.md](references/playbooks/new-source-arrived.md) | bucket → ingest → canonicalize → findings-impact → log |
 | A workshop / discovery session just ended | `/eng-workshop` | [references/playbooks/post-workshop.md](references/playbooks/post-workshop.md) | held-notes → findings → canonical deltas → backlog → log |
-| Findings are ready, deliverable due | `/eng-sprint` | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index |
+| Findings or research analysis are ready, deliverable due | `/eng-sprint` | [references/playbooks/deliverable-sprint.md](references/playbooks/deliverable-sprint.md) | validate → panel-discuss → build → panel-review → rev index → choose format |
 | Day 1 of a new engagement | `/eng-new` | [references/playbooks/new-engagement.md](references/playbooks/new-engagement.md) | pick mode → scaffold → context → panel-init → first ingest batch |
 | An RFP / tender arrived (bid it) | `/eng-rfp` | [references/playbooks/rfp-arrived.md](references/playbooks/rfp-arrived.md) | ingest RFP → analyse → go/no-go → research → respond → red-team |
 | The scope grew — bid won, study became an engagement, client tendered | `/eng-upgrade` | [references/playbooks/adding-a-block.md](references/playbooks/adding-a-block.md) | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
+| A reviewer changed an existing artefact | `/engagement-os:eng-propagate-change` | skill-owned workflow | scan → invalidate affected review → invoke owning skills → re-render/version if needed → checkpoint |
 
 Anything that doesn't match a playbook: use the pipeline table above and invoke the
 one stage skill that owns your task.

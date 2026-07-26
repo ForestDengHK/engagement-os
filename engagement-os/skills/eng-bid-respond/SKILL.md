@@ -16,8 +16,14 @@ Start the section map from `bid_response_outline.md.tmpl`, and each section file
 `bid_section.md.tmpl` — both in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
 **If missing:** the matrix isn't closed (mandatory rows still `open`) or there is no research
-log → go back to `eng-rfp-analyze` / `eng-bid-research`. Drafting from an open analysis writes
-chapters the go/no-go may throw away, and claims without a cited source cannot survive here.
+log → go back to `Skill(engagement-os:eng-rfp-analyze)` /
+`Skill(engagement-os:eng-bid-research)`. Drafting from an open analysis writes chapters the
+go/no-go may throw away, and claims without a cited source cannot survive here.
+
+Before writing or reviewing, invoke `Skill(engagement-os:eng-propagate-change)`. Work only the
+sections it identifies. An approved section whose content or load-bearing dependency changed is
+no longer approved even if its frontmatter still says so; the change-impact gate returns it to
+`revise-r2`.
 
 ## Workflow
 
@@ -42,10 +48,14 @@ Bid Response Progress:
 - [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
         R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
         → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
-- [ ] 7. ONLY NOW render — hand off to the `eng-render` skill with `--profile bid`. It gates on
-        R2 status and open [⚠VERIFY], strips the internal scaffolding, and re-checks page counts
-        on the rendered file. Do not assemble by hand here.
-- [ ] 8. Freeze the submitted version to 4_final/ + record date; matrix fully closed
+- [ ] 7. Run the strict mechanical gate → `Skill(engagement-os:eng-check)` in strict mode.
+- [ ] 8. ONLY AFTER IT PASSES, render → `Skill(engagement-os:eng-render)` with the bid profile.
+        It strips internal scaffolding and re-checks page counts. Do not assemble by hand here.
+- [ ] 9. Verify the actual rendered artefact, then freeze that exact verified submission package
+        to 4_final/ + record date; matrix fully closed
+- [ ] 10. After all affected sections pass review and the new artefact is verified, checkpoint
+         through `Skill(engagement-os:eng-propagate-change)`. A later edit is measured against
+         this exact reconciled state.
 ```
 
 **Watch the `scoring` line.** A section marked **per item** needs self-contained answers per item —

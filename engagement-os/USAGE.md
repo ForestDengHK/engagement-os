@@ -11,6 +11,12 @@ Legend: `[auto]` runs without you · `[drafts]` it writes a first version and sh
 You are never sent to a text editor. Every artefact is drafted from what you already said and
 presented inline; you correct it in the conversation and the agent writes the file.
 
+If you edit a workbook, section, figure, DOCX/PDF/PPTX, or another maintained artefact outside
+the conversation, say “I changed this file” or invoke `/engagement-os:eng-propagate-change`.
+It finds the affected work, refreshes deterministic derivatives through their existing skills,
+reopens only the review that became stale, and never overwrites `4_final/`. The same check runs
+automatically before checking, rendering, or freezing, so remembering the skill is optional.
+
 ---
 
 ## Scenario 1 — Research only
@@ -22,7 +28,7 @@ A client hands you material; you produce a report. No bid, no delivery.
     /eng-new   ACME, 27-010, "Market & Capability Study", research only
 
 ▸ What happens
-    [asks]  where to put the repo (default ./acme-27-010)
+    [asks]  where to put the repo (default ./research-market-capability-study)
     [auto]  scaffolds the research tree — 15 files
     [asks]  fills .claude/project-context.md from what you tell it
     [drafts] 5-8 questions for 00_research/README.md §1, derived from the goal
@@ -80,10 +86,10 @@ acme-27-010/
 
 ## Scenario 2 — Pursuit only (bid a tender)
 
-> **Variant:** default is a full open RFP. For a **framework mini-competition**, scaffold with
-> `--variant mini-comp` — the route is planted into `rfp_analysis.md` and the pursuit loop
-> adjusts (go/no-go shrinks to capacity + conflict, call-off terms pre-agreed, possibly no
-> clarification window). Tested as scenario 7 in `verify_scenarios.py`.
+> **Variant:** default is a full open RFP. For a **framework mini-competition**, say that in
+> `/eng-new` — the route is planted into `rfp_analysis.md` and the pursuit loop adjusts
+> (go/no-go shrinks to capacity + conflict, call-off terms pre-agreed, possibly no clarification
+> window). Tested as scenario 7 in the release harness.
 
 ```
 ▸ You type
@@ -99,11 +105,16 @@ acme-27-010/
             (anchored, so every requirement cites by clause/page)
     [auto]  fills compliance_matrix.md — one row per requirement, mandatory flagged
     [auto]  fills rfp_analysis.md — eval weights, multi-role read, win-themes, risks
+    [auto]  indexes firm-held assets — what each proves, date, in-window status, permissions
+    [auto]  for a priced tender, hands the S-ID scope to eng-estimate
+            → estimation.xlsx (the maintained model) + estimation.md (generated snapshot)
+    [auto]  finalises clarifications and the go/no-go recommendation using the cost base
     [asks]  ← STOP. GO / NO-GO. Yours to decide. On no-go it logs why and stops.
     [auto]  researches every open gap, cited; unsourceable → [⚠VERIFY] → cut
     [auto]  writes the response FROM the matrix, in the RFP's mandated format
     [asks]  red-team gate — mandatory requirements all met, format compliant
-    [auto]  freezes to 4_final/
+    [auto]  runs the strict mechanical gate, renders the buyer-required file, verifies it
+    [auto]  freezes that exact submitted package to 4_final/ and records date + version
 ```
 
 **2 commands.** One stop that's genuinely yours: go/no-go.
@@ -237,6 +248,8 @@ or drop the claim.
 | `/eng-maintain-memory` | re-index CLAUDE.md / DELIVERABLES / project-context |
 | `/eng-index-assets` | index what the firm holds — what each asset PROVES, dated, in-window. Usually reached *via* `/eng-source`'s scan rather than typed |
 | `/eng-rfp-analyze` · `/eng-bid-research` · `/eng-bid-respond` | the three bid stages individually |
+| `/engagement-os:eng-estimate` + “size this tender” · “update the rate card” · “refresh the estimate” | Directly invokes the plugin skill; it creates or updates `estimation.xlsx`, invokes `xlsx` for spreadsheet work and verification, and refreshes the generated snapshot |
+| `/engagement-os:eng-propagate-change` + “I changed this file” · “what does this affect?” | Detects changed R/S/A/BR/F dependencies, refreshes safe derivatives through their owning skills, reopens affected review, and preserves frozen versions |
 | `/eng-check` | run every mechanical gate that applies and report what is blocking |
 
 Default to the chain commands. A stage run in isolation skips the gates — that's how a
@@ -248,21 +261,24 @@ deliverable ends up built on unvalidated findings.
 
 | Scenario | Commands | The one thing only you can do |
 |---|---|---|
-| Research | `/eng-new` → `/eng-source`* → `/eng-sprint` | approve the question list |
+| Research | `/eng-new` → `/eng-source`* → `/eng-sprint` | approve the question list + choose the delivered format |
 | Pursuit | `/eng-new` → `/eng-rfp` | the go/no-go call |
 | Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | approve the findings backbone |
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
 | Is it ready | `/eng-check` — any time, not just before shipping | decide what to do about each finding |
 | Ship the file | `/eng-render <dir>` — standalone, any directory | decide document vs deck, and clear the gates |
-| Fix an issued deck | `/eng-render` → splice the redrawn slides, `verify_deck.py` | say which slides are wrong; the rest do not move |
+| Fix an issued deck | `/eng-render` → splice the redrawn slides → `/eng-check` | say which slides are wrong; the rest do not move |
+| Reviewer edited a file | `/engagement-os:eng-propagate-change` | approve only the judgement changes it reopens |
 
 `*` = repeat per batch / session / deliverable.
 
-Self-tests, all three green before a release:
+Maintainer-only self-tests, all four green before a release. These are internal release
+harnesses, not commands users run to operate an engagement:
 
 | Harness | Covers |
 |---|---|
 | `python3 skills/eng-os/scripts/verify_scenarios.py` | scaffolds every scenario above; each command resolves to a playbook whose skills and paths all exist; every markdown link in the pack resolves |
 | `python3 tests/run_tests.py` | one clean tree + one violated tree per `eng_lint.py` rule |
 | `python3 tests/test_verify_deck.py` | one passing + one failing deck per `verify_deck.py` check |
+| `python3 tests/test_change_impact.py` | workbook, R/S/A/BR/F, approved-section, generated-output and frozen-package propagation |

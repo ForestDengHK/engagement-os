@@ -12,7 +12,12 @@ deliverable-neutral fact baselines; each deliverable adds its own so-what on top
 Findings must have been swept by `eng-validate-findings` — build only from reconciled inputs (the
 clean-reference layer). Method detail: `eng-os` → `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/deliverable-build.md`.
 
-**If missing:** findings exist but were never validated → run `eng-validate-findings` first;
+Unless this skill was invoked by the change-propagation hand-off itself, first invoke
+`Skill(engagement-os:eng-propagate-change)`. A changed validated finding makes every deliverable
+that consumes it stale; the previous "approved" label cannot survive the changed fact.
+
+**If missing:** findings exist but were never validated →
+`Skill(engagement-os:eng-validate-findings)` first;
 building from unreconciled inputs bakes contradictions into an artefact that carries our name.
 
 ## Pick the mode
@@ -43,8 +48,9 @@ The gate itself is mandatory; the tool is the Panel Framework **if installed**.
   deliverable from the client-sponsor, solution-architect, security/compliance, and quality angles
   and red-line each) — never ship without *some* multi-perspective review.
 
-**Producing the file is a separate step** — hand off to the `eng-render` skill with
-`--profile deliverable`. It owns discover/gate/strip/measure and routes the rest to
+**Producing the file is a separate step** — hand off to
+`Skill(engagement-os:eng-render)` with the deliverable profile. It owns
+discover/gate/strip/measure and routes the rest to
 `presentation-builder` (deck) or the `docx` skill (document). Build the content here; render there.
 
 **Write the section-contract frontmatter as you build** — `section:` and a real `status:` from

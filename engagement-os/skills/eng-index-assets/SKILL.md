@@ -47,8 +47,10 @@ for R-004 is the finding, and it is more useful early than complete-but-late.
 - [ ] 4. Map assets to requirements: which matrix row does each asset serve? An asset that
         serves none is not a gap in the bid — say so rather than padding the index.
 - [ ] 5. Write the GAPS section: every evidence-bearing requirement with no in-window asset.
-        Each gap gets a route: external research (→ eng-bid-research) or an upload request
-        (→ a named human, with what exactly is needed).
+        Each gap gets a route: external research
+        (after GO → `Skill(engagement-os:eng-bid-research)`) or an upload request
+        (→ a named human, with what exactly is needed). Record the route now; do not start
+        research or drafting before the human GO gate.
 - [ ] 6. Report back: how many requirements are now evidenced, which are UNKNOWN pending a
         date, which are genuine gaps and who owns each.
 ```

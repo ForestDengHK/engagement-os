@@ -28,6 +28,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import section_contract as sc
+import change_impact as ci
 
 EVIDENCE_TAGS = {"[Observed]", "[Reported]", "[Assumed]", "[RFP]"}
 TEXT_EXT = {".md", ".txt"}
@@ -320,8 +321,9 @@ def rule_spine_filled(root, r):
 def rule_conditional_analysis_artefacts(root, r):
     """A worked analysis must have produced the artefacts it says it produced.
 
-    Two artefacts in `2_analysis/` are conditional — `estimation.md` when the tender is priced,
-    `bid_reuse_analysis.md` when a prior bid exists — and both failure modes cost real money.
+    Two outputs in `2_analysis/` are conditional — the `estimation.xlsx` model plus its generated
+    `estimation.md` snapshot when the tender is priced, and `bid_reuse_analysis.md` when a prior
+    bid exists — and both failure modes cost real money.
     Found on the real GNI pursuit: a reuse analysis was generated with no check that a prior bid
     existed, and no estimate was produced at all, so the price had nothing behind it.
 
@@ -333,10 +335,11 @@ def rule_conditional_analysis_artefacts(root, r):
     placeholder = re.compile(r"<[a-z€][^>\n]{2,}>", re.I)
     for f in sorted(root.glob("01_pursuit/*/2_analysis/rfp_analysis.md")):
         text = f.read_text(encoding="utf-8", errors="replace")
-        for section, artefact, why in (
-                (r"##\s*\d+\.\s*Estimate & price posture", "estimation.md",
+        for section, artefacts, why in (
+                (r"##\s*\d+\.\s*Estimate & price posture",
+                 ("estimation.xlsx", "estimation.md"),
                  "the price has nothing bottom-up behind it"),
-                (r"##\s*\d+\.\s*Prior-bid reuse", "bid_reuse_analysis.md",
+                (r"##\s*\d+\.\s*Prior-bid reuse", ("bid_reuse_analysis.md",),
                  "the analysis says a prior bid carries over, but the diff was never done")):
             m = re.search(section + r"(.*?)(?=\n##\s|\Z)", text, re.S)
             if not m or placeholder.search(m.group(1)):
@@ -345,9 +348,11 @@ def rule_conditional_analysis_artefacts(root, r):
             body = m.group(1)
             if re.search(r"not created|none found|no prior bid|n/?a\b", body, re.I):
                 continue                       # the negative was recorded — that IS the result
-            if not (f.parent / artefact).exists():
+            missing = [artefact for artefact in artefacts if not (f.parent / artefact).exists()]
+            if missing:
                 r.error("analysis-artefact-missing", str(f.relative_to(root)),
-                        f"§ points at `{artefact}`, which does not exist — {why}")
+                        f"§ requires {', '.join(f'`{a}`' for a in artefacts)}; missing "
+                        f"{', '.join(f'`{a}`' for a in missing)} — {why}")
 
 
 def rule_estimate_snapshot_fresh(root, r):
@@ -364,12 +369,39 @@ def rule_estimate_snapshot_fresh(root, r):
         r.ran()
         if not md.exists():
             r.warn("estimate-snapshot-missing", str(xlsx.relative_to(root)),
-                   "workbook has no markdown snapshot — run "
-                   "`build_estimate_workbook.py --out <wb> --to-md`")
+                   "workbook has no markdown snapshot — invoke "
+                   "`/engagement-os:eng-estimate` to refresh it")
         elif xlsx.stat().st_mtime > md.stat().st_mtime + 1:
             r.warn("estimate-snapshot-stale", str(md.relative_to(root)),
                    "workbook is newer than its snapshot — re-export, or the diff everyone "
                    "reads is out of date")
+
+
+def rule_change_impact_pending(root, r):
+    """A reconciled checkpoint must not lag a manual edit or its required re-review.
+
+    No state file means this repo has not adopted the change-impact gate yet; eng-new and
+    eng-propagate-change create it. Once adopted, a pending impact is visible to every strict
+    check instead of relying on the user to remember which downstream artefact copied a value.
+    """
+    state = root / ci.STATE_REL
+    if not state.exists():
+        return
+    r.ran()
+    report = ci.scan(root)
+    if not report.get("has_pending"):
+        return
+    errors = [i for i in report.get("impacts", []) if i.get("severity") == "error"]
+    summaries = [f"{i['artifact']}: {i['action']}" for i in report.get("impacts", [])]
+    detail = "; ".join(summaries[:4])
+    if len(summaries) > 4:
+        detail += f"; +{len(summaries) - 4} more"
+    message = ("manual changes have unresolved downstream impact — invoke "
+               "`/engagement-os:eng-propagate-change`; " + (detail or report["status"]))
+    if errors:
+        r.error("change-impact-pending", str(ci.STATE_REL), message)
+    else:
+        r.warn("change-impact-pending", str(ci.STATE_REL), message)
 
 
 PACK_ROOT_FILES = {"README.md", "00_REFERENCE_SUMMARY.md", "01_REFERENCE_INSIGHTS.md"}
@@ -727,6 +759,7 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_verify_not_shipped, rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
          rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,
+         rule_change_impact_pending,
          rule_images_triaged,
          rule_media_links_resolve, rule_manifest_complete, rule_pointer_table_resolves]
 

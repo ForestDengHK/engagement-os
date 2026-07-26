@@ -16,19 +16,19 @@ held-notes ─► eng-write-findings ─► eng-update-canonical ─► backlog 
    Present it and ask only for what's genuinely missing ("nothing in the notes covers agenda
    item 4 — was it run?"). **Never hand the user a blank held-notes template.**
    Verify: every agenda item is marked covered / deferred / not-run.
-2. **Findings — one per coherent topic** → `eng-write-findings`.
+2. **Findings — one per coherent topic** → `Skill(engagement-os:eng-write-findings)`.
    New findings for new topics; extend existing findings where the session added
    evidence. Every claim carries an evidence tag (`[Observed]`/`[Reported]`/…)
    and a precedence tag; new unverifiable claims get `[⚠VERIFY]` + a V-n register row.
    Verify: each finding maps to the backbone; quotes are attributed.
-3. **Canonical deltas** → `eng-update-canonical`.
+3. **Canonical deltas** → `Skill(engagement-os:eng-update-canonical)`.
    Only the session's *deltas* — corrected facts, new systems/people/dates —
    not a re-summary of the whole session (the held-notes + findings hold that).
-4. **Backlog sweep** (part of `eng-update-canonical`'s remit):
+4. **Backlog sweep** (part of `Skill(engagement-os:eng-update-canonical)`'s remit):
    flip answered discovery questions to their answer status with the source;
    add newly-surfaced questions. List what the session was supposed to cover but
    didn't — that becomes the "owed" list for the next session.
-5. **Log + memory** → `eng-maintain-memory`: session write-up in the engagement log;
+5. **Log + memory** → `Skill(engagement-os:eng-maintain-memory)`: session write-up in the engagement log;
    milestone line in CLAUDE.md only if a phase/week closed.
 
 ## Stop gates

@@ -1,5 +1,5 @@
 ---
-description: An RFP / tender arrived — run the bid loop: ingest the pack, analyse it into a compliance matrix, go/no-go, close the gaps with cited research, write the response, red-team before submit.
+description: An RFP / tender arrived — ingest, analyse, index evidence, estimate, stop for the human go/no-go, research/respond, review, check, render, verify, and freeze the submission.
 ---
 
 Run the **rfp-arrived** playbook:

@@ -1,6 +1,6 @@
 # E2E — the RESEARCH lane, run against real public material (2026-07-26)
 
-**What we did:** scaffolded a fresh `--mode research` repo (`~/working/deloitte-ai-platform-study`)
+**What we did:** scaffolded a fresh `--mode research` repo (`~/working/research-deloitte-ai-platform-study`)
 and ran the research lane exactly as USAGE.md scenario 1 describes — `/eng-new` → question spine →
 source acquisition → ingest → canonicalize → analysis → validate → build → review → v1.0 — on a
 real assignment: *what does Deloitte argue an enterprise AI platform must be, what does Deloitte
@@ -25,6 +25,7 @@ vendor describing itself. Both broke something.
 | 4 | **A freshly scaffolded research repo linted dirty and asserted a vocabulary it did not contain.** `research-README.md.tmpl` §5 says evidence tags and T1/T2/T3 are unchanged "per `_FINDING_STANDARD.md`" — but the standard was a **delivery-only** planted file. Every research repo shipped with a dangling reference *and* no definition of the closed tag set the block claims to obey | `dangling-live-file` on the empty tree, before any work | `FINDING_STANDARD.md.tmpl` now also plants to `00_research/_FINDING_STANDARD.md`. One template, two blocks — the tag set cannot drift between them |
 | 5 | **`spine-unfilled` could never go green in a research repo.** The rule scanned the **whole file** for `<placeholder>`, but the research README documents its citation format as `_sources/<bucket>/_md/<file>.md §Page N` and its versioning as `<CLIENT>_<ENG-ID>_…`. With all 8 questions filled, the rule still fired — **on the instructions rather than on the spine** | filling the question list and watching the warning survive | rule narrows to the spine section when the planted heading is found, falls back to whole-file when it isn't |
 | 6 | **My own first fix for #5 introduced a worse false positive** — requiring the exact planted heading made the rule warn "section is missing" on any repo whose wording differs, including the test harness's own fixture tree. **The suite did not catch it**; a direct run against fixture-style headings did | building a throwaway tree with the fixture's headings and running lint on it | fallback-to-whole-file instead of warning; two new regression fixtures added (`spine-filled-but-later-sections-still-templated`, `spine-placeholder-inside-the-research-questions-section`) |
+| 7 | **Standalone research repos were not filterable by name.** The documented default reused the client/id convention, so a workspace could not isolate research assignments by directory prefix | issuing the first research E2E output and trying to distinguish it from pursuit/delivery repos | research mode now defaults to `research-<project-slug>`; this E2E repo was renamed `research-deloitte-ai-platform-study` and all stored paths were updated |
 
 **Pattern worth naming, again:** none of these were findable by reading the code. #2 in particular
 needs **many documents in one bucket** — the pursuit packs have a handful, so the collision never
@@ -95,9 +96,11 @@ had enough surface to show itself. The research lane's normal shape is 10–30 s
 
 ## Artefacts
 
-- E2E repo: `~/working/deloitte-ai-platform-study` (kept — rerun target)
+- E2E repo: `~/working/research-deloitte-ai-platform-study` (kept — rerun target)
 - Output: `00_research/2_output/INTERNAL_26-R01_Deloitte-AI-Platform-POV-and-Asset-Study_v1.0.md`
   (3,746 words, 13 sections, every claim cited to a page/section anchor with an origin URL)
+- Leadership deck: `00_research/2_output/INTERNAL_26-R01_Deloitte-AI-Platform-POV-and-Asset-Study_v1.0.pptx`
+  (12 slides; four original, native-editable exhibits; structural gate 0 errors / 0 warnings)
 - Review record: `panel/reviews/2026-07-26_R1_review_26-R01_v0.1.md`
 - Register: `_pm/source_precedence_and_conflict_register.md` (CL-A + V-1…V-6)
 - Final gate: `eng_lint.py` **0 errors**, 12 carried warnings; `tests/run_tests.py` and
