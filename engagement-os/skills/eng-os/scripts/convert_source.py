@@ -36,6 +36,7 @@ rather than crashing. Install as needed: pip install pymupdf python-pptx python-
 import argparse
 import hashlib
 import os
+import pathlib
 import re
 import sys
 import datetime as _dt
@@ -405,12 +406,59 @@ DISPATCH = {
 }
 
 
+def scan(root):
+    """List source files sitting in the tree that have no converted markdown yet.
+
+    Asking the user to type a path for every arriving document is asking them to do what a
+    directory listing can decide. A source file is un-ingested when nothing named after it
+    exists under the matching `_md/` — that is the whole test, and it needs no manifest.
+
+    Returns [(bucket_label, source_path)], in arrival-agnostic sorted order.
+    """
+    pending = []
+    areas = [(p, p / "_md") for p in root.glob("_sources/*") if p.is_dir()]
+    areas += [(p, p / "_md") for p in root.glob("01_pursuit/*/1_received") if p.is_dir()]
+    areas += [(p, p / "_md") for p in root.glob("01_pursuit/archive-*/1_received") if p.is_dir()]
+    for area, md_dir in areas:
+        converted = {p.stem.lower() for p in md_dir.rglob("*.md")} if md_dir.exists() else set()
+        for src in sorted(area.rglob("*")):
+            if not src.is_file() or src.suffix.lower() not in DISPATCH:
+                continue
+            if md_dir in src.parents:            # already inside _md/ — an extracted image
+                continue
+            if src.stem.lower() not in converted:
+                pending.append((str(area.relative_to(root)), src))
+    return pending
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("source")
+    ap.add_argument("source", nargs="?",
+                    help="the document to convert. Omit it with --scan to find what is waiting.")
+    ap.add_argument("--scan", metavar="ROOT", nargs="?", const=".",
+                    help="list source files in the engagement tree with no markdown yet, "
+                         "and exit. Answers 'what arrived that I haven't ingested?'")
     ap.add_argument("--out", help="output .md path (default: source with .md next to it)")
     ap.add_argument("--images-dir", help="dir for extracted images (default: <out_dir>/images)")
     args = ap.parse_args()
+
+    if args.scan is not None:
+        root = pathlib.Path(args.scan).resolve()
+        pending = scan(root)
+        if not pending:
+            print("  nothing waiting — every source file in the tree has markdown")
+            return 0
+        print(f"  {len(pending)} document(s) waiting to be ingested:\n")
+        area = None
+        for label, src_path in pending:
+            if label != area:
+                area, _ = label, print(f"  {label}/")
+            print(f"      {src_path.relative_to(root / label)}")
+        print("\n  Ingest each one, then update that bucket's canonical pair.")
+        return 0
+
+    if not args.source:
+        ap.error("give a document to convert, or --scan to list what is waiting")
 
     src = os.path.abspath(args.source)
     if not os.path.exists(src):

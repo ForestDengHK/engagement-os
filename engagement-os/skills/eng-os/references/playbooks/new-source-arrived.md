@@ -5,6 +5,10 @@ a client attachment, a buyer clarification, a benchmark someone found, one more 
 Documents arrive one at a time and are analysed one at a time; that is the normal case, not a
 degenerate one. Nobody ever has the full set on day one.
 
+**You do not have to name the file.** Drop it anywhere in the tree and run `/eng-source` with
+no arguments — `convert_source.py --scan <root>` lists every source file that has no markdown
+yet, grouped by where it sits. Naming a path is the shortcut, not the requirement.
+
 The most frequent loop in an engagement. Runs once per document; batch by repeating
 the loop, not by widening a step. Each step names the skill that owns it — follow
 that skill, don't reproduce it here.

@@ -8,9 +8,17 @@ Run the **new-source-arrived** playbook:
 Read that file and follow it exactly, including its stop gates. It owns the chain; do not
 reproduce or improvise the steps.
 
-Arguments (may be empty — ask for what's missing): `$ARGUMENTS`
+Arguments: `$ARGUMENTS`
 
-Expect: the path(s) to the incoming document(s).
+**With a path** — ingest that document.
+
+**With no arguments — do not ask which file. Find them:**
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py --scan <repo-root>
+```
+It lists every source file in the tree that has no markdown yet, grouped by where it sits.
+Show that list, confirm the batch, then run the playbook over it. Asking the user to type a
+path for a file already sitting in the repo is asking them to do a directory listing by hand.
 
 Step 0 is bucketing by **how each document was obtained** (`public/` · `pre_award/` ·
 `engagement/`; the tender pack itself goes to `01_pursuit/<ENG-ID>/1_received/`). A mixed batch
