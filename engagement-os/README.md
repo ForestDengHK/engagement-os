@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 12 skills + 7 commands + 25 templates + 5 deterministic
+Packaged as 16 skills + 8 commands + 27 templates + 9 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -11,6 +11,24 @@ actually doing (bid only, delivery only, a standalone research assignment, or al
 >
 > The agent-facing entry point is `skills/eng-os/SKILL.md` (auto-triggers). This file is the
 > human-facing manual: the same material with the reasoning attached.
+
+### Research quick start
+
+Use this when the job is **sources in → evidence-based report/deck out**, with no RFP and no
+delivery programme:
+
+```text
+/eng-new <topic>, research only
+    → approve the drafted research questions
+/eng-source <files-or-folder>       repeat for each source batch
+/eng-sprint the research output
+    → choose Markdown, Word/PDF, PowerPoint, or workbook
+```
+
+The repo is named `research-<project-slug>`. Questions are the spine; sources are ingested and
+canonicalised against them; analysis lands in `00_research/1_analysis/`; reviewed outputs land in
+`00_research/2_output/`. Do not start with a blank report and do not default the final format to
+Markdown.
 
 ---
 
@@ -41,12 +59,17 @@ multi-lens review when it is not.
 Two independent pipelines, one skill per stage, no overlapping authority:
 
 ```
-PURSUIT   ingest RFP ─► analyse ─► research gaps ─► write response ─► red-team gate ─► submit
+RESEARCH   questions ─► ingest/canonicalize ─► analyse ─► validate/build/review ─► choose format
+
+PURSUIT   ingest RFP ─► analyse/assets ─► estimate ─► HUMAN GO ─► research/respond
+                                                               └─► review ─► check/render/verify/freeze
 
 DELIVERY  scaffold ─► ingest ─► canonicalize ─► findings ─► validate ─► build deliverable
                                                         │            │
                                                 maintain memory   panel-review (hard ship gate)
                                                 (throughout)
+
+ANY LANE  reviewer edits a maintained artefact ─► propagate impact ─► refresh/re-review affected only
 ```
 
 Take either, both, or neither — see §4 for modes.
@@ -56,6 +79,9 @@ Take either, both, or neither — see §4 for modes.
 | `eng-os` | Method map + shared assets (references / templates / scripts / playbooks) | Engagement start; finding a convention or workflow |
 | `eng-scaffold` | Stand up the repo for the blocks you need (`--mode`) → delegate to `/panel-init` | "set up a new engagement" |
 | `eng-rfp-analyze` | Decompose an RFP: compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go | A tender arrived |
+| `eng-index-assets` | Index firm-held evidence: what it proves, date, in-window verdict, permission constraints | Assets arrive or the RFP exposes evidence gaps |
+| `eng-estimate` | Maintain the formula-live estimate workbook and generated markdown snapshot | A priced tender, SOW, or change request needs sizing |
+| `eng-propagate-change` | Detect a manual edit, refresh deterministic derivatives, reopen affected review, and preserve frozen history | "I changed the estimate/section/file; what does it affect?" |
 | `eng-bid-research` | Close the analysis gaps with cited, zero-fabrication research | After RFP analysis, on a go |
 | `eng-bid-respond` | Assemble the response from the matrix in the RFP's mandated format; red-team before submit | Writing the tender |
 | `eng-ingest-source` | One document → anchored markdown; lossless image rule (decorative dropped / content kept / uncertain OCR'd) | A new source arrives |
@@ -64,6 +90,8 @@ Take either, both, or neither — see §4 for modes.
 | `eng-validate-findings` | Corpus-wide provenance sweep: evidence-tag audit, precedence arbitration, `[⚠VERIFY]` register | Before deliverables; after an evidence wave |
 | `eng-build-deliverable` | Validated findings → as-is / to-be deliverable (SKELETON → v0.x → v1.0) | "build D1/D2/…" |
 | `eng-maintain-memory` | Keep CLAUDE.md / project-context / DELIVERABLES / cross-session memory lean (anti-rot) | Milestones; recurring corrections |
+| `eng-check` | Run the mechanical readiness gates and report blockers without silently fixing them | Mid-flight or before freeze |
+| `eng-render` | Turn reviewed markdown into the required Word/PDF/deck artefact and verify the assembled output | Content is approved and must become the delivered file |
 
 **Six load-bearing principles** (when a choice conflicts with one, the principle wins):
 1. Source → derived separation — originals are never edited; every derivative traces back by path + page.
@@ -82,11 +110,12 @@ that names the owning skill per step plus its stop gates. Six recurring situatio
 |---|---|---|
 | **New source arrived** | `/eng-source` | bucket it → ingest (per doc) → canonicalize (per bucket) → findings-impact check → log |
 | **Post-workshop** | `/eng-workshop` | held-notes → findings → canonical deltas → question backlog → log |
-| **Deliverable sprint** | `/eng-sprint` | validate → panel-discuss (lock structure) → build → panel-review (red-line gate) → rev index |
+| **Deliverable sprint** | `/eng-sprint` | validate → panel-discuss (lock structure) → build → panel-review → rev index → choose delivered format |
 | **New engagement, day 1** | `/eng-new` | pick mode → scaffold → fill context → panel-init → first ingest batch |
-| **An RFP arrived** | `/eng-rfp` | ingest RFP → analyse → go/no-go → research → respond → red-team |
+| **An RFP arrived** | `/eng-rfp` | ingest → analyse → index assets → estimate → go/no-go → research/respond loop → review → check → render/verify → freeze |
 | **Written sections must become the delivered file** | `/eng-render` | analyse the directory → gate → strip → docx/pdf, or a manifest handed to `presentation-builder` |
 | **The scope grew** (bid won, study became an engagement) | `/eng-upgrade` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
+| **A reviewer changed an existing artefact** | `/engagement-os:eng-propagate-change` | detect changed IDs/files → refresh deterministic outputs → reopen affected sections → re-review/render → checkpoint |
 
 Each command is a thin router to `skills/eng-os/references/playbooks/<name>.md` — the playbook
 holds the content, the command is just an explicit entry point. Saying the situation in words
@@ -110,10 +139,11 @@ can also be called by name when you'd rather not rely on the trigger firing.
 /eng-upgrade   /eng-workshop   /eng-sprint
 ```
 
-**Single-capability command** — wraps one skill, usable on its own with no engagement around it:
+**Single-capability commands** — each wraps one skill and is usable on its own:
 
 ```
 /eng-render <dir>          # markdown sections + figures -> the delivered file
+/eng-check [repo-or-file]  # mechanical readiness/verification gate
 ```
 
 **Skills** — one stage, one job. Call directly when you know exactly which stage you want:
@@ -131,6 +161,11 @@ can also be called by name when you'd rather not rely on the trigger firing.
 | `/eng-rfp-analyze` | Decomposing an RFP into the compliance matrix |
 | `/eng-bid-research` | Closing matrix gaps with cited research |
 | `/eng-bid-respond` | Writing the tender response from the matrix |
+| `/eng-estimate` | Maintaining a priced scope's workbook and generated snapshot |
+| `/eng-propagate-change` | Tracing a manual edit through only the affected downstream work |
+| `/eng-index-assets` | Registering what firm-held evidence actually proves |
+| `/eng-check` | Running the mechanical gates without changing the content |
+| `/eng-render` | Rendering reviewed content into the required submission file |
 
 Plugin skills are namespaced `engagement-os:eng-<name>`; the bare `/eng-<name>` form works when
 it's unambiguous. **Arguments are plain text, not flags** — write it however you'd say it
@@ -160,12 +195,9 @@ feeding a tender). Every lane also gets core: `CLAUDE.md`, `project-context.md`,
 `_sources/README.md`, `archived/`, `references/`, `panel/`.
 
 Everything below starts the same way — **say it in words and `eng-scaffold` fires** ("set up a
-research repo for ACME", "we're bidding ACME 27-010"), or run the script directly:
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/scaffold_engagement.py \
-  --root ./acme-27-010 --client ACME --eng-id 27-010 --name "<engagement name>" --mode <lane>
-```
+research repo for ACME", "we're bidding ACME 27-010"), or use `/eng-new` with the same plain
+language. The agent gathers any missing facts and creates the right lane; users never invoke the
+scaffolding engine directly.
 
 Then, in every lane: fill `.claude/project-context.md` (the facts a machine can't know), and run
 `/panel-init` if you have the Panel Framework.
@@ -186,6 +218,9 @@ Then, in every lane: fill `.claude/project-context.md` (the facts a machine can'
                              [⚠VERIFY] first — an unsourceable claim never ships.
 6. Review, then issue        panel-review (or a manual multi-lens pass). Record the live
                              version in 00_research/README.md §4.
+7. Choose delivered format  Markdown, Word/PDF, PowerPoint, or workbook. `/eng-sprint`
+                             routes reviewed content to the appropriate rendering skill and
+                             verifies the actual file; it never assumes Markdown is enough.
 ```
 
 ### Lane B — pursuit (`--mode pursuit`)
@@ -196,13 +231,18 @@ Then, in every lane: fill `.claude/project-context.md` (the facts a machine can'
 2. Analyse the RFP           eng-rfp-analyze → fills the planted rfp_analysis.md +
                              compliance_matrix.md: every requirement gets a row, eval weights
                              mapped, win-themes, risks, materials-needed, go/no-go.
-3. GO / NO-GO — human        Stop here on a no-go and log why. Don't sink writing effort
+3. Estimate if priced        eng-rfp invokes the engagement-os:eng-estimate plugin skill here
+                             (also directly available as /engagement-os:eng-estimate):
+                             create/update estimation.xlsx, invoke xlsx for verification,
+                             refresh the generated markdown snapshot.
+4. GO / NO-GO — human        Stop here on a no-go and log why. Don't sink writing effort
                              into a bid you won't win or can't deliver.
-4. Research the gaps         eng-bid-research → close every matrix `gap` with a citation.
+5. Research the gaps         eng-bid-research → close every matrix `gap` with a citation.
                              Zero fabrication; unsourceable → [⚠VERIFY] → cut.
-5. Write the response        eng-bid-respond → built FROM the matrix, in the RFP's mandated
+6. Write the response        eng-bid-respond → built FROM the matrix, in the RFP's mandated
                              format. Every claim traces to [RFP §x] or a closed log row.
-6. Red-team, then submit     panel-review. Freeze to 4_final/ and record what was submitted.
+7. Review, check, issue       panel-review → eng-check strict → eng-render → verify the actual
+                             file → freeze that exact submitted package to 4_final/ and record it.
 ```
 
 ### Lane C — delivery (`--mode delivery`)
@@ -228,17 +268,15 @@ You bid, you won. Or the study became the engagement. **Don't rebuild and don't 
 repo** — add the block and keep one audit trail. Full chain + gates:
 `references/playbooks/adding-a-block.md`.
 
-```bash
-# Name the OLD blocks AND the new one — --mode is the repo's full block list, not a delta.
-python3 .../scaffold_engagement.py --root <same root> ... --mode pursuit,delivery
-```
+Say “we won the bid, add delivery” or run `/eng-upgrade` with those words. The skill supplies the
+existing and new blocks to the scaffolder, so the user does not need to reconstruct its flags.
 
-Everything that exists prints `skip`; only the new block's tree, bucket, and templates appear.
-Then three things the script can't do for you:
+Everything that exists is preserved; only the new block's tree, bucket, and templates appear.
+Then the skill completes three context-dependent steps with you:
 
 | # | Do this | Why |
 |---|---|---|
-| 1 | **Top up `CLAUDE.md` by hand** — new pointer rows, skills line, `**Phase:**` | The scaffolder never rewrites an existing `CLAUDE.md`; it warns when a block was added |
+| 1 | **Update `CLAUDE.md`** — new pointer rows, skills line, `**Phase:**` | The deterministic scaffolder preserves the existing file, so the skill applies this contextual edit |
 | 2 | **Write the handoff** — for a won bid, `01_pursuit/<ENG-ID>/7_briefing/`: what we won, what we promised, scope, dates, priced assumptions | Delivery scope gets read from here, not from memory of the bid. Skipping it is the most expensive failure mode of a won bid |
 | 3 | **Re-baseline the sources** | See below — this is the one that bites |
 
@@ -313,7 +351,8 @@ work tree — `00_research/1_analysis/`, `01_pursuit/<ENG-ID>/2_analysis/`, or `
 
 - **Do the skills step on each other?** No — seam contract: only `eng-update-canonical`
   edits the canonical set; only `eng-validate-findings` runs the corpus-wide sweep;
-  `eng-build-deliverable` consumes only validated findings.
+  `eng-build-deliverable` consumes only validated findings; `eng-propagate-change` only
+  detects/invalidate/routes and delegates substantive edits to those owning skills.
 - **Does it work without the Panel Framework?** Yes. Panel is a companion; scaffold
   delegates to `/panel-init` when present and skips it otherwise. Any equivalent
   review mechanism can stand in for the ship gate.

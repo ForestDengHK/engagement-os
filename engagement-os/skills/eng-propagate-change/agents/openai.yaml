@@ -1,0 +1,4 @@
+interface:
+  display_name: "Propagate Engagement Changes"
+  short_description: "Trace file edits and reopen affected work"
+  default_prompt: "Use $eng-propagate-change to detect what my edit affects and route every required refresh or review."

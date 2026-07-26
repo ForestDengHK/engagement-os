@@ -4,21 +4,19 @@ A research assignment turns into a bid. A bid is won. A delivery client asks for
 The repo doesn't get rebuilt and it doesn't get a sibling — you **add the block** and keep one
 audit trail. Blocks are additive by design; the scaffolder never clobbers.
 
-The mechanical part takes one command. The part that matters is what does **not** carry over.
+The mechanical part is delegated to one skill. The part that matters is what does **not**
+carry over.
 
 ## Chain
 
 ```
-re-run eng-scaffold --mode <old>,<new> ─► top up CLAUDE.md ─► draft the handoff ─► re-baseline sources
-       adds only the new block              you edit it         what we promised     the sharp gate
+Skill(engagement-os:eng-scaffold) ─► top up CLAUDE.md ─► draft the handoff ─► re-baseline sources
+   old blocks + new block             agent edits it       what we promised     the sharp gate
 ```
 
-1. **Re-run the scaffolder with the old blocks AND the new one.**
-   ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/scaffold_engagement.py \
-     --root <same root> --client <CLIENT> --eng-id <ENG-ID> --name "<name>" \
-     --mode <old>,<new> --phase <new phase label>
-   ```
+1. **Invoke `Skill(engagement-os:eng-scaffold)` with the old blocks AND the new one.**
+   Pass the existing repo root, client, engagement ID, name, complete block list, and new phase
+   label in the skill request. Never ask the user to reconstruct or run the underlying script.
    Always name the **old blocks too** — the mode is the repo's full block list, not a delta.
    Verify: the new work tree + its source bucket exist; every pre-existing file printed `skip`.
 2. **Top up `CLAUDE.md` — you do it, not the user.** The *script* never rewrites an existing

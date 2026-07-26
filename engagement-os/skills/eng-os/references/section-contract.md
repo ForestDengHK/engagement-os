@@ -20,12 +20,17 @@ in the same commit; a contract defined in two places is already two contracts.
 | `page_budget` | The limit AND its scope (see below) | lint — per-file and shared-pool checks |
 | `figures` | `[F-nn, …]` this section uses | lint — every id must exist in `figures/` and be referenced in the body |
 | `evidence` | `[A-nnn, …]` firm assets relied on | lint — every id must exist in `firm_assets.md` |
+| `depends_on` | Additional load-bearing inputs such as `estimation.xlsx`, `S-nn`, or a named analysis file | `eng-propagate-change` — a changed dependency invalidates this section's review |
 | `status` | Lifecycle state (below) | lint + the render gate |
 
 A field with **no machine consumer is documentation**. Do not let it look enforced —
 a field that appears checked but isn't is worse than no field (it reads as verified).
 The documentation-only fields are still mandatory in the file: `marks`/`scoring` are
 what a reviewer checks the answer's shape against.
+
+Do not duplicate `answers_reqs`, `evidence`, or `figures` inside `depends_on`; those fields
+already build their part of the graph. Use `depends_on` only where the dependency is otherwise
+invisible — especially a pricing section that relies on `estimation.xlsx`.
 
 ## Status vocabulary (the only legal values)
 

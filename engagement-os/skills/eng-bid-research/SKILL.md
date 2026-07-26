@@ -15,9 +15,14 @@ Research is scoped by the **materials-needed list** and every `gap` in `complian
 high-weight win-themes. Each task names the Req ID / theme it serves. Log findings in
 `2_analysis/bid_research_log.md` (template in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`).
 
-**If missing:** no compliance matrix / materials-needed list → run `eng-rfp-analyze` first.
+**If missing:** no compliance matrix / materials-needed list →
+`Skill(engagement-os:eng-rfp-analyze)` first.
 Without the gap list there is no scope to research against; an unscoped "general pass" produces
 plausible-looking findings nobody asked for — the worst failure mode under zero-fabrication.
+
+Unless this skill was invoked by the change-propagation hand-off itself, first invoke
+`Skill(engagement-os:eng-propagate-change)`. A manually changed matrix row can alter which gaps
+need research; continuing from the previous list would research the wrong scope.
 
 ## Workflow
 
@@ -47,4 +52,6 @@ to confirm it.
 - Fabricating or "rounding up" a credential/metric/reference is an automatic disqualifier.
 
 ## Hand-off
-The closed research log → `eng-bid-respond`. Open `[⚠VERIFY]` rows are closed or cut before the response asserts them.
+Once the human GO gate has passed, the closed research log →
+`Skill(engagement-os:eng-bid-respond)`. Open `[⚠VERIFY]` rows are closed or cut before the
+response asserts them.

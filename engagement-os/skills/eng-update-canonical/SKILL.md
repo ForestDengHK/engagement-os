@@ -1,6 +1,12 @@
 ---
 name: eng-update-canonical
-description: Use after eng-ingest-source runs, when source-derived facts in a `_sources/` bucket change, or when the user says "update the canonical", "fold this into the summary", "refresh the reference summary/insights", or "roll up the new doc". Owns ONLY `_sources/<bucket>/_md/00_REFERENCE_SUMMARY.md` + `01_REFERENCE_INSIGHTS.md` — a "canonical project fact" about the engagement itself (stack, stakeholder, scope) belongs to `.claude/project-context.md` via eng-maintain-memory, not here.
+description: >-
+  Use after eng-ingest-source runs, when source-derived facts in a `_sources/` bucket change,
+  or when the user says "update the canonical", "fold this into the summary", "refresh the
+  reference summary/insights", or "roll up the new doc". Owns ONLY the named source bucket's
+  `_md/00_REFERENCE_SUMMARY.md` and `01_REFERENCE_INSIGHTS.md`; a canonical project fact about
+  the engagement itself (stack, stakeholder, scope) belongs to `.claude/project-context.md`
+  via eng-maintain-memory, not here.
 ---
 
 # Updating canonical

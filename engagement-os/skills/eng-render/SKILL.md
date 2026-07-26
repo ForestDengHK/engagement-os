@@ -1,6 +1,14 @@
 ---
 name: eng-render
-description: Use when a set of written markdown sections (plus their figures) must become the delivered artefact — a Word/PDF document or a slide deck. Triggers on FORMAT verbs only: "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT from these sections", "export these sections to docx/pdf", "what would this build into" — and on the deck round trip after that: "splice these corrected slides back into the deck", "check this deck before I send it". (Writing or assembling the CONTENT is eng-bid-respond / eng-build-deliverable — this skill never drafts.) Works standalone on ANY directory of markdown; needs no engagement scaffold, no compliance matrix, no prior eng-* step.
+description: >-
+  Use when a set of written markdown sections (plus their figures) must become the delivered
+  artefact — a Word/PDF document or a slide deck. Triggers on FORMAT verbs only, such as
+  "render this directory as a deck", "turn these MD files into a Word doc", "generate the PPT
+  from these sections", "export these sections to docx/pdf", or "what would this build into";
+  and on the deck round trip after that, such as "splice these corrected slides back into the
+  deck" or "check this deck before I send it". Writing or assembling the CONTENT is
+  eng-bid-respond / eng-build-deliverable — this skill never drafts. Works standalone on ANY
+  directory of markdown; needs no engagement scaffold, compliance matrix, or prior eng-* step.
 ---
 
 # Rendering written sections into the delivered artefact
@@ -35,6 +43,8 @@ converter written here would be a worse pandoc.
 ## Workflow
 
 ```
+- [ ] 0. Invoke `Skill(engagement-os:eng-propagate-change)`. Stop on any unresolved impact;
+        rendering stale approved content only makes the stale state harder to see.
 - [ ] 1. ANALYSE first — always. Never render blind:
         python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/render_document.py \
           --sections <dir> --analyse --profile <plain|bid|deliverable>
@@ -119,3 +129,6 @@ embedded).
   the subject and the content an afterthought.
 - Re-render rather than editing the output. The markdown and the figure HTML are the masters;
   a hand-edit to the `.docx` is lost on the next build.
+- If a reviewer did edit DOCX/PDF/PPTX directly, invoke
+  `Skill(engagement-os:eng-propagate-change)` to reconcile that edit into the maintained source
+  before rendering; never checkpoint the generated-file edit as authoritative.

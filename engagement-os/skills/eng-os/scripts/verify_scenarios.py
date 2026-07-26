@@ -40,7 +40,7 @@ CONDITIONAL = ("01_pursuit/archive-",)
 
 # scenario -> (mode, [commands], [content assertions])
 # Asserted below against USAGE.md: every numbered scenario there is tested here; tested
-# scenarios beyond the numbered list are standalone stages (6 render, 7 variant).
+# scenarios beyond the numbered list are standalone stages (6 render, 7 variant, 8 check).
 SCENARIOS = {
     "1 research only": ("research", ["eng-new", "eng-source", "eng-sprint"], []),
     "2 pursuit only": ("pursuit", ["eng-new", "eng-rfp"], []),
@@ -56,6 +56,7 @@ SCENARIOS = {
 
 PATH_RE = re.compile(r"`((?:_sources|_pm|00_research|01_pursuit|02_delivery)/[\w<>./-]*)`")
 SKILL_RE = re.compile(r"`(eng-[a-z-]+)`")
+PLUGIN_SKILL_RE = re.compile(r"Skill\(engagement-os:(eng-[a-z-]+)\)")
 
 # A typo'd top-level path (`01_pursit/…`) never matches PATH_RE, so it was never
 # required to exist — a silent pass. Top-level-looking means: numbered (`NN_foo`)
@@ -174,6 +175,155 @@ def check_external_skills():
     return not missing
 
 
+def check_estimate_invocation_chain():
+    """Pin the deterministic route; a name in prose is not a skill invocation.
+
+    Natural-language matching remains useful, but the plugin skill itself is the direct user
+    entry and the priced-tender handoff uses the Skill tool. Once loaded, eng-estimate must itself
+    invoke xlsx rather than reproducing spreadsheet conventions.
+    """
+    checks = (
+        ("direct plugin skill exists",
+         ROOT / "skills/eng-estimate/SKILL.md",
+         "name: eng-estimate"),
+        ("RFP playbook invokes eng-estimate through Skill",
+         PB / "rfp-arrived.md",
+         "Skill(engagement-os:eng-estimate)"),
+        ("eng-estimate invokes xlsx through Skill",
+         ROOT / "skills/eng-estimate/SKILL.md",
+         "Skill(xlsx)"),
+    )
+    ok = True
+    print("\n  estimate invocation chain:")
+    for label, path, needle in checks:
+        passed = path.exists() and needle in path.read_text(encoding="utf-8")
+        print(f"  {'✓' if passed else '✗'} {label}")
+        ok = ok and passed
+    return ok
+
+
+def check_change_propagation_chain():
+    """Pin every automatic entry to the change-impact facade."""
+    checks = (
+        ("direct change-propagation skill exists",
+         ROOT / "skills/eng-propagate-change/SKILL.md",
+         "name: eng-propagate-change"),
+        ("new engagement seeds a checkpoint",
+         PB / "new-engagement.md",
+         "Skill(engagement-os:eng-propagate-change)"),
+        ("estimate routes material deltas",
+         ROOT / "skills/eng-estimate/SKILL.md",
+         "Skill(engagement-os:eng-propagate-change)"),
+        ("response reopens stale review",
+         ROOT / "skills/eng-bid-respond/SKILL.md",
+         "Skill(engagement-os:eng-propagate-change)"),
+        ("check scans before declaring clean",
+         ROOT / "skills/eng-check/SKILL.md",
+         "Skill(engagement-os:eng-propagate-change)"),
+        ("render scans before building",
+         ROOT / "skills/eng-render/SKILL.md",
+         "Skill(engagement-os:eng-propagate-change)"),
+        ("section contract declares extra dependencies",
+         ROOT / "skills/eng-os/templates/bid_section.md.tmpl",
+         "depends_on: []"),
+        ("strict lint sees pending impact",
+         ROOT / "skills/eng-os/scripts/eng_lint.py",
+         "rule_change_impact_pending"),
+    )
+    ok = True
+    print("\n  change-propagation chain:")
+    for label, path, needle in checks:
+        passed = path.exists() and needle in path.read_text(encoding="utf-8")
+        print(f"  {'✓' if passed else '✗'} {label}")
+        ok = ok and passed
+    return ok
+
+
+def check_internal_skill_invocations():
+    """Every explicit engagement-os Skill call resolves to a skill in this plugin."""
+    missing = []
+    count = 0
+    for f in sorted(list(ROOT.glob("skills/**/*.md")) + list(ROOT.glob("commands/*.md"))):
+        for name in PLUGIN_SKILL_RE.findall(
+                f.read_text(encoding="utf-8", errors="replace")):
+            count += 1
+            if name not in SKILLS:
+                missing.append(f"{f.relative_to(ROOT)} → {name}")
+    print(f"\n  internal Skill calls: {count}")
+    if missing:
+        for item in missing:
+            print(f"  ✗ unresolved `{item}`")
+    else:
+        print("  ✓ every explicit engagement-os Skill call resolves")
+    return not missing
+
+
+def check_pursuit_continuity():
+    """Pin the one-way gates and hand-off order across the public guide and playbook."""
+    playbook = (PB / "rfp-arrived.md").read_text(encoding="utf-8")
+    ordered = (
+        "Skill(engagement-os:eng-rfp-analyze)",
+        "Skill(engagement-os:eng-index-assets)",
+        "Skill(engagement-os:eng-estimate)",
+        "**🛑 GO / NO-GO — human.**",
+        "Skill(engagement-os:eng-bid-research)",
+        "Skill(engagement-os:eng-bid-respond)",
+        "Skill(engagement-os:eng-check)",
+        "Skill(engagement-os:eng-render)",
+        "**Verify the rendered artefact**",
+        "**Freeze the exact verified submission package**",
+    )
+    positions = [playbook.find(token) for token in ordered]
+    chain_ok = all(p >= 0 for p in positions) and positions == sorted(positions)
+
+    guide_checks = (
+        ("README estimate precedes GO",
+         ROOT / "README.md", "3. Estimate if priced", "4. GO / NO-GO"),
+        ("USAGE estimate precedes GO",
+         ROOT / "USAGE.md", "for a priced tender, hands the S-ID scope to eng-estimate",
+         "STOP. GO / NO-GO"),
+        ("analysis cannot bypass GO",
+         ROOT / "skills/eng-rfp-analyze/SKILL.md",
+         "Do **not** invoke\nresearch or drafting from this skill",
+         "only after the human GO gate"),
+        ("estimate cannot bypass GO",
+         ROOT / "skills/eng-estimate/SKILL.md",
+         "Do **not** invoke drafting from this skill",
+         "only after GO"),
+    )
+    print("\n  pursuit continuity:")
+    print(f"  {'✓' if chain_ok else '✗'} analyse → assets → estimate → human GO "
+          "→ research → respond → check → render → verify → freeze")
+    ok = chain_ok
+    for label, path, before, after in guide_checks:
+        text = path.read_text(encoding="utf-8")
+        before_at, after_at = text.find(before), text.find(after)
+        passed = before_at >= 0 and after_at >= 0 and before_at < after_at
+        print(f"  {'✓' if passed else '✗'} {label}")
+        ok = ok and passed
+    return ok
+
+
+def check_guide_inventory():
+    """Keep README's release inventory tied to what is actually shipped."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    match = re.search(
+        r"Packaged as (\d+) skills \+ (\d+) commands \+ (\d+) templates \+ "
+        r"(\d+) deterministic", readme)
+    actual = (
+        len(SKILLS),
+        len(list(CMD.glob("*.md"))),
+        len([f for f in (ROOT / "skills/eng-os/templates").iterdir() if f.is_file()]),
+        len([f for f in (ROOT / "skills/eng-os/scripts").iterdir() if f.is_file()]),
+    )
+    documented = tuple(map(int, match.groups())) if match else None
+    ok = documented == actual
+    print("\n  guide inventory:")
+    print(f"  {'✓' if ok else '✗'} README={documented} actual={actual} "
+          "(skills, commands, templates, scripts)")
+    return ok
+
+
 def main():
     keep = "--keep" in sys.argv
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="engos-e2e-"))
@@ -251,7 +401,8 @@ def main():
 
                 typo = sorted({p for p in TOPLIKE_RE.findall(body)
                                if p.split("/")[0] not in KNOWN_TOP})
-                missing_skills = sorted(set(SKILL_RE.findall(body)) - SKILLS)
+                named_skills = set(SKILL_RE.findall(body)) | set(PLUGIN_SKILL_RE.findall(body))
+                missing_skills = sorted(named_skills - SKILLS)
                 required = {p for p in PATH_RE.findall(body) if owned_by_selected(p, blocks)}
                 bad = []
                 for p in sorted(required):
@@ -262,7 +413,7 @@ def main():
                         bad.append(p)
                 ok = not missing_skills and not bad and not typo
                 print(f"  {'✓' if ok else '✗'} /{c:12} → {target:24} "
-                      f"skills={len(set(SKILL_RE.findall(body)) & SKILLS)} paths={len(required)}"
+                      f"skills={len(named_skills & SKILLS)} paths={len(required)}"
                       + (f"  MISSING-SKILLS={missing_skills}" if missing_skills else "")
                       + (f"  MISSING-PATHS={bad}" if bad else "")
                       + (f"  UNKNOWN-TOP-PATHS={typo}" if typo else ""))
@@ -276,6 +427,16 @@ def main():
 
     if not check_external_skills():
         fails.append("external-skill-refs")
+    if not check_estimate_invocation_chain():
+        fails.append("estimate-invocation-chain")
+    if not check_change_propagation_chain():
+        fails.append("change-propagation-chain")
+    if not check_internal_skill_invocations():
+        fails.append("internal-skill-invocations")
+    if not check_pursuit_continuity():
+        fails.append("pursuit-continuity")
+    if not check_guide_inventory():
+        fails.append("guide-inventory")
 
     print("\n" + ("✓ ALL SCENARIOS RUNNABLE" if not fails else f"✗ {len(fails)} FAILURE(S): {fails}"))
     return 0 if not fails else 1

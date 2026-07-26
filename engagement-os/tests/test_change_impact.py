@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""Regression tests for eng-propagate-change's deterministic impact engine."""
+import copy
+import importlib.util
+import json
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+PLUGIN = pathlib.Path(__file__).resolve().parents[1]
+ENGINE = PLUGIN / "skills/eng-os/scripts/change_impact.py"
+LINT = PLUGIN / "skills/eng-os/scripts/eng_lint.py"
+
+spec = importlib.util.spec_from_file_location("change_impact", ENGINE)
+ci = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ci)
+
+
+def section(title, req, asset, extra="", body="Approved answer."):
+    return (
+        "---\n"
+        f'section: "{title}"\n'
+        'rft_clause: "§5"\n'
+        "marks: 10\n"
+        'scoring: "whole"\n'
+        f"answers_reqs: [{req}]\n"
+        'page_budget: "4 A4"\n'
+        "figures: [F-01]\n"
+        f"evidence: [{asset}]\n"
+        f"depends_on: [{extra}]\n"
+        "status: approved\n"
+        "---\n\n"
+        f"# {title}\n\n{body}\n\n"
+        "![figure](../figures/F-01_x.png)\n\n"
+        "## Review log\n\n"
+        "| Round | Reviewer / lens | Date | Verdict | What changed |\n"
+        "|---|---|---|---|---|\n"
+        "| R2 | experienced human | 2026-07-26 | pass | approved |\n"
+    )
+
+
+def delivery_section(title, body):
+    return (
+        "---\n"
+        f'section: "{title}"\n'
+        "figures: []\n"
+        "evidence: []\n"
+        "depends_on: []\n"
+        "status: approved\n"
+        "---\n\n"
+        f"# {title}\n\n{body}\n\n"
+        "## Review log\n\n"
+        "| Round | Reviewer / lens | Date | Verdict | What changed |\n"
+        "|---|---|---|---|---|\n"
+        "| R2 | experienced human | 2026-07-26 | pass | approved |\n"
+    )
+
+
+def tree():
+    return {
+        "CLAUDE.md": "# Test engagement\n",
+        "01_pursuit/27-010/2_analysis/compliance_matrix.md": (
+            "| Req ID | Requirement | Mandatory | Evidence | Status |\n"
+            "|---|---|---|---|---|\n"
+            "| R-001 | Price must be explained | M | A-001 | met |\n"
+            "| R-002 | Team must be named | M | A-002 | met |\n"),
+        "01_pursuit/27-010/2_analysis/rfp_analysis.md": (
+            "# Analysis\n\n## 3. Scope\n\n"
+            "| S-ID | Scope | Driver |\n|---|---|---|\n"
+            "| S-01 | Assess | 5 systems |\n\n"
+            "## 10. Estimate\n\nP50 €100.\n"),
+        "01_pursuit/27-010/2_analysis/estimation.xlsx": b"PK-estimate-v1",
+        "01_pursuit/27-010/2_analysis/estimation.md": "# generated estimate v1\n",
+        "01_pursuit/27-010/2_analysis/bid_research_log.md": (
+            "| # | Serves | Claim | Status |\n|---|---|---|---|\n"
+            "| 1 | R-001 | Benchmark is 12 weeks | closed |\n"
+            "| 2 | R-002 | Named lead required | closed |\n"),
+        "01_pursuit/_shared/firm_assets.md": (
+            "| ID | Asset | Date |\n|---|---|---|\n"
+            "| A-001 | Rate card | 2026-01 |\n"
+            "| A-002 | Lead CV | 2026-01 |\n"),
+        "01_pursuit/27-010/3_drafting/sections/s1.md":
+            section("Pricing", "R-001", "A-001", "estimation.xlsx, BR-001",
+                    "Our P50 is €100, based on log #1."),
+        "01_pursuit/27-010/3_drafting/sections/s2.md":
+            section("Team", "R-002", "A-002", "", "Our lead is named."),
+        "01_pursuit/27-010/3_drafting/figures/F-01_x.html": "<html>v1</html>",
+        "01_pursuit/27-010/3_drafting/figures/F-01_x.png": b"png-v1",
+        "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx": b"PK-pptx-v1",
+        "01_pursuit/27-010/3_drafting/bid.docx": b"PK-docx-v1",
+        "01_pursuit/27-010/4_final/submission.pdf": b"pdf-final-v1",
+        "02_delivery/DELIVERABLES.md": (
+            "| D | Name | Live file |\n|---|---|---|\n"
+            "| D1 | Assessment | `02_delivery/2_assessment/d1.md` |\n"),
+        "02_delivery/1_discovery/3_findings/platform/f1.md": (
+            "# Finding\n\nEvidence: [Observed]\n\nFeeds: D1\n"),
+        "02_delivery/2_assessment/d1.md":
+            delivery_section("Assessment", "The current finding is reflected."),
+        "00_research/1_analysis/q1.md": "# Analysis\n\nThe market is changing.\n",
+        "00_research/2_output/report.md":
+            delivery_section("Research report", "The market conclusion."),
+    }
+
+
+def build(items=None):
+    root = pathlib.Path(tempfile.mkdtemp(prefix="engos-impact-"))
+    for rel, content in (items or tree()).items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, bytes):
+            path.write_bytes(content)
+        else:
+            path.write_text(content, encoding="utf-8")
+    return root
+
+
+def mutate_text(root, rel, old, new):
+    path = root / rel
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def affected(report):
+    return {x["path"]: x for x in report["affected_sections"]}
+
+
+def has_action(report, needle):
+    return any(needle in (i["artifact"] + " " + i["action"] + " " + i["reason"])
+               for i in report["impacts"])
+
+
+def case_baseline_and_untracked():
+    root = build()
+    assert ci.scan(root)["status"] == "baseline_missing"
+    result = ci.checkpoint(root)
+    assert result["tracked_files"] >= 12
+    assert ci.scan(root)["status"] == "clean"
+    (root / "notes.txt").write_text("untracked scratch", encoding="utf-8")
+    assert ci.scan(root)["status"] == "clean"
+    state = (root / ci.STATE_REL).read_text(encoding="utf-8")
+    assert "Our P50 is" not in state
+
+
+def case_estimate_propagates_only_pricing():
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/2_analysis/estimation.xlsx").write_bytes(b"PK-estimate-v2")
+    report = ci.scan(root)
+    a = affected(report)
+    assert "01_pursuit/27-010/3_drafting/sections/s1.md" in a
+    assert "01_pursuit/27-010/3_drafting/sections/s2.md" not in a
+    assert a["01_pursuit/27-010/3_drafting/sections/s1.md"]["required_status"] == "revise-r2"
+    assert has_action(report, "refresh snapshot")
+    assert has_action(report, "§10")
+    assert has_action(report, "new version")
+    final_before = (root / "01_pursuit/27-010/4_final/submission.pdf").read_bytes()
+    changed = ci.apply_invalidations(root, report)
+    assert changed == ["01_pursuit/27-010/3_drafting/sections/s1.md"]
+    s1 = (root / changed[0]).read_text(encoding="utf-8")
+    s2 = (root / "01_pursuit/27-010/3_drafting/sections/s2.md").read_text(encoding="utf-8")
+    assert "status: revise-r2" in s1 and "change-impact gate" in s1
+    assert "status: approved" in s2
+    assert (root / "01_pursuit/27-010/4_final/submission.pdf").read_bytes() == final_before
+
+
+def case_refreshed_estimate_does_not_claim_stale_derivatives():
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/2_analysis/estimation.xlsx").write_bytes(b"PK-estimate-v2")
+    (root / "01_pursuit/27-010/2_analysis/estimation.md").write_text(
+        "# generated estimate v2\n", encoding="utf-8")
+    mutate_text(root, "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+                "P50 €100.", "P50 €101.")
+    report = ci.scan(root)
+    assert not any(i["artifact"].endswith("estimation.md") and "refresh snapshot" in i["action"]
+                   for i in report["impacts"])
+    assert not any(i["artifact"].endswith("§10") for i in report["impacts"])
+    assert "01_pursuit/27-010/3_drafting/sections/s1.md" in affected(report)
+
+
+def case_entity_routes():
+    cases = [
+        ("01_pursuit/27-010/2_analysis/compliance_matrix.md",
+         "Price must be explained", "Price and tax must be explained", "s1.md", "R-001"),
+        ("01_pursuit/_shared/firm_assets.md",
+         "Lead CV", "Updated lead CV", "s2.md", "A-002"),
+        ("01_pursuit/27-010/2_analysis/bid_research_log.md",
+         "Benchmark is 12 weeks", "Benchmark is 14 weeks", "s1.md", "BR-001"),
+    ]
+    for rel, old, new, section_name, entity in cases:
+        root = build()
+        ci.checkpoint(root)
+        mutate_text(root, rel, old, new)
+        report = ci.scan(root)
+        matches = [x for x in report["affected_sections"] if x["path"].endswith(section_name)]
+        assert len(matches) == 1 and entity in " ".join(matches[0]["reasons"])
+
+
+def case_scope_and_figure():
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+                "5 systems", "8 systems")
+    report = ci.scan(root)
+    assert report["changed_entities"]["scope"] == ["S-01"]
+    assert has_action(report, "re-baseline the estimate")
+
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/figures/F-01_x.html", "v1", "v2")
+    report = ci.scan(root)
+    assert has_action(report, "regenerate PNG")
+    assert len(report["affected_sections"]) == 2
+
+
+def case_delivery_and_research_propagate():
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "02_delivery/1_discovery/3_findings/platform/f1.md",
+                "Evidence: [Observed]", "Evidence: [Observed] and [Reported]")
+    report = ci.scan(root)
+    d1 = affected(report)["02_delivery/2_assessment/d1.md"]
+    assert d1["required_status"] == "revise"
+
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "00_research/1_analysis/q1.md", "changing", "accelerating")
+    report = ci.scan(root)
+    research = affected(report)["00_research/2_output/report.md"]
+    assert research["required_status"] == "revise"
+
+
+def case_direct_edits_are_not_blessed():
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/2_analysis/estimation.md", "v1", "manual")
+    report = ci.scan(root)
+    assert any(i["severity"] == "error" and "regenerate from estimation.xlsx" in i["action"]
+               for i in report["impacts"])
+    assert ci.checkpoint(root)["status"] == "checkpoint_refused"
+
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/3_drafting/bid.docx").write_bytes(b"PK-human-edit")
+    report = ci.scan(root)
+    assert any(i["severity"] == "error" and "maintained source" in i["action"]
+               for i in report["impacts"])
+    assert ci.checkpoint(root)["status"] == "checkpoint_refused"
+
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/4_final/submission.pdf").write_bytes(b"edited-final")
+    report = ci.scan(root)
+    assert any(i["severity"] == "error" and i["artifact"].endswith("submission.pdf")
+               for i in report["impacts"])
+    assert ci.checkpoint(root)["status"] == "checkpoint_refused"
+
+    root = build()
+    ci.checkpoint(root)
+    new_final = root / "01_pursuit/27-010/4_final/submission-v2.pdf"
+    new_final.write_bytes(b"verified-new-version")
+    report = ci.scan(root)
+    assert not any(i["severity"] == "error" for i in report["impacts"])
+    assert ci.checkpoint(root)["status"] == "checkpointed"
+
+
+def case_approved_body_and_checkpoint():
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/sections/s2.md",
+                "Our lead is named.", "Our lead and deputy are named.")
+    report = ci.scan(root)
+    s2 = affected(report)["01_pursuit/27-010/3_drafting/sections/s2.md"]
+    assert s2["required_status"] == "revise-r2"
+    ci.apply_invalidations(root, report)
+    # Simulate completed human re-review, then accept the reconciled state.
+    mutate_text(root, "01_pursuit/27-010/3_drafting/sections/s2.md",
+                "status: revise-r2", "status: approved")
+    ci.checkpoint(root)
+    assert ci.scan(root)["status"] == "clean"
+
+
+def case_lint_blocks_pending():
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/2_analysis/estimation.xlsx").write_bytes(b"PK-estimate-v2")
+    proc = subprocess.run([sys.executable, str(LINT), str(root), "--strict"],
+                          capture_output=True, text=True)
+    assert proc.returncode == 1 and "change-impact-pending" in proc.stdout
+
+
+def case_cli_contract():
+    root = build()
+    first = subprocess.run(
+        [sys.executable, str(ENGINE), str(root), "--checkpoint", "--json"],
+        capture_output=True, text=True)
+    assert first.returncode == 0
+    assert json.loads(first.stdout)["status"] == "checkpointed"
+    (root / "01_pursuit/27-010/4_final/submission.pdf").write_bytes(b"tampered")
+    refused = subprocess.run(
+        [sys.executable, str(ENGINE), str(root), "--checkpoint", "--json"],
+        capture_output=True, text=True)
+    assert refused.returncode == 1
+    assert json.loads(refused.stdout)["status"] == "checkpoint_refused"
+
+
+CASES = [
+    ("baseline, clean scan, untracked file ignored, hashes only", case_baseline_and_untracked),
+    ("estimate change routes pricing only and preserves final", case_estimate_propagates_only_pricing),
+    ("refreshed estimate does not re-report refreshed derivatives",
+     case_refreshed_estimate_does_not_claim_stale_derivatives),
+    ("R/A/BR entity changes route exact sections", case_entity_routes),
+    ("scope and figure changes route their owners", case_scope_and_figure),
+    ("delivery findings and research analysis reopen outputs", case_delivery_and_research_propagate),
+    ("generated/frozen direct edits are rejected", case_direct_edits_are_not_blessed),
+    ("approved body edit invalidates then checkpoints clean", case_approved_body_and_checkpoint),
+    ("strict lint blocks pending impact", case_lint_blocks_pending),
+    ("CLI emits JSON and refuses unsafe checkpoint", case_cli_contract),
+]
+
+
+def main():
+    failures = []
+    for name, fn in CASES:
+        try:
+            fn()
+            print(f"  ✓ {name}")
+        except Exception as exc:
+            failures.append(name)
+            print(f"  ✗ {name}: {type(exc).__name__}: {exc}")
+    print(f"\n{len(CASES) - len(failures)}/{len(CASES)} change-impact cases pass")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

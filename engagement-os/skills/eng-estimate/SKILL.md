@@ -1,6 +1,6 @@
 ---
 name: eng-estimate
-description: Use when a tender, proposal, SOW or change request has to be sized or priced — "how many days is this", "size the engagement", "build the effort model", "what should we bid", "price the RFP", "estimate this scope", "fill the pricing document". Produces a bottom-up effort model traced to the scope decomposition, an overlap audit, a P50/P80 range separated from scope-variance scenarios, the client-side hours ask, a genuinely independent cross-check plus an outside view, a cost→price build, and the price-vs-marks decision table. Decision support for the pricing call — it does not recommend a bid price.
+description: Use when a tender, proposal, SOW or change request has to be sized or priced, or an existing estimate workbook needs updating, recalculating, or refreshing — "how many days is this", "size the engagement", "build the effort model", "what should we bid", "price the RFP", "estimate this scope", "update the rate card", "refresh the estimate", "fill the pricing document". Produces and maintains a formula-live Excel effort model traced to the scope decomposition, an overlap audit, a P50/P80 range separated from scope-variance scenarios, the client-side hours ask, a genuinely independent cross-check plus an outside view, a cost→price build, and the price-vs-marks decision table. Decision support for the pricing call — it does not recommend a bid price.
 ---
 
 # Estimating an engagement
@@ -28,34 +28,51 @@ calibration, contingency, the pricing-document mapping, re-baseline triggers —
 sheet. `estimation.md` is a **generated snapshot**, never edited by hand.
 
 ```
-workbook (source of truth)  ──  --to-md  ─►  markdown snapshot (generated, read-only)
+workbook (source of truth)  ──  eng-estimate refresh  ─►  markdown snapshot (generated, read-only)
 ```
 
-Seed the workbook once from
-`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/estimation.md.tmpl`, then work in the workbook:
+## Conversation contract
 
-```bash
-B=${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/build_estimate_workbook.py
-python3 $B 01_pursuit/<ENG-ID>/2_analysis/estimation.md      # seed the workbook — ONCE
-python3 $B --out .../estimation.xlsx --to-md                 # after every workbook edit
-    # --reseed      rebuild FROM the markdown, discarding workbook edits (destructive)
-    # --check       recompute the seed markdown's arithmetic and report drift
-    # --zero-rates  emit the rate card at 0 when no real card exists
-    # --blank       starter workbook before any markdown
-```
+Prefer the plugin skill's explicit invocation, `/engagement-os:eng-estimate`. Also treat
+natural-language requests such as “size this tender”, “create the estimate workbook”, “change the
+Manager rate to €x”, “re-run the estimate”, “sync the snapshot”, or “show what moved since the
+last price” as fallback invocations of this skill.
 
-**Re-seeding is destructive and the script refuses it by default.** It used to rebuild from the
+- Never ask the user to run Python, a script, or a CLI flag.
+- Never ask the user to edit `estimation.md`.
+- Accept changes in conversation and write them to `estimation.xlsx`; if the user prefers to edit
+  the workbook directly, read those edits back.
+- After every workbook change, recalculate, verify zero formula errors, and overwrite the generated
+  `estimation.md` snapshot. Return the workbook path, the snapshot path, and the material deltas.
+- Then invoke `Skill(engagement-os:eng-propagate-change)`: a changed cost, duration, assumption,
+  exclusion or client-time ask invalidates the analysis headline and every response section
+  declaring or containing that pricing dependency. Do not checkpoint until those hand-offs and
+  any required human re-review are complete.
+- Preserve prior versions through git history during working changes. At a formal pricing freeze,
+  copy both artefacts into `4_final/`; do not create dated working snapshots.
+
+## Agent-only implementation
+
+The deterministic engine is
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/build_estimate_workbook.py`. It is an implementation
+detail behind this skill, not a user entry point. Seed once from
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/estimation.md.tmpl`; thereafter export from the
+workbook to the snapshot. Run the engine yourself and translate its result into plain language.
+Only explain its CLI when the user explicitly asks about implementation.
+
+**Re-seeding is destructive and the engine refuses it by default.** It used to rebuild from the
 markdown on every run, so a reviewer's workbook edits vanished on the next build while the docs
-told them the workbook was the model. An existing workbook is now never overwritten without
-`--reseed`.
+told them the workbook was the model. Never discard workbook edits unless the user explicitly
+asks to rebuild from the snapshot and acknowledges that those edits will be lost.
 
 **Why keep a markdown snapshot at all** when the workbook is the source: `eng_lint` reads text,
 so an xlsx-only estimate falls out of every mechanical gate; and `git diff` on a binary shows
 nothing, which matters on a bid re-priced three times. The snapshot is regenerated after each
 edit and carries a DO-NOT-EDIT banner.
 
-**Use the `xlsx` skill for anything spreadsheet-shaped beyond running this script** — editing the
-workbook by hand, adding a sheet, changing formatting, or diagnosing a formula. It owns the
+**Invoke the installed `xlsx` skill through the Skill tool before any workbook mutation or
+verification (`Skill(xlsx)`).** Use it for anything spreadsheet-shaped beyond running this
+engine — editing the workbook, adding a sheet, changing formatting, or diagnosing a formula. It owns the
 conventions this workbook already follows (Arial; blue text for inputs, black for formulas, green
 for cross-sheet links, yellow fill for cells to edit; percentages stored as fractions) and the
 function-compatibility rules that decide whether a formula survives verification. Do not re-derive
@@ -101,7 +118,7 @@ Estimation Progress:
 - [ ] 9. Price-vs-marks DECISION TABLE — no recommended price
 - [ ] 10. Map onto the buyer's pricing document, obeying its format exactly
 - [ ] 11. Cone-of-uncertainty stage + re-baseline triggers
-- [ ] 12. Build the workbook (`build_estimate_workbook.py`) and check the row counts
+- [ ] 12. Create/update the workbook, recalculate through `xlsx`, refresh the snapshot, and check row counts
 ```
 
 **Step 2 — independence is a property of the process.** Two techniques run by the same person in
@@ -161,7 +178,8 @@ state the assumed competitor range as the guess it is.
   scope variance is carried by contract words, not by days.
 
 ## Hand-off
-Range + assumptions + exclusions + the client-time table → `eng-bid-respond` (pricing section,
-methodology, and the stakeholder-input table). P50/P80 + the decision table → `rfp_analysis.md`
-§10 — and into the go/no-go if the winnable price sits below the cost base. The pricing decision
-itself, once the partner takes it, → `_pm/raid_and_decisions.md`, not back into this file.
+Return the range, assumptions, exclusions, client-time table, P50/P80, and decision table to the
+`rfp-arrived` playbook. It updates `rfp_analysis.md` §10 and uses the cost base in the human
+go/no-go decision. Do **not** invoke drafting from this skill: only after GO does the playbook pass
+the pricing material to `Skill(engagement-os:eng-bid-respond)`. Once the partner takes the pricing
+decision, record it in `_pm/raid_and_decisions.md`, not back into this file.

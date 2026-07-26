@@ -16,6 +16,8 @@ the facade; both live with the eng-os kernel. Pruning skills individually must k
 ## Workflow
 
 ```
+- [ ] 0. Invoke `Skill(engagement-os:eng-propagate-change)` first. A pending manual edit,
+        stale generated output, invalidated review, or modified frozen file blocks "clean".
 - [ ] 1. Work out what is being checked:
         an engagement repo (a bid, a delivery)          → step 2
         an assembled deck                               → step 3
@@ -47,6 +49,8 @@ the facade; both live with the eng-os kernel. Pruning skills individually must k
 - **It does not judge content.** Whether the answer is *good* is `panel-review` and the human
   round. This decides only what a script can decide — which is why it is cheap enough to run
   constantly rather than once at the end.
+- **It does not bless an unpropagated edit.** Complete the change-impact hand-offs and reviews,
+  checkpoint the reconciled state, then run this gate again.
 
 ## Run it early and often
 

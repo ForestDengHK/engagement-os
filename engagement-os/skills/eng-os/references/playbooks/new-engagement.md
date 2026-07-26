@@ -17,8 +17,12 @@ pick mode ─► eng-scaffold ─► fill context (human) ─► /panel-init ─
    Build only what the work needs — an empty `02_delivery/` in a bid repo sends every later
    skill hunting through folders that will never hold anything. Blocks are additive, so
    under-building is cheap to fix and over-building is not.
-1. **Scaffold** → `eng-scaffold` (or run `scaffold_engagement.py --mode <blocks>` directly).
-   Creates the tree for the selected blocks and plants their templates.
+1. **Scaffold** — invoke the plugin skill through the Skill tool:
+   `Skill(engagement-os:eng-scaffold)`. It creates the tree for the selected blocks and plants
+   their templates; never send the user to the underlying script.
+   For a standalone research repo, default the destination name to
+   `research-<project-slug>` so all research assignments are immediately filterable.
+   Respect an explicit root supplied by the user.
    Verify: `CLAUDE.md` + `.claude/project-context.md` + `_sources/README.md` + `_pm/` exist;
    per block, `01_pursuit/<ENG-ID>/2_analysis/` spine *(pursuit)* and `DELIVERABLES.md` +
    `3_findings/` backbone + standard *(delivery)*; **no folders for unselected blocks**.
@@ -35,9 +39,12 @@ pick mode ─► eng-scaffold ─► fill context (human) ─► /panel-init ─
    tender documents + any client-shared baseline materials.
    Verify: every received doc is in the reference pack with a manifest row;
    canonical summary has its first real content.
-5. **Memory start** → `eng-maintain-memory`: first engagement-log entry
+5. **Memory start** → `Skill(engagement-os:eng-maintain-memory)`: first engagement-log entry
    (mobilisation baseline); cross-session memory records the engagement exists
    and where its canonical files live.
+6. **Seed the change baseline** → `Skill(engagement-os:eng-propagate-change)`.
+   Checkpoint only after the fresh scaffold, context and spine agree. From this point, a manual
+   edit can be distinguished from the state that was last reconciled.
 
 ## Stop gates
 

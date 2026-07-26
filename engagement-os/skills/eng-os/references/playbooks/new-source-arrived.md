@@ -6,10 +6,10 @@ Documents arrive one at a time and are analysed one at a time; that is the norma
 degenerate one. Nobody ever has the full set on day one.
 
 **You do not have to name the file, or know which command it needs.** Drop it anywhere in the
-tree and run `/eng-source` with no arguments — `convert_source.py --scan <root>` reports what is
+tree and run `/eng-source` with no arguments — the command scans internally and reports what is
 waiting, split by destination: sourced material **to ingest** (this playbook) and our own assets
-**to index** (`eng-index-assets` — never converted, never bucketed). Naming a path is the
-shortcut, not the requirement.
+**to index** (`Skill(engagement-os:eng-index-assets)` — never converted, never bucketed).
+Naming a path is the shortcut, not the requirement.
 
 The most frequent loop in an engagement. Runs once per document; batch by repeating
 the loop, not by widening a step. Each step names the skill that owns it — follow
@@ -32,13 +32,14 @@ routes it there if it slipped in here.
    client-handed post-award → `_sources/engagement/` · the tender pack itself →
    `01_pursuit/<ENG-ID>/1_received/`. A mixed batch splits into per-bucket sub-batches
    and each runs the loop separately. If a doc's provenance is unclear, ask — don't default.
-1. **Ingest — one doc at a time** → `eng-ingest-source`.
+1. **Ingest — one doc at a time** → `Skill(engagement-os:eng-ingest-source)`.
    Convert to anchored markdown with the lossless image rule; append the manifest row.
    Verify: output markdown exists under the right bucket, images triaged
    (decorative dropped / content kept+captioned / uncertain OCR'd inline), manifest row added.
 2. **Repeat step 1 for every doc in the sub-batch.** Do not start canonicalizing until the
    sub-batch is fully ingested — canonical updates are cheaper in one pass.
-3. **Canonicalize — once per sub-batch, into that bucket's pair** → `eng-update-canonical`.
+3. **Canonicalize — once per sub-batch, into that bucket's pair** →
+   `Skill(engagement-os:eng-update-canonical)`.
    Facts → `<bucket>/_md/00_REFERENCE_SUMMARY.md`; interpretation →
    `<bucket>/_md/01_REFERENCE_INSIGHTS.md`; conflicts superseded, never deleted; new
    `[⚠VERIFY]` items registered. **Never fold one bucket's facts into another's summary.**
@@ -46,8 +47,9 @@ routes it there if it slipped in here.
 4. **Impact check — judgment gate, no skill. What "impact" means depends on the block.**
 
    **In a delivery repo — does any new fact create, extend, or contradict a finding?**
-   - Yes → invoke `eng-write-findings` (new finding or extend an existing one, with the
-     new source cited). Contradiction → stamp the losing claim `⚠ superseded-by`, keep both.
+   - Yes → invoke `Skill(engagement-os:eng-write-findings)` (new finding or extend an existing
+     one, with the new source cited). Contradiction → stamp the losing claim
+     `⚠ superseded-by`, keep both.
    - No → note "no finding impact" in the engagement log and stop.
 
    **In a pursuit repo — does it move the spine?** A bid has no findings; it has
@@ -56,18 +58,21 @@ routes it there if it slipped in here.
      defines "within three years" can flip a row from `gap` to `met` — or the reverse.
      Update the row and its evidence.
    - **Is it one of our own assets rather than sourced material?** Then it does not belong in
-     a bucket at all → `eng-index-assets`, which decides what it proves and whether it is
-     in-window.
+     a bucket at all → `Skill(engagement-os:eng-index-assets)`, which decides what it proves
+     and whether it is in-window.
    - **Which sections does the moved row touch?** Only sections whose `answers_reqs` include
-     it → `eng-bid-respond` to write or revise those, and re-run their review round. Sections
-     already at `reviewed-r2` that the change touches drop back to `revise-r2` — a fact that
-     moved under a section un-reviews it.
+     it → `Skill(engagement-os:eng-bid-respond)` to write or revise those, and re-run their
+     review round. Sections already at `reviewed-r2` that the change touches drop back to
+     `revise-r2` — a fact that moved under a section un-reviews it.
    - **Does it change the go/no-go?** A newly discovered deal-breaker is an escalation, not a
      matrix edit — surface it to the human.
    - No impact → one line in the log and stop.
-5. **Log + memory — once per session** → `eng-maintain-memory`.
+5. **Log + memory — once per session** → `Skill(engagement-os:eng-maintain-memory)`.
    Engagement-log entry (what arrived, what it changed, what's still owed);
    update open-question backlog statuses the new evidence answers.
+6. **Propagate the internal artefact changes** →
+   `Skill(engagement-os:eng-propagate-change)`. Apply only the affected routes and review
+   invalidations; do not re-run unrelated sections.
 
 ## Stop gates
 

@@ -12,7 +12,9 @@ Create a new engagement repo that follows the Engagement OS conventions, so ever
 - **client** — short code (e.g. `ACME`)
 - **eng-id** — engagement / tender id (e.g. `27-010`)
 - **name** — engagement name (e.g. "Data Platform Strategic Assessment")
-- **root** — destination directory (default: `./<client-lower>-<eng-id>`)
+- **root** — destination directory. Default by primary mode:
+  - research: `./research-<project-slug>`
+  - pursuit / delivery / full: `./<client-lower>-<eng-id>`
 - **mode** — which blocks to build (default: `full`) — see below
 - **phase** — starting phase label (default: `Mobilisation`)
 
@@ -45,6 +47,11 @@ from what was sold.
 **Research and delivery share the `engagement` bucket** — in both, the client handed us material
 under an engagement's confidentiality terms. Buckets are named for the constraint on the material,
 not for the work tree that consumes it, so the same filing rule holds in every mode.
+
+**Research repositories are filterable by name.** Unless the user supplies an explicit root,
+derive a short kebab-case project slug and prefix it with `research-` (for example,
+`research-deloitte-ai-platform-study`). Do not use a client/id-only default for a standalone
+research assignment.
 
 ## Workflow
 

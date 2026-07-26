@@ -10,11 +10,12 @@ Aligned twice — to the RFP text AND to our best practice — and read from eve
 Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/rfp-analysis.md`.
 
 ## Prerequisite
-The RFP pack is ingested to markdown first (`eng-ingest-source` → `01_pursuit/<ENG-ID>/1_received/_md/`)
+The RFP pack is ingested to markdown first
+(`Skill(engagement-os:eng-ingest-source)` → `01_pursuit/<ENG-ID>/1_received/_md/`)
 so every requirement can be cited by clause/page.
-**If missing:** no `_md/` pack → run `eng-ingest-source` first (no pursuit tree at all →
-`eng-scaffold`, or just run `/eng-rfp`, which chains both). Analysing from the raw PDF is how
-clause citations get invented.
+**If missing:** no `_md/` pack → invoke `Skill(engagement-os:eng-ingest-source)` first
+(no pursuit tree at all → `Skill(engagement-os:eng-scaffold)`, or just run `/eng-rfp`, which
+chains both). Analysing from the raw PDF is how clause citations get invented.
 
 Work in `01_pursuit/<ENG-ID>/2_analysis/`. **Three artefacts always, two on condition:**
 
@@ -24,7 +25,7 @@ Work in `01_pursuit/<ENG-ID>/2_analysis/`. **Three artefacts always, two on cond
 | `compliance_matrix.md` | always | the completeness spine, one row per requirement |
 | `clarification_log.md` | always | questions to the buyer + settled readings — the **query deadline lands before submission** |
 | `bid_reuse_analysis.md` | **only if a prior bid exists** | section-by-section diff of what carries over |
-| `estimation.md` | **only if the tender is priced** | the bottom-up effort → cost model (`eng-estimate`) |
+| `estimation.xlsx` + generated `estimation.md` | **only if the tender is priced** | the maintained effort → cost model plus its diffable snapshot (`eng-estimate`) |
 
 A conditional artefact exists **because the condition held, never because a list said so.** No
 prior bid → don't create the file; record *"searched, none found"* in `rfp_analysis.md` §9. An
@@ -48,8 +49,8 @@ RFP Analysis Progress:
 - [ ] 6. Flag risks / red-flags / deal-breakers (+ clarification questions)
 - [ ] 7. Materials-needed list: WE research vs YOU upload (be specific)
 - [ ] 7b. Prior-bid check — found one → bid_reuse_analysis.md; none → record the negative
-- [ ] 8. Go / no-go recommendation with conditions
-- [ ] 9. Hand the S-ID table to eng-estimate (priced tenders only)
+- [ ] 8. Return the S-ID table to the RFP playbook for eng-estimate (priced tenders only)
+- [ ] 9. When the estimate returns, finalise the go / no-go recommendation with conditions
 ```
 
 Fill `rfp_analysis.md` (steps 2b–8) and `compliance_matrix.md` (step 2) from the templates in
@@ -96,5 +97,8 @@ speculative file is a liability.
 - **Traceable both ways.** Requirement → our response; any claim → its requirement + evidence.
 
 ## Hand-off
-Scope table (§3) → `eng-estimate`, which turns S-IDs into effort, cost and a price posture.
-Gaps + the materials-needed list → `eng-bid-research`. On a go, the matrix + win-themes → `eng-bid-respond`.
+Return the scope table (§3), gaps, materials-needed list, matrix, and win-themes to the
+`rfp-arrived` playbook. It invokes `Skill(engagement-os:eng-estimate)` for priced tenders, then
+returns here to finalise the clarification log and go/no-go recommendation. Do **not** invoke
+research or drafting from this skill: only after the human GO gate does the playbook invoke
+`Skill(engagement-os:eng-bid-research)` and `Skill(engagement-os:eng-bid-respond)`.
