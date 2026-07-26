@@ -47,6 +47,14 @@ The gate itself is mandatory; the tool is the Panel Framework **if installed**.
 `--profile deliverable`. It owns discover/gate/strip/measure and routes the rest to
 `presentation-builder` (deck) or the `docx` skill (document). Build the content here; render there.
 
+**Write the section-contract frontmatter as you build** — `section:` and a real `status:` from
+`section_contract.DELIVERABLE_STATUSES` (`draft` → `reviewed` → `approved` → `issued`), plus
+`figures:` and `evidence:` where they apply. Every built file, in the delivery block *and the
+research block*. A file with no frontmatter reads as `status=draft` to the renderer, so the
+`deliverable` profile refuses it — which is correct behaviour reported against a file that had
+simply never been stamped. Found on the Deloitte research E2E: a reviewed, red-lined v1.0 report
+was blocked at the render gate because nothing in the research lane had ever written a status line.
+
 ## Guardrails
 No client-facing headline rests on an unverified figure. Provenance travels with the claim.
 Don't bake a recommendation back into a finding. Apply the project's CLAUDE.md "ALWAYS apply"

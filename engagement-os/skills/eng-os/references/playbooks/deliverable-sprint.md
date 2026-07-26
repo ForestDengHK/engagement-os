@@ -36,6 +36,22 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
    The live-file index (see the table above) points at the new version; superseded
    versions archived (never deleted); engagement log records the sprint; memory notes
    any new recurring correction that emerged.
+6. **Deliver it in the form the recipient actually needs** → `eng-render`.
+   **Ask — never assume markdown is the deliverable.** The sprint has produced reviewed
+   markdown; whether that ships as markdown, a document, or a deck is a decision about the
+   *recipient*, not about the content, and nobody should have to remember a command to reach it.
+   Run the analyse pass first (`--analyse`), read it back, then offer the routes:
+
+   | Recipient needs | Route | Owner |
+   |---|---|---|
+   | a read-through, a working copy, a repo artefact | stop at markdown — it is already the deliverable | — |
+   | a document (page limit, mandated template, portal upload) | `--to docx\|pdf\|both` | `eng-render` |
+   | a presentation (steering committee, defence, meeting) | `--to deck-manifest` → `presentation-builder` | `eng-render` → `presentation-builder` |
+   | a workbook (cost model, register, data appendix) | **`eng-render` does not own this** — hand to the `xlsx` skill, or `eng-estimate` if it is a priced bid model | `xlsx` / `eng-estimate` |
+
+   Verify: the analyse pass says WOULD BUILD under the right profile; for a deck, the assembled
+   `.pptx` passes `verify_deck.py --expect <n>`; the live-file index row records the **shipped**
+   format, not just the markdown.
 
 ## Stop gates
 
@@ -47,3 +63,6 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
   draft, regardless of version number.
 - **STOP if scope changed mid-sprint** — back to step 2 (re-lock structure), not
   silent accommodation.
+- **Do not pick the delivered format for the user, and do not default to markdown.** Step 6 is a
+  question, not a step you complete on their behalf. Reviewed markdown that nobody can open in a
+  steering committee is a sprint that stopped one step early.
