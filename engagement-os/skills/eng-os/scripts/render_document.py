@@ -41,7 +41,6 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import section_contract as sc   # the single source for the section-file contract
 
-FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 FIG_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 H1_RE = re.compile(r"^#\s+(.+)$", re.M)
 
@@ -80,15 +79,10 @@ PROFILES = {
 
 def read_section(path):
     raw = open(path, encoding="utf-8").read()
-    m = FM_RE.match(raw)
-    meta, body = {}, raw
-    if m:
-        body = raw[m.end():]
-        for line in m.group(1).splitlines():
-            if ":" in line and not line.startswith((" ", "\t", "#")):
-                k, v = line.split(":", 1)
-                meta[k.strip()] = v.strip().strip('"').strip("'")
-    return meta, body
+    # Do not grow a render-local interpretation of the section contract. Lint and
+    # render must parse the same file identically, including the template's inline
+    # lifecycle comments.
+    return sc.parse_frontmatter(raw)
 
 
 def discover(sec_dir, order=None):
@@ -218,14 +212,15 @@ def report(sections, strip=True):
 
 # ---------------------------------------------------------------- typography
 
-def reference_docx(font: str, size: str, workdir: str) -> str:
-    """Build a pandoc reference.docx whose default typography is `font`/`size`.
+def reference_docx(font: str, size: str, paper: str, workdir: str) -> str:
+    """Build a pandoc reference.docx with enforced typography and paper size.
 
     `--metadata mainfont=`/`fontsize=` only reach LaTeX/PDF output; the docx writer
     takes ALL typography from the reference document, so passing those flags for a
     docx target looked like enforcement and did nothing. Here we take pandoc's own
-    default reference and rewrite the docDefaults in word/styles.xml with stdlib
-    zipfile — no python-docx dependency. OOXML font sizes are in half-points.
+    default reference and rewrite the docDefaults in word/styles.xml plus the section
+    page size in word/document.xml with stdlib zipfile — no python-docx dependency.
+    OOXML font sizes are in half-points; page dimensions are in twentieths of a point.
     """
     half = str(int(float(size.rstrip("pt")) * 2))
     src = os.path.join(workdir, "reference-default.docx")
@@ -254,6 +249,23 @@ def reference_docx(font: str, size: str, workdir: str) -> str:
         xml = xml[:m.start()] + dd + xml[m.end():]
 
     members["word/styles.xml"] = xml.encode("utf-8")
+
+    paper_twips = {
+        "a4": ("11906", "16838"),
+        "letter": ("12240", "15840"),
+    }
+    width, height = paper_twips[paper]
+    doc_xml = members["word/document.xml"].decode("utf-8")
+    pg = f'<w:pgSz w:w="{width}" w:h="{height}"/>'
+    if re.search(r"<w:pgSz\b[^>]*/>", doc_xml):
+        doc_xml = re.sub(r"<w:pgSz\b[^>]*/>", pg, doc_xml)
+    elif "</w:sectPr>" in doc_xml:
+        doc_xml = doc_xml.replace("</w:sectPr>", f"  {pg}\n    </w:sectPr>", 1)
+    else:
+        print("warning: reference.docx has no sectPr — paper size not enforceable",
+              file=sys.stderr)
+    members["word/document.xml"] = doc_xml.encode("utf-8")
+
     out = os.path.join(workdir, "reference.docx")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for name, data in members.items():
@@ -278,6 +290,9 @@ def main() -> int:
     ap.add_argument("--profile", choices=sorted(PROFILES), default="plain")
     ap.add_argument("--font", default="Arial")
     ap.add_argument("--size", default="10pt")
+    ap.add_argument("--paper", choices=["a4", "letter"], default="a4",
+                    help="paper size for generated reference.docx (default: a4); ignored when "
+                         "--reference-doc supplies the buyer's own template")
     ap.add_argument("--reference-doc",
                     help="a mandated .docx template — overrides --font/--size and is the "
                          "only typography mechanism that reaches the docx writer")
@@ -377,7 +392,7 @@ def main() -> int:
         return 4
 
     with tempfile.TemporaryDirectory() as td:
-        ref = args.reference_doc or reference_docx(args.font, args.size, td)
+        ref = args.reference_doc or reference_docx(args.font, args.size, args.paper, td)
         docx_path = os.path.join(out_dir, args.name + ".docx")
         subprocess.run(["pandoc", md_path, "-o", docx_path,
                         f"--resource-path={sec_dir}:{os.path.dirname(sec_dir)}",
