@@ -48,9 +48,14 @@ A client hands you material; you produce a report. No bid, no delivery.
     [auto]  builds into 00_research/2_output/, v0.1 → v1.0
     [asks]  review gate — every red-line resolved before it ships
     [auto]  records the live version in 00_research/README.md §4
+    [decide] ← what does the reader actually need? markdown (done already) ·
+            Word/PDF · a deck · a workbook. It runs the analyse pass, reads it
+            back, and routes to /eng-render — it never assumes markdown was
+            the deliverable.
 ```
 
-**3 commands.** One decision that's genuinely yours: approving the question list.
+**3 commands.** Two decisions that are genuinely yours: approving the question list, and what
+format the reader receives.
 
 <details><summary>What lands on disk</summary>
 
@@ -155,9 +160,11 @@ Note there is **no `engagement/` bucket** — a bid has no post-award material y
 
     [auto]  validates → [asks] locks structure → [auto] builds → [asks] review gate
     [auto]  updates DELIVERABLES.md to the new live version, archives the old
+    [decide] ← the delivered format: markdown · Word/PDF · deck · workbook
 ```
 
-**4 commands**, the middle two on repeat. One decision that's genuinely yours: the backbone.
+**4 commands**, the middle two on repeat. Two decisions that are genuinely yours: the backbone,
+and the delivered format.
 
 ---
 

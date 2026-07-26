@@ -240,6 +240,18 @@ CASES = [
          "**Headline estimate:** <€ / days, ± range, confidence> → `estimation.md`\n"),
      set(), set(), {"analysis-artefact-missing"}),
 
+    # ── estimate snapshot freshness ──────────────────────────────────────────
+    # New failure mode created by making the workbook the source: edit it, forget to re-export,
+    # and git shows a snapshot that reads as current and is not.
+    ("workbook newer than its markdown snapshot",
+     lambda t: (t.__setitem__("01_pursuit/27-010/2_analysis/estimation.md", "# old snapshot\n"),
+                t.__setitem__("01_pursuit/27-010/2_analysis/estimation.xlsx",
+                              "PK-newer\n@mtime+120")),
+     set(), {"estimate-snapshot-stale"}, set()),
+    ("workbook with no snapshot at all",
+     lambda t: t.__setitem__("01_pursuit/27-010/2_analysis/estimation.xlsx", "PK"),
+     set(), {"estimate-snapshot-missing"}, set()),
+
     # ── images & manifest ────────────────────────────────────────────────────
     ("images-untriaged",
      lambda t: (t.__setitem__("_sources/public/_md/doc1/x.md",
@@ -409,10 +421,24 @@ KIND_RE = re.compile(r"^\s*(ERROR|warn)\s+\[([\w-]+)\]")
 
 
 def build(root, files):
+    """Materialise a fixture tree.
+
+    A path may carry a trailing `\n@mtime+N` marker to age it N seconds into the future —
+    needed for rules that compare timestamps between two files (a generated snapshot against
+    its source), which a same-instant write cannot exercise.
+    """
+    import os
+    import time
     for rel, content in files.items():
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
+        bump = 0
+        m = re.search(r"\n@mtime\+(\d+)$", content)
+        if m:
+            content, bump = content[:m.start()], int(m.group(1))
         p.write_text(content, encoding="utf-8")
+        if bump:
+            os.utime(p, (time.time() + bump, time.time() + bump))
 
 
 def run_lint(root):

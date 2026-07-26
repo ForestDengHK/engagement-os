@@ -350,6 +350,28 @@ def rule_conditional_analysis_artefacts(root, r):
                         f"§ points at `{artefact}`, which does not exist — {why}")
 
 
+def rule_estimate_snapshot_fresh(root, r):
+    """The generated markdown snapshot must not lag the workbook it was exported from.
+
+    The workbook is the maintained artefact and the markdown is its export, which creates one
+    failure mode the old two-file design did not have: edit the workbook, forget to re-export,
+    and git now shows a snapshot that reads as current and is not. Everything downstream — lint,
+    review, the diff someone uses to see what moved between two re-prices — is then reasoning
+    from stale numbers that look authoritative.
+    """
+    for xlsx in sorted(root.glob("**/estimation.xlsx")):
+        md = xlsx.with_suffix(".md")
+        r.ran()
+        if not md.exists():
+            r.warn("estimate-snapshot-missing", str(xlsx.relative_to(root)),
+                   "workbook has no markdown snapshot — run "
+                   "`build_estimate_workbook.py --out <wb> --to-md`")
+        elif xlsx.stat().st_mtime > md.stat().st_mtime + 1:
+            r.warn("estimate-snapshot-stale", str(md.relative_to(root)),
+                   "workbook is newer than its snapshot — re-export, or the diff everyone "
+                   "reads is out of date")
+
+
 PACK_ROOT_FILES = {"README.md", "00_REFERENCE_SUMMARY.md", "01_REFERENCE_INSIGHTS.md"}
 
 
@@ -704,7 +726,8 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
-         rule_conditional_analysis_artefacts, rule_images_triaged,
+         rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,
+         rule_images_triaged,
          rule_media_links_resolve, rule_manifest_complete, rule_pointer_table_resolves]
 
 

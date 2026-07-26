@@ -669,6 +669,18 @@ def export_markdown(xlsx_path, md_path):
     show what moved between two re-prices, and a reviewer can read it without opening Excel.
     Values, not formulas — so the workbook must have been recalculated first, or every derived
     cell reads back empty.
+
+    **It overwrites, deliberately.** Git is the version history — that is most of why a text
+    snapshot exists at all, and dated filenames (`estimation-2026-07-26.md`) would duplicate it,
+    clutter the analysis folder and break every rule that expects one `estimation.md`. A version
+    that must survive independently of git is a *freeze*, and the pack already has one place for
+    that: `4_final/`, which should capture the workbook and the snapshot together.
+
+    On `markitdown`: the `xlsx` skill names it for xlsx → markdown, and for a quick look it is
+    the right tool. It is not used here for two reasons — it is a lossy preview by design ("no
+    cell coordinates, don't plan edits from it"), and this snapshot is a record of record that
+    has to carry the DO-NOT-EDIT banner and read post-recalculation values deterministically.
+    If you want the preview instead: `pip install markitdown[xlsx]` then `markitdown file.xlsx`.
     """
     import datetime
     import openpyxl
