@@ -1,0 +1,43 @@
+# `01_pursuit/_shared/` — our own reusable material
+
+Everything here is **ours**: written by the firm, reusable across tenders, and not obtained
+from anyone under a confidentiality constraint. That is the whole filing rule.
+
+## Where a document goes — decide by WHERE IT CAME FROM, not what it is about
+
+| The document is… | Goes to | Why |
+|---|---|---|
+| the tender pack the buyer issued for **this** bid | `01_pursuit/<ENG-ID>/1_received/` | it is the contractual artefact of one tender, never edited, cited by clause |
+| anything else **given to us or found by us** | `_sources/<bucket>/` | bucketed by who may see it: `public/` · `pre_award/` · `engagement/` |
+| **our own** methodology, case study, CV, credential, diagram, rate card | **here**, by kind | ours to reuse on any bid; no constraint to track |
+
+The trap is filing by topic. A sector benchmark report we downloaded and a case study we wrote
+are both "reference material about the sector" — but only one of them can be freely quoted in
+any bid, and that is decided by origin, not subject.
+
+**Never file client-confidential material here.** If a case study contains a named client's
+data, it needs that client's permission before it appears in a bid — record the permission in
+the `Constraint` column of `firm_assets.md`, and anonymise if permission is not held.
+
+## The folders
+
+| Folder | Holds |
+|---|---|
+| `approaches/` | methodology, delivery frameworks, our standard phase models |
+| `case_studies/` | prior engagement write-ups — the evidence an evaluator scores |
+| `cvs/` | team CVs, in the format tenders usually mandate |
+| `credentials/` | accreditations, certifications, insurance, financial standing, policies |
+| `diagrams/` | reusable architecture / process figures (editable source, not just PNG) |
+| `finance/` | rate cards, pricing models, commercial templates |
+| `_md/` | markdown conversions of any of the above, when a document is cited often enough to be worth converting (`eng-ingest-source --out`) |
+
+A kind that fits none of these gets a new folder — don't force it into the nearest one.
+
+## The index is the point, not the folder
+
+`firm_assets.md` sits beside these folders and is what the bid actually consumes. A folder
+answers *"what do we have"*; a bid needs *"what proves this requirement, and is it still
+valid"* — recency rules make an undated asset unusable no matter how good it is.
+
+**Every file added here gets a row in `firm_assets.md` in the same sitting.** An asset nobody
+indexed is an asset nobody will find under deadline.

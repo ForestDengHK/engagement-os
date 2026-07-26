@@ -67,7 +67,15 @@ RESEARCH_DIRS = [
 ]
 
 PURSUIT_DIRS = [
-    "01_pursuit/_shared",
+    # Our OWN reusable material, by kind. These are the paths firm_assets.md indexes;
+    # without them the index points at a folder nobody created and assets land anywhere.
+    "01_pursuit/_shared/approaches",
+    "01_pursuit/_shared/case_studies",
+    "01_pursuit/_shared/cvs",
+    "01_pursuit/_shared/credentials",
+    "01_pursuit/_shared/diagrams",
+    "01_pursuit/_shared/finance",
+    "01_pursuit/_shared/_md",
     # The tender pack is not a _sources bucket (it's the contractual artefact of one tender),
     # but it gets the same anchored-markdown treatment so requirements cite by clause/page.
     "01_pursuit/{ENG_ID}/1_received/_md/images",
@@ -163,6 +171,7 @@ PURSUIT_FILES = [
     ("compliance_matrix.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/compliance_matrix.md", {}),
     ("clarification_log.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/clarification_log.md", {}),
     ("firm_assets.md.tmpl", "01_pursuit/_shared/firm_assets.md", {}),
+    ("pursuit-shared-README.md.tmpl", "01_pursuit/_shared/README.md", {}),
 ]
 
 DELIVERY_FILES = [
