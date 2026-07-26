@@ -70,7 +70,11 @@ Blocks are marked `[core]` / `[research]` / `[pursuit]` / `[delivery]`.
 │   └── 2_output/                       # the report / brief / deck, versioned v0.x → v1.0
 │
 ├── 01_pursuit/                         # [pursuit] BID PHASE — frozen once won
-│   ├── _shared/                        # cross-bid reusable assets OF OURS (approaches, CVs, case studies, finance)
+│   ├── _shared/                        # cross-bid reusable assets OF OURS — filed by KIND, not by topic
+│   │   ├── README.md                   # what belongs here vs in _sources/ (decided by ORIGIN, not subject)
+│   │   ├── firm_assets.md              # the index the bid consumes: what each asset PROVES + date + in-window
+│   │   ├── approaches/ case_studies/ cvs/ credentials/ diagrams/ finance/
+│   │   └── _md/                        # conversions of the above, when an asset is cited often enough to warrant one
 │   ├── <ENG-ID>/                       # the live/won bid, one folder per tender id
 │   │   ├── 1_received/                 # the tender pack exactly as issued (never edited) + _md/
 │   │   ├── 2_analysis/                 # rfp_analysis.md · compliance_matrix.md · bid_research_log.md · Q&A

@@ -19,7 +19,11 @@ Each row below carries the date and the constraint, so the check is a lookup rat
 
 | ID | Asset | Category | What it proves | Dated | In-window? | Constraints | Used for |
 |---|---|---|---|---|---|---|---|
-| A-001 | `<path under _shared/>` | methodology / case study / CV / credential / diagram / financial | <the specific claim it can back, not the title> | <YYYY-MM> | <vs this RFP's recency rule> | <client permission? anonymised? NDA?> | R-0xx |
+| A-001 | `case_studies/<file>` | methodology / case study / CV / credential / diagram / financial | <the specific claim it can back, not the title> | <YYYY-MM> | <vs this RFP's recency rule> | <client permission? anonymised? NDA?> | R-0xx |
+
+Paths are relative to `01_pursuit/_shared/` — `approaches/` · `case_studies/` · `cvs/` ·
+`credentials/` · `diagrams/` · `finance/`. What belongs there versus in `_sources/` is decided
+by **where the document came from**, not its subject: see `README.md` beside this file.
 
 **Category** is what the asset *is*; **What it proves** is what it can be cited for. A case study
 whose "what it proves" restates its title has not been read — write the claim a evaluator would
