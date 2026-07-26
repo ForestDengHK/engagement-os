@@ -9,12 +9,15 @@ angle, and honest about what we don't yet have.
 - The zero-error, dual-alignment doctrine
 - Step 1 — requirement extraction (every requirement gets an ID + clause cite)
 - Step 2 — the compliance / response matrix
+- Step 2b — scope decomposition (the estimation baseline)
+- Step 2c — our understanding & our solution (does it actually solve their problem?)
 - Step 3 — evaluation criteria & weights map (score-driven)
 - Step 4 — multi-role analysis (the panel lens)
 - Step 5 — win-themes & differentiators (evidence, not slogans)
 - Step 6 — risks, red-flags, deal-breakers
 - Step 6b — clarification questions (derived by dimension sweep, panel lens, human sends)
 - Step 7 — materials-needed list (research vs upload)
+- Step 7b — prior-bid check (conditional, and the negative result is recorded)
 - Step 8 — go / no-go recommendation
 
 ## Where analysis sits in the pursuit pipeline
@@ -67,6 +70,69 @@ The centrepiece artefact (`compliance_matrix.md`). One row per requirement:
 Rules: every requirement has a row; every mandatory row must reach `met`; a row with no evidence
 is a `gap` (→ materials-needed or research). The matrix is the completeness check — the response
 is done when every row closes.
+
+## Step 2b — scope decomposition (the estimation baseline)
+
+The compliance matrix answers *"did we address everything they asked for?"*. It does not answer
+*"how big is this?"* — a row reading "the vendor shall conduct a comprehensive assessment of the
+Data Warehouse and application landscape" is one requirement and six weeks of work. **Without a
+scope decomposition there is no estimate, and without an estimate the price is a guess dressed
+as a lump sum.**
+
+Break the buyer's scope prose into numbered work items (`S-01…`), each with its clause, the
+deliverable it feeds, and — the part everyone skips — **the effort driver**: the countable thing
+the work scales on. "Assess the source systems" costs what it costs because there are 5 of them
+and 18 loads between them; the number is in the RFP and belongs in the analysis, not rediscovered
+in the pricing spreadsheet a week later.
+
+- **Volumetric baseline.** Every count the effort model will multiply by, cited. Servers, source
+  systems, interfaces, reports, universes, stakeholder groups, sites, environments, data domains.
+  An uncited count is `[⚠VERIFY]` and usually a clarification question.
+- **Explicitly out of scope.** Say it back to them. On a fixed price this is the only thing
+  standing between the estimate and everything the buyer assumed was included.
+- **Unbounded language.** "Comprehensive", "as required", "including but not limited to", "the
+  application landscape" — each has no natural stopping point. Every one gets either a
+  clarification question or a **stated depth assumption** that carries verbatim into both the
+  estimate and the response. An assumption stated in the estimate but not in the bid is not a
+  defence.
+- **Acceptance.** What must be shown, and who signs. On a completion-triggered payment this
+  decides when we get paid, so it is scope, not admin.
+- **Scope items the RFP implies but never states** — mobilisation, governance/steering, QA,
+  document production, client review cycles. They consume real days and appear in no clause.
+  Record them as scope items marked *implied*, or they are absorbed out of margin.
+
+Hand this table to `eng-estimate`. An S-ID with no effort driver is not estimable — fix it here,
+not by padding later.
+
+## Step 2c — our understanding & our solution
+
+Two failures this step exists to prevent, and both are common enough that evaluators score for
+them explicitly:
+
+1. **Restating the buyer's words back as "understanding".** If our understanding section says
+   nothing the RFP does not already say, we have demonstrated reading comprehension, not insight.
+   The test: does it name a cause, a consequence, or a connection the buyer did not write down?
+2. **A method with no target.** A phased approach that never names which client challenge each
+   phase resolves is a framework dump. The buyer's own limitations list is the checklist —
+   answer it item by item.
+
+One row per client challenge: their statement (cited) → what we think is actually driving it →
+what we would do → **does that resolve it: fully / partly / no** → the named standard or
+reference architecture it conforms to → the asset that proves we can do it.
+
+- **Name the standard.** "Industry best practice" is an opinion with a suit on. DAMA-DMBOK,
+  TOGAF ADM, the Kimball model, the vendor's own well-architected framework, ISO 27001, NIS2 —
+  something an evaluator can check. If no standard applies, say the reasoning is ours and own it.
+- **Answer the "so does it work" question.** A solution row whose verdict is *partly* or *no* is
+  more credible than five rows of *fully*, and it is the honest input to the go/no-go. State
+  what we propose instead — a phase 2, a client-side action, an explicit assumption.
+- **Alignment is dual, per element** (the doctrine, made checkable): each solution element maps
+  to (a) the requirement it answers, (b) the methodology or asset we run it with, (c) the standard
+  it conforms to. Missing (b) is a capability asserted without a method — a delivery risk that
+  becomes a red-team finding. Missing (c) is the opinion problem above.
+- This section is the **source text for the response's method and deliverables sections**, which
+  is usually where the marks are concentrated. Writing it in analysis rather than in drafting is
+  what stops the response being invented under deadline.
 
 ## Step 3 — evaluation criteria & weights map
 
@@ -150,6 +216,26 @@ The explicit two-column ask, so nothing is silently assumed:
   reuse, pricing inputs, certifications, referee contacts — anything only the firm holds.
 
 Be specific ("the 2024 utility DWH case study with the €X saving," not "a relevant case study").
+
+## Step 7b — prior-bid check (conditional, and the negative result is recorded)
+
+Most tenders are a variant of one already answered, so before drafting: **is there a prior bid?**
+A re-issue, a follow-on, the same buyer asking again, or the same scope for a different buyer.
+Search `01_pursuit/` and any `archive-*` tree, and ask the user — they may hold one the repo
+doesn't.
+
+The result is binary and both branches are explicit:
+
+- **A prior bid exists** → convert it (`eng-ingest-source` → `01_pursuit/archive-<PRIOR-ID>/`) and
+  fill `bid_reuse_analysis.md` — section by section, field-level diff. Do this *before* drafting.
+- **No prior bid** → **do not create `bid_reuse_analysis.md`.** An empty or speculative reuse
+  analysis is worse than none: it reads as done work, and the next reader trusts it. Record the
+  negative in `rfp_analysis.md` §9 — *"searched X, none found"* — so it is visibly a checked
+  fact rather than a forgotten step.
+
+The same rule holds for any conditional artefact: **the file exists because the condition held,
+never because the template list said so.** A scaffolder plants the artefacts every bid needs;
+everything else is created on the evidence that it applies.
 
 ## Step 8 — go / no-go recommendation
 

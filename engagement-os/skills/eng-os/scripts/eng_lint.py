@@ -297,6 +297,39 @@ def rule_spine_filled(root, r):
                    "sourced facts have nothing to map onto")
 
 
+def rule_conditional_analysis_artefacts(root, r):
+    """A worked analysis must have produced the artefacts it says it produced.
+
+    Two artefacts in `2_analysis/` are conditional — `estimation.md` when the tender is priced,
+    `bid_reuse_analysis.md` when a prior bid exists — and both failure modes cost real money.
+    Found on the real GNI pursuit: a reuse analysis was generated with no check that a prior bid
+    existed, and no estimate was produced at all, so the price had nothing behind it.
+
+    The condition is read off `rfp_analysis.md` itself, which is why this can be mechanical: the
+    template plants a pointer per artefact next to a placeholder. Placeholder still there → that
+    section was never worked, nothing to check. Placeholder replaced → the analysis has committed
+    to an answer, and the file it points at has to exist.
+    """
+    placeholder = re.compile(r"<[a-z€][^>\n]{2,}>", re.I)
+    for f in sorted(root.glob("01_pursuit/*/2_analysis/rfp_analysis.md")):
+        text = f.read_text(encoding="utf-8", errors="replace")
+        for section, artefact, why in (
+                (r"##\s*\d+\.\s*Estimate & price posture", "estimation.md",
+                 "the price has nothing bottom-up behind it"),
+                (r"##\s*\d+\.\s*Prior-bid reuse", "bid_reuse_analysis.md",
+                 "the analysis says a prior bid carries over, but the diff was never done")):
+            m = re.search(section + r"(.*?)(?=\n##\s|\Z)", text, re.S)
+            if not m or placeholder.search(m.group(1)):
+                continue                       # unworked section — not yet a claim
+            r.ran()
+            body = m.group(1)
+            if re.search(r"not created|none found|no prior bid|n/?a\b", body, re.I):
+                continue                       # the negative was recorded — that IS the result
+            if not (f.parent / artefact).exists():
+                r.error("analysis-artefact-missing", str(f.relative_to(root)),
+                        f"§ points at `{artefact}`, which does not exist — {why}")
+
+
 PACK_ROOT_FILES = {"README.md", "00_REFERENCE_SUMMARY.md", "01_REFERENCE_INSIGHTS.md"}
 
 
@@ -331,12 +364,44 @@ def rule_images_triaged(root, r):
     for pack, content in md_packs(root):
         r.ran()
         for p in content:
-            n = sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
-                    if tag.match(line))
+            text = p.read_text(encoding="utf-8", errors="replace")
+            n = sum(1 for line in text.splitlines() if tag.match(line))
             if n:
                 r.warn("images-untriaged", str(p.relative_to(root)),
                        f"{n} extracted image(s) still `[uncertain]` — OCR them inline and retag "
                        "`[ocr-done]`, or classify as `[decorative]`/`[content]`")
+            # A placed figure with no caption is only half-ingested: the pixels arrived, what
+            # the document said they mean did not. The converter writes the stub; leaving it is
+            # the same silent-decay failure as leaving an image untriaged.
+            c = text.count("[caption-needed]")
+            if c:
+                r.warn("images-uncaptioned", str(p.relative_to(root)),
+                       f"{c} placed figure(s) still `[caption-needed]` — write what each shows "
+                       "in the words of the surrounding clause")
+
+
+def rule_media_links_resolve(root, r):
+    """Every image a converted MD links to must exist on disk.
+
+    Found on the real GNI tender pack: pandoc emits raw HTML `<img src=...>` for any Word image
+    that carries an explicit size, the converter only repointed the Markdown `![](…)` form, and
+    every figure in every converted docx pointed into a deleted temp directory. Nothing noticed
+    — the text conversion succeeded, and a dead image link renders as nothing at all. Same class
+    as `rule_figures_exist`, one stage earlier in the pipeline.
+    """
+    ref_re = re.compile(r"!\[[^\]]*\]\(([^)]+)\)|<img\b[^>]*?src\s*=\s*[\"']([^\"']+)[\"']", re.I)
+    for _pack, content in md_packs(root):
+        for p in content:
+            r.ran()
+            for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                for m in ref_re.finditer(line):
+                    ref = m.group(1) or m.group(2)
+                    if not ref or ref.startswith(("http://", "https://", "data:")):
+                        continue
+                    if not (p.parent / ref).exists():
+                        r.error("media-link-dead", f"{p.relative_to(root)}:{i}",
+                                f"links '{ref}', which does not exist — the figure is lost and "
+                                "the markdown gives no sign of it")
 
 
 def rule_manifest_complete(root, r):
@@ -619,7 +684,8 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
-         rule_images_triaged, rule_manifest_complete, rule_pointer_table_resolves]
+         rule_conditional_analysis_artefacts, rule_images_triaged,
+         rule_media_links_resolve, rule_manifest_complete, rule_pointer_table_resolves]
 
 
 def main():

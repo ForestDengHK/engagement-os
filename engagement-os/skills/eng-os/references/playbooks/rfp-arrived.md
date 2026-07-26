@@ -53,15 +53,24 @@ alone; don't wait for the rest of the material to arrive.
    (commercial risk review is narrower, not absent); and there may be **no clarification
    window** — check before planning step 5.
 3. **Analyse it** → `eng-rfp-analyze`. Every requirement extracted with an ID + clause cite into
-   `compliance_matrix.md`; evaluation weights mapped; multi-role read; evidence-backed
+   `compliance_matrix.md`; the **scope decomposed into S-IDs with effort drivers** and a cited
+   volumetric baseline; **our understanding and our solution** per client challenge, including
+   what it does *not* solve; evaluation weights mapped; multi-role read; evidence-backed
    win-themes; risks and deal-breakers; the **materials-needed list** (research vs upload); a
    go/no-go. This is the spine's first version, not its last.
 4. **Check for a prior bid — before drafting anything.** A re-issue, a follow-on, or the same
    buyer asking again means most of the answer already exists *and already survived an
    evaluation*. Convert it (`eng-ingest-source` → `01_pursuit/archive-<PRIOR-ID>/`) and fill
    `bid_reuse_analysis.md`: per section, FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW, with a
-   field-level diff of the old clause against the new one. Skip only when there genuinely is no
-   prior bid — say so rather than assuming.
+   field-level diff of the old clause against the new one.
+   **If there is none, create no file** — write *"searched X, none found"* into `rfp_analysis.md`
+   §9 instead. A speculative reuse analysis reads as completed work and the next reader trusts
+   it; a recorded negative is a checked fact.
+4b. **Size it** → `eng-estimate` (priced tenders — i.e. nearly all of them). The S-ID table
+   becomes a bottom-up effort model, the client-side hours ask, itemised contingency, and a
+   cost→price build; where the buyer publishes a cost formula, price converts to marks
+   arithmetically. Do this **before** the go/no-go: "can we win it at a price above our cost
+   base" is a go/no-go question, and it cannot be answered by feel.
 5. **Index what we hold** → `eng-index-assets` → `01_pursuit/_shared/firm_assets.md`. What each
    asset **proves** (the claim an evaluator scores, not the title), its date, whether it is
    **in-window** against this tender's recency rule, and its permission constraints. This is

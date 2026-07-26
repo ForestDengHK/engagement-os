@@ -76,12 +76,18 @@ class ImageCollector:
     Everything dropped is counted and reported, so the pass stays auditable: the lossless rule
     is about not losing *information*, and a logo carries none. What survives is what a human
     would actually have to look at.
+
+    Links are written relative to **the markdown file**, not to the images dir's parent. Those
+    two coincide only when the images dir is exactly `<md_dir>/images`; every other layout the
+    skill actually instructs (`_md/images/<topic>/`) produced links that resolved nowhere.
     """
 
-    def __init__(self, images_dir):
+    def __init__(self, images_dir, link_base=None):
         self.dir = images_dir
+        self.link_base = link_base or os.path.dirname(images_dir.rstrip("/"))
         self.kept = []                  # (relpath, unit) in emit order
-        self._by_digest = {}            # digest -> [(path, unit), ...]
+        self._by_digest = {}            # digest -> [(path, rel, unit), ...]
+        self._names = {}                # emitted filename -> relpath (for inline placement)
         self.dropped_small = 0
 
     def add(self, blob, unit, name):
@@ -94,7 +100,7 @@ class ImageCollector:
         os.makedirs(self.dir, exist_ok=True)
         with open(path, "wb") as f:
             f.write(blob)
-        rel = os.path.relpath(path, os.path.dirname(self.dir))
+        rel = os.path.relpath(path, self.link_base)
         self._by_digest.setdefault(digest, []).append((path, rel, unit))
         return True
 
@@ -112,8 +118,47 @@ class ImageCollector:
             else:
                 _path, rel, unit = copies[0]
                 self.kept.append((rel, unit))
+                self._names[os.path.basename(rel)] = rel
         self.kept.sort(key=lambda t: t[1])
         return self.kept, dropped_repeat
+
+    def link_for(self, name):
+        """Relative link for a kept image by filename, or None if it was dropped.
+        `finalise()` must have run — decorative-drop is only decidable across the whole doc."""
+        return self._names.get(os.path.basename(name))
+
+
+IMG_TOKEN = "<!--ENGOS-IMG:%s-->"
+_IMG_TOKEN_RE = re.compile(r"[ \t]*<!--ENGOS-IMG:(.+?)-->[ \t]*")
+
+
+def img_block(rel, alt=""):
+    """A placed image plus the caption stub that keeps the placement honest.
+
+    A figure with no caption is only half-ingested: the reader (and every downstream claim) has
+    the pixels but not what the document said the pixels mean. The stub is deliberately visible
+    and deliberately tagged — `eng_lint.py` fails on a surviving `[caption-needed]`, so an
+    unexplained diagram cannot quietly reach an analysis the way it did on the real GNI pack.
+    """
+    label = alt.strip() or os.path.basename(rel)
+    return (f"\n![{label}]({rel})\n\n"
+            f"*Figure `{os.path.basename(rel)}` — `[caption-needed]`: say what this shows, in the "
+            f"words of the surrounding clause; if it carries text, OCR it inline first.*\n")
+
+
+def place_inline_images(md, coll):
+    """Resolve the inline placement tokens the converters emitted.
+
+    An image only means something where it sat in the document — a scoring table or an
+    architecture diagram listed at the bottom of the file under "triage these" has lost the
+    clause it belonged to. But whether an image survives the decorative filter is only decidable
+    once the whole document has been read, so the converters emit a token in place and this
+    resolves it afterwards: kept → a markdown image at its original position, dropped → gone.
+    """
+    def sub(m):
+        rel = coll.link_for(m.group(1))
+        return img_block(rel) if rel else ""
+    return _IMG_TOKEN_RE.sub(sub, md)
 
 
 def img_section(collector):
@@ -133,9 +178,14 @@ def img_section(collector):
                "Repeats and icons carry no information; nothing that appears once was touched.\n"
     if not kept:
         return ("\n---\n\n## Images\n" + note + "\nNo content-bearing images.\n") if note else ""
+    # Careful with the wording: the lint counts occurrences of the caption tag, so this preamble
+    # must describe the stub without spelling it — boilerplate that names its own marker makes
+    # every converted file permanently fail the rule it exists to serve.
     lines = ["\n---\n\n## Images extracted — triage these\n", note,
-             "Classify each `[decorative]` (delete) / `[content]` (keep + caption) / "
-             "`[uncertain]` (OCR inline, then retag `[ocr-done]`). Do not delete an "
+             "Each is also **placed inline** at the position it held in the source, under a "
+             "caption stub. This index is the checklist: classify each `[decorative]` (delete "
+             "the file, the inline block and this line) / `[content]` (keep + write the caption) "
+             "/ `[uncertain]` (OCR inline, then retag `[ocr-done]`). Do not delete an "
              "`[uncertain]` image before its text is captured.\n"]
     for im, _unit in kept:
         lines.append(f"- `[uncertain]` ![{os.path.basename(im)}]({im})")
@@ -157,6 +207,22 @@ def _run(cmd):
         return None
 
 
+MAX_HEADING_CHARS = 120     # above this it is a mis-styled paragraph, not a heading
+
+
+def _plain_heading(title):
+    """Strip the emphasis wrapper pandoc faithfully carries into a heading.
+
+    A real Word heading arrives as `**4.5. DECLARATION...**` or `<u>5.2. COST EVALUATION</u>`
+    because the style bolded it. Keeping the wrapper leaves `## Section 42: **SCOPE**` in the
+    output and makes the clause detection read the `**` instead of the number.
+    """
+    t = title.strip()
+    t = re.sub(r"^(?:(?:\*\*|__|<u>|\[)\s*)+", "", t, flags=re.I)
+    t = re.sub(r"(?:\s*(?:\*\*|__|</u>|\]))+$", "", t, flags=re.I)
+    return t.strip()
+
+
 def number_headings(md, label="Section"):
     """Give every markdown heading a stable, citable anchor, keeping its level.
 
@@ -165,8 +231,17 @@ def number_headings(md, label="Section"):
     anchor because it survives pagination and matches what an evaluator sees: `## 2.1 Timetable`
     becomes `## §2.1 Timetable`. Only headings without a native number get the synthetic
     fallback (`## Section 12: Minimum Requirements`). The outline hierarchy is never flattened.
+
+    Three things the first version got wrong, all visible on the real GNI RFT:
+    * the synthetic counter counted the `§`-numbered headings too, so the fallback sequence
+      arrived full of holes (`Section 50` → `§4.5` → `Section 53`) and read like data loss;
+    * an empty styled paragraph became a bare `#` — a heading with no text and no anchor;
+    * a whole paragraph styled as Heading 3 in Word became `### Section 21: • The Contracting
+      Entity may withhold payments pursuant to...`, which is body text wearing an anchor. A
+      heading longer than `MAX_HEADING_CHARS` is demoted back to a paragraph; the text is kept,
+      only the false anchor goes.
     """
-    out, n = [], 0
+    out, anchors, synthetic = [], 0, 0
     native = re.compile(
         r"^(?:(?:section|clause)\s+)?"
         r"(?P<num>\d{1,3}(?:\.\d{1,3}){0,5})"
@@ -174,27 +249,44 @@ def number_headings(md, label="Section"):
         re.I)
     for line in md.splitlines():
         m = re.match(r"^(#{1,6})\s+(.*)$", line)
-        if m and m.group(2).strip():
-            n += 1
-            title = m.group(2).strip()
-            if title.startswith("§"):
-                out.append(f"{m.group(1)} {title}")
-                continue
-            # Pandoc faithfully keeps inline formatting in headings, so a real Word
-            # heading often arrives as `**4.5. DECLARATION...**` or
-            # `<u>5.2. COST EVALUATION</u>`. Detect against the visible text, not the
-            # Markdown/HTML wrapper.
-            probe = re.sub(r"^(?:(?:\*\*|__|<u>|\[)\s*)+", "", title, flags=re.I)
-            probe = re.sub(r"(?:\s*(?:\*\*|__|</u>|\]))+$", "", probe, flags=re.I)
-            clause = native.match(probe)
-            if clause:
-                out.append(f"{m.group(1)} §{clause.group('num')} "
-                           f"{clause.group('title').strip()}")
-            else:
-                out.append(f"{m.group(1)} {label} {n}: {title}")
-        else:
+        if not m:
             out.append(line)
-    return "\n".join(out), n
+            continue
+        title = _plain_heading(m.group(2))
+        if not title:
+            continue                                 # empty styled paragraph — drop, don't anchor
+        if len(title) > MAX_HEADING_CHARS:
+            out.append(title)                        # mis-styled paragraph — keep text, drop anchor
+            continue
+        anchors += 1
+        if title.startswith("§"):
+            out.append(f"{m.group(1)} {title}")
+            continue
+        clause = native.match(title)
+        if clause:
+            out.append(f"{m.group(1)} §{clause.group('num')} {clause.group('title').strip()}")
+        else:
+            synthetic += 1
+            out.append(f"{m.group(1)} {label} {synthetic}: {title}")
+    return "\n".join(out), anchors
+
+
+_TOC_NESTED = re.compile(r"\[([^\[\]]*?)\s*\[(\d+)\]\(#[^)]*\)\]\(#[^)]*\)")
+_INTERNAL_LINK = re.compile(r"\[([^\[\]]*)\]\(#[^)]*\)")
+
+
+def flatten_internal_links(md):
+    """Turn Word's exported table of contents back into readable text.
+
+    Pandoc renders a TOC field as a link whose own label contains another link —
+    `[1. IMPORTANT INFORMATION [4](#important-information)](#important-information)`. That is
+    not valid nesting in GFM, so it renders as literal brackets, and a hundred lines of it is
+    the first thing anyone reading the converted RFT sees. The anchors are worthless anyway:
+    `number_headings` rewrites the heading ids they point at. Keep the text and the page number,
+    drop the link machinery. External links are untouched.
+    """
+    md = _TOC_NESTED.sub(lambda m: f"{m.group(1)} — p.{m.group(2)}", md)
+    return _INTERNAL_LINK.sub(lambda m: m.group(1), md)
 
 
 def _pptx_shapes(container):
@@ -207,14 +299,14 @@ def _pptx_shapes(container):
             yield sh
 
 
-def convert_pdf(src, images_dir):
+def convert_pdf(src, images_dir, link_base=None):
     try:
         import fitz  # pymupdf
     except ImportError:
         return None, "pymupdf not installed — run: pip install pymupdf (PEP-668: add --user --break-system-packages)"
     doc = fitz.open(src)
     out = [header(src, f"> **Pages:** {doc.page_count}  ")]
-    coll = ImageCollector(images_dir)
+    coll = ImageCollector(images_dir, link_base)
     for i, page in enumerate(doc, 1):
         out.append(f"## Page {i}:\n")
         text = page.get_text("text").strip()
@@ -227,19 +319,22 @@ def convert_pdf(src, images_dir):
                 if min(pix.width, pix.height) < MIN_IMG_PIXELS:
                     coll.dropped_small += 1
                     continue
-                coll.add(pix.tobytes("png"), i, f"p{i}_img{j}.png")
+                name = f"p{i}_img{j}.png"
+                if coll.add(pix.tobytes("png"), i, name):
+                    out.append(IMG_TOKEN % name)     # resolved after the decorative filter runs
             except Exception:
                 continue
-    return "\n".join(out) + img_section(coll), None
+    tail = img_section(coll)                         # runs finalise(); must precede placement
+    return place_inline_images("\n".join(out), coll) + tail, None
 
 
-def convert_pptx(src, images_dir):
+def convert_pptx(src, images_dir, link_base=None):
     try:
         from pptx import Presentation
     except ImportError:
         return None, "python-pptx not installed — run: pip install python-pptx (PEP-668: add --user --break-system-packages)"
     prs = Presentation(src)
-    coll = ImageCollector(images_dir)
+    coll = ImageCollector(images_dir, link_base)
 
     # markitdown owns the text: it reaches shape types python-pptx makes you hunt for and
     # carries each picture's embedded accessibility description, which is often the only
@@ -249,15 +344,31 @@ def convert_pptx(src, images_dir):
         md = _run(["markitdown", src])
         if md:
             body = re.sub(r"<!--\s*Slide number:\s*(\d+)\s*-->", r"## Slide \1:", md)
+            by_slide = {}
             for i, slide in enumerate(prs.slides, 1):
                 for shape in _pptx_shapes(slide.shapes):
                     if getattr(shape, "shape_type", None) == 13:
                         try:
-                            coll.add(shape.image.blob, i, f"s{i}_{shape.shape_id}.{shape.image.ext}")
+                            name = f"s{i}_{shape.shape_id}.{shape.image.ext}"
+                            if coll.add(shape.image.blob, i, name):
+                                by_slide.setdefault(i, []).append(name)
                         except Exception:
                             continue
+            # markitdown names pictures but writes no files, so it emits no link either.
+            # Park each slide's images at the end of that slide's block, not at the end of
+            # the deck: a diagram three slides away from its narrative is a diagram nobody
+            # can caption.
+            if by_slide:
+                parts = re.split(r"(?m)^(## Slide (\d+):)$", body)
+                rebuilt = [parts[0]]
+                for k in range(1, len(parts), 3):
+                    chunk = parts[k + 2]
+                    toks = "".join("\n" + IMG_TOKEN % n for n in by_slide.get(int(parts[k + 1]), []))
+                    rebuilt.append(parts[k] + chunk.rstrip("\n") + toks + "\n")
+                body = "".join(rebuilt)
             head = header(src, f"> **Slides:** {len(prs.slides)}  \n> **Extractor:** markitdown  ")
-            return head + body + img_section(coll), None
+            tail = img_section(coll)
+            return head + place_inline_images(body, coll) + tail, None
 
     out = [header(src, f"> **Slides:** {len(prs.slides)}  \n> **Extractor:** python-pptx (fallback — install markitdown for richer shape coverage + image alt-text)  ")]
     for i, slide in enumerate(prs.slides, 1):
@@ -277,7 +388,9 @@ def convert_pptx(src, images_dir):
             if shape.shape_type == 13:  # picture
                 try:
                     image = shape.image
-                    coll.add(image.blob, i, f"s{i}_{shape.shape_id}.{image.ext}")
+                    name = f"s{i}_{shape.shape_id}.{image.ext}"
+                    if coll.add(image.blob, i, name):
+                        out.append(IMG_TOKEN % name)
                 except Exception:
                     continue
         try:
@@ -287,10 +400,11 @@ def convert_pptx(src, images_dir):
                     out.append(f"**Speaker notes:**\n\n{notes}\n")
         except Exception:
             pass
-    return "\n".join(out) + img_section(coll), None
+    tail = img_section(coll)
+    return place_inline_images("\n".join(out), coll) + tail, None
 
 
-def convert_docx(src, images_dir):
+def convert_docx(src, images_dir, link_base=None):
     # Pandoc owns the extraction. It keeps document order (tables stay in their clause), real
     # heading levels, lists, footnotes and nested tables — all things a hand-rolled python-docx
     # walk gets wrong, and all things pandoc settled years ago. We add only what pandoc has no
@@ -305,7 +419,7 @@ def convert_docx(src, images_dir):
         tmp = tempfile.mkdtemp(prefix="engos-media-")
         md = _run(["pandoc", "-t", "gfm", "--wrap=none", f"--extract-media={tmp}", src])
         if md:
-            coll = ImageCollector(images_dir)
+            coll = ImageCollector(images_dir, link_base)
             for root, _dirs, files in os.walk(tmp):
                 for fn in sorted(files):
                     src_img = os.path.join(root, fn)
@@ -315,18 +429,38 @@ def convert_docx(src, images_dir):
                     except OSError:
                         continue
             shutil.rmtree(tmp, ignore_errors=True)
-            # pandoc points at its own temp dir; repoint at the pack's images dir, and drop
-            # the links to images the filter removed so the markdown has no dead references.
-            kept_names = {os.path.basename(rel) for rel, _u in coll.kept}
-            rel_dir = os.path.basename(images_dir.rstrip("/"))
+            tail = img_section(coll)                 # finalise() before any link_for() call
 
-            def _fix(m):
-                name = os.path.basename(m.group(2))
-                return f"![{m.group(1)}]({rel_dir}/{name})" if name in kept_names else ""
-            md = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _fix, md)
+            # Pandoc points every image at the temp dir we just deleted. Repoint the survivors
+            # at the pack's images dir and drop the links to images the filter removed, so the
+            # markdown carries no dead references.
+            #
+            # BOTH syntaxes, not just markdown. Pandoc emits raw HTML `<img src=... style=.../>`
+            # whenever the Word image carries an explicit size — which is nearly always. The
+            # first version only rewrote `![](…)`, so on the real GNI tender pack every single
+            # figure in every converted docx pointed into a temp directory that no longer
+            # existed. The failure was invisible: the text conversion "succeeded".
+            def _fix_md(m):
+                rel = coll.link_for(m.group(2))
+                return img_block(rel, m.group(1)) if rel else ""
+
+            def _fix_html(m):
+                tag = m.group(0)
+                srcm = re.search(r'src\s*=\s*["\']([^"\']+)["\']', tag)
+                if not srcm:
+                    return ""
+                rel = coll.link_for(srcm.group(1))
+                if not rel:
+                    return ""
+                altm = re.search(r'alt\s*=\s*["\']([^"\']*)["\']', tag)
+                return img_block(rel, altm.group(1) if altm else "")
+
+            md = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _fix_md, md)
+            md = re.sub(r"<img\b[^>]*/?>", _fix_html, md, flags=re.I)
+            md = flatten_internal_links(md)
             body, n = number_headings(md, "Section")
             head = header(src, f"> **Sections:** {n}  \n> **Extractor:** pandoc  ")
-            return head + body + img_section(coll), None
+            return head + body + tail, None
 
     # Fallback: no pandoc on this machine. Order is lost (python-docx exposes paragraphs and
     # tables as two separate sequences) — the header says so rather than pretending otherwise.
@@ -370,7 +504,7 @@ def convert_docx(src, images_dir):
     return "\n".join(out), None
 
 
-def convert_xlsx(src, images_dir):
+def convert_xlsx(src, images_dir, link_base=None):
     try:
         import openpyxl
     except ImportError:
@@ -397,7 +531,7 @@ def convert_xlsx(src, images_dir):
     return "\n".join(out), None
 
 
-def convert_csv(src, images_dir):
+def convert_csv(src, images_dir, link_base=None):
     import csv
     out = [header(src)]
     with open(src, newline="", encoding="utf-8", errors="replace") as f:
@@ -411,8 +545,8 @@ def convert_csv(src, images_dir):
     return "\n".join(out), None
 
 
-def convert_image(src, images_dir):
-    rel = os.path.relpath(src, os.path.dirname(images_dir)) if images_dir else src
+def convert_image(src, images_dir, link_base=None):
+    rel = os.path.relpath(src, link_base or os.path.dirname(images_dir)) if images_dir else src
     body = header(src) + (
         f"## Image\n\n`[uncertain]` ![{os.path.basename(src)}]({rel})\n\n"
         "_This is an image source — OCR it inline (agent + vision), then retag `[ocr-done]`._\n"
@@ -582,7 +716,7 @@ def main():
     images_dir = os.path.abspath(args.images_dir) if args.images_dir else os.path.join(os.path.dirname(out_path), "images")
     os.makedirs(images_dir, exist_ok=True)
 
-    body, err = fn(src, images_dir)
+    body, err = fn(src, images_dir, os.path.dirname(out_path))
     if err:
         print(f"ERROR: {err}", file=sys.stderr)
         return 3

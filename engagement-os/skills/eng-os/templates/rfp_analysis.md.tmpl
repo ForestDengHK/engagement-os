@@ -17,27 +17,79 @@
 | <criterion> | <%> | R-00x | <our angle> |
 <!-- If weights aren't published, infer and mark [⚠VERIFY]. -->
 
-## 3. Multi-role analysis
+## 3. Scope decomposition — the estimation baseline
+<!-- WITHOUT THIS THERE IS NO ESTIMATE. Break the buyer's scope prose into numbered work items,
+     each traceable to a clause. This table is the input `eng-estimate` consumes; an item that
+     isn't here doesn't get priced, and an item nobody can size is a clarification question. -->
+
+| S-ID | Scope item (what they're asking for) | Clause | Feeds deliverable | Effort driver (the countable thing) | In / Out / Ambiguous |
+|---|---|---|---|---|---|
+| S-01 | | `[RFP §x]` | D<n> | | In |
+
+**Volumetric baseline** — the counted facts effort scales on. Every one cited; anything we're
+guessing is `[⚠VERIFY]` and probably a clarification question.
+
+| Driver | Count | Source |
+|---|---|---|
+| <e.g. source systems in scope> | <n> | `[RFP §x]` |
+
+**Explicitly out of scope** (say it back to them — it protects the fixed price):
+- <what the RFP puts outside the ask, cited>
+
+**Unbounded scope language** — the phrases with no natural stopping point ("comprehensive
+assessment of the application landscape"). Each gets either a clarification question or a stated
+depth assumption that carries into the estimate and the response.
+
+| Phrase | Clause | Bounded how | → |
+|---|---|---|---|
+| | `[RFP §x]` | clarification Qn / stated assumption | |
+
+**Acceptance** — what the buyer must be shown before this is "done", and who signs `[RFP §x]`.
+
+## 4. Our understanding & our solution
+<!-- Two failures this section exists to prevent: restating the buyer's own words back as
+     "understanding", and proposing a method that never names the challenge it resolves. One row
+     per client challenge — theirs, ours, and the honest verdict on whether we close it. -->
+
+**Our reading of the problem behind the tender** *(3–5 sentences, in OUR words — the diagnosis,
+not a paraphrase; if we can't say something the RFP doesn't already say, we haven't understood it)*
+
+| # | Their challenge (cited) | Our understanding of what's actually driving it | Our solution / approach | Does it resolve it? | Best-practice / standard it aligns to | Proof we can do it |
+|---|---|---|---|---|---|---|
+| 1 | `[RFP §x]` | | | fully / partly / no — <why> | <named framework, standard or reference architecture — never "industry best practice"> | A-nnn / → §7 |
+
+**Solution shape** *(how the pieces fit — workstreams, sequence, and the one design decision that
+distinguishes our answer from the obvious one)*
+
+**What our solution does NOT solve** *(state it. An evaluator finds the gap anyway; naming it first
+is credibility, and it is the honest input to the go/no-go)*
+- <challenge left open, and what we propose instead — a phase 2, a client-side action, an assumption>
+
+**Alignment check** — each solution element against (a) the requirement it answers, (b) the
+methodology/asset we run it with, (c) the standard it conforms to. A row missing (b) is a
+capability we're asserting without a method; missing (c) is an opinion dressed as best practice.
+
+## 5. Multi-role analysis
 <!-- Each role's read against the requirements. Record conflicts; don't smooth them. -->
 - **Evaluator's eye:** <what actually wins the points; what the buyer fears>
 - **Solution architect:** <feasibility, solution shape, NFRs>
 - **Engagement partner / commercial:** <margin, pricing exposure, resourcing>
-- **Legal / contracts:** <onerous terms → §6>
+- **Legal / contracts:** <onerous terms → §7>
 - **Delivery lead:** <staffability, timeline realism>
 - **Sector / domain SME:** <domain & regulatory obligations>
 
-## 4. Win-themes & differentiators (evidence-backed)
+## 6. Win-themes & differentiators (evidence-backed)
 | # | Win-theme (buyer benefit) | Proof (named engagement / metric / credential) | Scores against |
 |---|---|---|---|
 | 1 | | | <criterion> |
 <!-- No proof → not a win-theme; send to §7 materials-needed. -->
 
-## 5. Risks / red-flags / deal-breakers
+## 7. Risks / red-flags / deal-breakers
 | # | Risk | Type (term/scope/timeline/qual/IP) | Owner | Mitigation or clarification-question |
 |---|---|---|---|---|
 | 1 | | | | |
 
-## 5b. Clarification candidates (→ `clarification_log.md`)
+## 7b. Clarification candidates (→ `clarification_log.md`)
 <!-- Derived by dimension sweep (method Step 6b), not noticed in passing: scope · technical /
      architecture · commercial / contractual · evaluation & logistics · format & compliance ·
      timeline. Each: the clause it attaches to, why the answer changes the bid, and the fallback
@@ -47,14 +99,27 @@
 |---|---|---|---|---|
 | Q1 | | | § | |
 
-## 6. Materials needed
+## 8. Materials needed
 **We research (→ eng-bid-research):**
 - <specific external topic tied to a Req ID / win-theme>
 
 **You upload (firm-held):**
 - <specific case study / named-staff CV / past-bid text / cert / referee / pricing input>
 
-## 7. Go / No-Go recommendation
+## 9. Prior-bid reuse
+<!-- One line, always — "no prior bid found" is a finding, not an omission. If one exists, the
+     section-by-section diff lives in `bid_reuse_analysis.md`; don't duplicate it here. -->
+**Prior bid:** <ref + name, or **none found** — searched `01_pursuit/` and `archive-*` on {{DATE}}>
+→ `bid_reuse_analysis.md` <exists / not created: no prior bid>
+
+## 10. Estimate & price posture
+<!-- The bottom-up model lives in `estimation.md` (→ eng-estimate). Here: only the headline and
+     whether the analysis supports pricing it at all. -->
+**Sizeable from this RFP?** <yes / not yet — S-IDs that can't be sized and what would fix it>
+**Headline estimate:** <€ / days, ± range, confidence> → `estimation.md`
+**Cost-score mechanics:** <how price converts to marks [RFP §x] — the tradeoff that sets the bid price>
+
+## 11. Go / No-Go recommendation
 **Recommendation:** <go / no-go / go-if> — <conditions>.
 <!-- Synthesise: best-practice fit · win probability given weights+differentiators · deliverability
      · commercial attractiveness · deal-breakers. Evidence-based, not a vote. -->

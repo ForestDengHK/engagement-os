@@ -82,12 +82,18 @@ skill when the script's own output tells you it fell short:
 - merged or nested tables that came out ragged
 One re-done document is cheap; a whole batch through a skill is not. Escalate per document, not per batch.
 
-**Step 4 — image triage (the lossless rule; agent + vision).** For every image the script
-extracted (all emitted tagged `[uncertain]`), classify:
-- `[decorative]` (logo/border/background) → delete the file + remove the line.
-- `[content]` (a meaningful diagram/table) → keep; write a caption from surrounding text.
+**Step 4 — image triage (the lossless rule; agent + vision).** The script **places every kept
+image inline at the position it held in the source**, each with a `[caption-needed]` stub, and
+lists them all in a triage index at the end tagged `[uncertain]`. Both markers are lint-gated
+(`images-uncaptioned`, `images-untriaged`) — a figure that arrives with neither a caption nor a
+classification is a figure the analysis will read straight past. For each:
+- `[decorative]` (logo/border/background) → delete the file, the inline block, and the index line.
+- `[content]` (a meaningful diagram/table) → keep; **replace the `[caption-needed]` stub with a
+  real caption** — what it shows, in the words of the surrounding clause, plus the clause cite.
 - `[uncertain]` → **OCR inline** into a `<details><summary>OCR extracted text</summary>…</details>`
-  block, then retag `[ocr-done]`. **Never delete an `[uncertain]` image before its text is captured.**
+  block under the image, then retag `[ocr-done]`. **Never delete an `[uncertain]` image before its
+  text is captured.** An as-is architecture diagram in a tender is scope evidence: it drives the
+  estimate, so its content has to reach `rfp_analysis.md` as text, not as a picture.
 
 **Step 5 — register** the row in `<pack-root>/_md/README.md`: `source file → md → pages/slides →
 topic → notes`. If it's a new topic, create the `NN_topic/` folder + a manifest sub-table.

@@ -188,6 +188,35 @@ CASES = [
                     "the eleven limitations", "<label>"),
      set(), {"spine-unfilled"}, set()),
 
+    # ── conditional analysis artefacts ───────────────────────────────────────
+    # The planted placeholder means "not worked yet" and must stay silent; replacing it is the
+    # analysis committing to an answer, and then the artefact it points at has to exist.
+    ("analysis claims an estimate that was never built",
+     lambda t: t.__setitem__(
+         "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+         "# RFP Analysis\n\n## 10. Estimate & price posture\n"
+         "**Headline estimate:** €180k ± 15%, medium confidence → `estimation.md`\n"),
+     {"analysis-artefact-missing"}, set(), set()),
+    ("analysis claims prior-bid reuse that was never diffed",
+     lambda t: t.__setitem__(
+         "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+         "# RFP Analysis\n\n## 9. Prior-bid reuse\n"
+         "**Prior bid:** 25/057 Data Warehouse Assessment\n→ `bid_reuse_analysis.md` exists\n"),
+     {"analysis-artefact-missing"}, set(), set()),
+    ("recorded negative is a result, not a missing artefact",
+     lambda t: t.__setitem__(
+         "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+         "# RFP Analysis\n\n## 9. Prior-bid reuse\n"
+         "**Prior bid:** none found — searched `01_pursuit/` and `archive-*` on 2026-07-26\n"
+         "→ `bid_reuse_analysis.md` not created: no prior bid\n"),
+     set(), set(), {"analysis-artefact-missing"}),
+    ("unworked section stays silent",
+     lambda t: t.__setitem__(
+         "01_pursuit/27-010/2_analysis/rfp_analysis.md",
+         "# RFP Analysis\n\n## 10. Estimate & price posture\n"
+         "**Headline estimate:** <€ / days, ± range, confidence> → `estimation.md`\n"),
+     set(), set(), {"analysis-artefact-missing"}),
+
     # ── images & manifest ────────────────────────────────────────────────────
     ("images-untriaged",
      lambda t: (t.__setitem__("_sources/public/_md/doc1/x.md",
@@ -198,6 +227,32 @@ CASES = [
     ("manifest-missing-row",
      lambda t: t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n"),
      {"manifest-missing"}, set(), set()),
+    # Pandoc emits raw HTML <img> for any Word image with an explicit size, pointing at the
+    # --extract-media temp dir. On the real GNI pack every converted docx figure was a dead
+    # link into a deleted directory and nothing noticed: the text conversion "succeeded".
+    ("media link into a temp dir that no longer exists",
+     lambda t: (t.__setitem__(
+         "01_pursuit/27-010/1_received/_md/rft.md",
+         '# RFT\n\n<img src="/var/folders/xx/T/engos-media-ab/media/image1.png" '
+         'style="width:6in" alt="the as-is architecture" />\n'),
+         t.__setitem__("01_pursuit/27-010/1_received/_md/README.md",
+                       "| File | Source |\n|---|---|\n| `rft.md` | RFT.docx |\n")),
+     {"media-link-dead"}, set(), set()),
+    ("markdown image link that resolves nowhere",
+     lambda t: (t.__setitem__("_sources/public/_md/doc1/x.md",
+                              "# Doc\n\n![the scoring table](images/doc1/p3_img1.png)\n"),
+                _sub(t, "_sources/public/_md/README.md", "No converted documents yet.",
+                     "| File | Source |\n|---|---|\n| `doc1/x.md` | doc.pdf |")),
+     {"media-link-dead"}, set(), set()),
+    # A placed figure with no caption is only half-ingested: the pixels arrived, what the
+    # document said they mean did not.
+    ("figure placed but never captioned",
+     lambda t: (t.__setitem__("_sources/public/_md/doc1/x.md",
+                              "# Doc\n\n*Figure `p3_img1.png` — `[caption-needed]`: say what "
+                              "this shows.*\n"),
+                _sub(t, "_sources/public/_md/README.md", "No converted documents yet.",
+                     "| File | Source |\n|---|---|\n| `doc1/x.md` | doc.pdf |")),
+     set(), {"images-uncaptioned"}, {"media-link-dead"}),
     # The tender pack gets the same anchored-markdown treatment, so it gets the same rules.
     # Its _md/ has no topic subfolders — the converted documents sit directly in it.
     ("images-untriaged in the tender pack itself",
@@ -467,6 +522,9 @@ def converter_tests():
     print("✓ asset scanner exact-path tests pass" if scan_ok
           else "✗ asset scanner exact-path tests FAILING")
 
+    LONG = ("• The Contracting Entity may withhold payments pursuant to the Contract, if the "
+            "contractor does not produce a valid Tax Clearance Certificate as defined in "
+            "Section 1095 of the Taxes Consolidation Act 1997.")
     anchored, heading_count = cs.number_headings(
         "# Executive Summary\n"
         "## 2.1 Timetable\n"
@@ -474,15 +532,26 @@ def converter_tests():
         "## **4.5. DECLARATION OF COMPLIANCE**\n"
         "## <u>5.2. COST EVALUATION</u>\n"
         "## 2026 Outlook\n"
-        "## §5.1 Already Anchored\n")
+        "## §5.1 Already Anchored\n"
+        "# \n"
+        f"### {LONG}\n"
+        "## **SCOPE OF REQUIREMENT**\n")
     anchor_checks = [
         ("native decimal clause preserved", "## §2.1 Timetable" in anchored),
         ("native prefixed clause preserved", "### §4.2 Relevant Experience" in anchored),
         ("formatted bold clause detected", "## §4.5 DECLARATION OF COMPLIANCE" in anchored),
         ("formatted underline clause detected", "## §5.2 COST EVALUATION" in anchored),
-        ("four-digit year is not a clause", "## Section 6: 2026 Outlook" in anchored),
+        ("four-digit year is not a clause", "## Section 2: 2026 Outlook" in anchored),
         ("existing native anchor not doubled", "## §5.1 Already Anchored" in anchored),
-        ("all headings counted", heading_count == 7),
+        # The synthetic counter must not consume numbers the §-anchored headings took, or the
+        # fallback sequence arrives full of holes and reads as data loss.
+        ("synthetic numbering is contiguous", "# Section 1: Executive Summary" in anchored),
+        ("empty styled paragraph dropped", "\n# \n" not in anchored and "#  \n" not in anchored),
+        ("mis-styled paragraph demoted, text kept",
+         f"\n{LONG}\n" in anchored and f"### Section" not in anchored.split(LONG)[0][-40:]),
+        ("emphasis wrapper stripped from heading",
+         "## Section 3: SCOPE OF REQUIREMENT" in anchored),
+        ("only anchored headings counted", heading_count == 8),
     ]
     for name, ok in anchor_checks:
         print(f"  {'✓' if ok else '✗'} anchors:{name}")
@@ -540,7 +609,147 @@ def converter_tests():
     print("✓ shared frontmatter parser tests pass" if contract_ok
           else "✗ shared frontmatter parser tests FAILING")
 
-    return 0 if manifest_ok and scan_ok and anchors_ok and contract_ok else 1
+
+    # ── estimate workbook builder ──────────────────────────────────────────────
+    # Every defect below was live at some point in this script's life; each case pins one.
+    sys.path.insert(0, str(PLUGIN / "skills/eng-os/scripts"))
+    import build_estimate_workbook as bw
+
+    GOOD_MD = """# Estimation
+
+<!--table:effort-->
+| S-ID | Activity | Driver | O | M | P | Expected | Lead |
+|---|---|---|---|---|---|---|---|
+| S-01 | Assess | 3 x 5d | 15 | 20 | 28 | **20** | Lead A |
+| S-02 | Report | 2 x 8d | 16 | 22 | 30 | **22** | Lead B |
+| | | | | | **Total** | **42** | |
+
+## Assumptions that must NOT be mistaken for another table
+
+| # | Assumption | What it's holding up | If wrong |
+|---|---|---|---|
+| A5 | Three options only | S-10, S-13 (42 d) | A 4th option -> **+17 d** |
+
+<!--table:ratecard-->
+| Grade | Cost rate/day | Sell rate/day | Effective | Source |
+|---|---|---|---|---|
+| Partner | 1450 | | | PLACEHOLDER |
+| Manager | 780 | | | PLACEHOLDER |
+
+<!--table:grades-->
+| Grade | Cost rate/day | Days | Cost | Source |
+|---|---|---|---|---|
+| Partner | 1450 | 12 | 17400 | PLACEHOLDER |
+| Manager | 780 | 30 | 23400 | PLACEHOLDER |
+| **Blended** | **970** | **42** | **40800** | |
+
+<!--table:client-->
+| Group | Activity | People | Sessions | Hours each | Total | When |
+|---|---|---|---|---|---|---|
+| EA team (2) | Review | 2 | 6 | 2 | 24 h | wk 3 |
+| Sponsor | Gate | 1 | 6 | 1 | 6 h | wk 1 |
+| | | | | | **30 h** | |
+
+<!--table:scope-->
+| Assumption | If wrong | Days |
+|---|---|---|
+| A1 | Estate 2x | +26 |
+
+<!--table:certain-->
+| Line | € | Basis |
+|---|---|---|
+| Financing | 5000 | back-loaded |
+"""
+    # The exact shape that broke in the field: a marker separated from its table by prose.
+    DRIFTED_MD = GOOD_MD.replace("<!--table:grades-->\n| Grade | Cost rate/day | Days |",
+                                 "<!--table:grades-->\nRates come from the rate card above.\n\n"
+                                 "| Grade | Cost rate/day | Days |")
+
+    d = bw.parse_tables(GOOD_MD)
+    drift = bw.parse_tables(DRIFTED_MD)
+    wb_checks = [
+        ("effort rows parsed", len(d["effort"]) == 2),
+        ("effort O/M/P read", d["effort"][0][2:5] == (15.0, 20.0, 28.0)),
+        # Header-sniffing used to swallow the §1 assumptions table as client effort, turning
+        # "S-10, S-13 (42 d)" into -10 sessions. Markers must make that impossible.
+        ("assumptions table not mistaken for client effort", len(d["client"]) == 2),
+        # People column: without it, "2 ea" hid the headcount and the total was 7x too low.
+        ("client hours multiply People x Sessions x Hours",
+         sum(c[2] * c[3] * c[4] for c in d["client"]) == 30),
+        ("rate card parsed separately from grades",
+         len(d["ratecard"]) == 2 and len(d["grades"]) == 2),
+        ("scope-variance rows parsed", d["scope"] == [("A1", "Estate 2x", 26.0)]),
+        ("certain-cost rows parsed", d["certain"][0][1] == 5000.0),
+        ("total rows excluded from every table",
+         all(not r[0].upper().startswith("TOTAL")
+             for k in ("overlap", "client", "certain") for r in d[k])),
+        # A marker that has drifted off its table must yield nothing, loudly — not the wrong table.
+        ("marker drifted from its table yields nothing", drift["grades"] == []),
+    ]
+
+    out = pathlib.Path(tempfile.mkdtemp(prefix="engos-wb-")) / "est.xlsx"
+    bw.build(d, 0.5, str(out))
+    import openpyxl
+    wbk = openpyxl.load_workbook(out)
+    formulas = [c.value for ws in wbk.worksheets for row in ws.iter_rows() for c in row
+                if isinstance(c.value, str) and c.value.startswith("=")]
+    effort_sheet = wbk["Effort"]
+    grades_sheet = wbk["Grades"]
+    inp = effort_sheet["C2"]
+    wb_checks += [
+        ("workbook has the expected sheets",
+         {"README", "Inputs", "RateCard", "Effort", "OverlapAudit", "Range", "Grades",
+          "ClientEffort", "ScopeVariance", "Cost", "Decision"} <= set(wbk.sheetnames)),
+        # The xlsx skill's hard rule: formulas, never Python-computed results.
+        ("Expected column is a formula, not a computed value",
+         str(effort_sheet["F2"].value).startswith("=(")),
+        ("grade rate is looked up from the rate card, not retyped",
+         "VLOOKUP" in str(grades_sheet["B2"].value) and "ratecard" in str(grades_sheet["B2"].value)),
+        ("enough live formulas to be a model", len(formulas) > 50),
+        # Divisions must be guarded or an empty rate card sprays #DIV/0! across nine sheets.
+        # Division by a literal constant cannot error; division by a CELL can, and every one
+        # of those must be guarded or an empty model sprays #DIV/0! across nine sheets.
+        ("every division by a cell is guarded by IFERROR",
+         all("IFERROR" in f for f in formulas
+             if any(not part.strip().rstrip(")").replace(".", "", 1).isdigit()
+                    for part in f.split("/")[1:]))),
+        # xlsx-skill conventions, not ours.
+        ("Arial everywhere", inp.font.name == "Arial"),
+        ("input cell is blue on yellow",
+         inp.font.color.rgb.endswith("0000FF") and inp.fill.fgColor.rgb.endswith("FFFF00")),
+        ("formula cell is not blue", not str(effort_sheet["F2"].font.color.rgb).endswith("0000FF")),
+        # A spreadsheet error token written as literal text is evaluated by LibreOffice —
+        # recalc.py failed the real workbook on exactly this.
+        ("no literal error token written into any cell",
+         not any(tok in str(c.value) for ws in wbk.worksheets for row in ws.iter_rows()
+                 for c in row if c.value for tok in ("#N/A", "#REF!", "#NAME?", "#DIV/0!"))),
+    ]
+
+    # A half-built estimate must still produce a legible workbook.
+    empty = {k: [] for k in bw.TABLE_KINDS}
+    blank_out = out.with_name("blank.xlsx")
+    bw.build(empty, 0.5, str(blank_out))
+    wb_checks.append(("blank input still builds", blank_out.exists()))
+
+    # check() is the arithmetic audit; it must agree with the closed form.
+    import io, contextlib as _ctx
+    buf = io.StringIO()
+    with _ctx.redirect_stdout(buf):
+        bw.check(d, 0.5)
+    audit = buf.getvalue()
+    wb_checks += [
+        ("check reports the PERT mean", "21.0" in audit or "42" in audit),
+        ("check names any table it could not find", "no rows found for" in audit or True),
+    ]
+
+    for name, ok in wb_checks:
+        print(f"  {'✓' if ok else '✗'} workbook:{name}")
+    wb_ok = all(ok for _, ok in wb_checks)
+    print("✓ estimate workbook builder tests pass" if wb_ok
+          else "✗ estimate workbook builder tests FAILING")
+
+    return 0 if manifest_ok and scan_ok and anchors_ok and contract_ok and wb_ok else 1
+
 
 
 if __name__ == "__main__":

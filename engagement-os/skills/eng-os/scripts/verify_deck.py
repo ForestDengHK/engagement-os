@@ -15,6 +15,14 @@ check afterwards — so the two failures that actually shipped kept shipping:
 Neither is visible in a build log; both are visible in the package. Reads the OOXML
 directly (stdlib zipfile — no python-pptx), so it runs anywhere the pack runs.
 
+THIS IS NOT A SCHEMA VALIDATOR, AND IT DOES NOT REPLACE ONE. The `pptx` skill ships
+`scripts/office/validate.py` — schema, relationship, content-type and chart checks, each failure
+naming its fix — and that is the gate for "is this file structurally valid OOXML". Run it first;
+it is the skill's job and it does it better. What this script adds is the *deliverable* question
+a schema check cannot answer: is the deck a flattened picture-per-slide export, is a font neither
+standard nor embedded, did the splice land the right number of slides, did a figure's image
+actually come across. Two gates, two questions — not two implementations of one.
+
     python3 verify_deck.py deck.pptx [--expect N] [--review-copy] [--strict]
 
 Exit 0 clean · 1 findings (errors, or warnings under --strict) · 2 unreadable.
