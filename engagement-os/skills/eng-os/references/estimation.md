@@ -18,7 +18,7 @@ bottom-up, cited, cross-checked, and honest about its own error bar.
 - Step 9 — price vs score: decision support, not a recommendation
 - Step 10 — into the buyer's pricing document
 - Step 11 — re-baseline triggers
-- The artefacts: a narrative and a live model
+- The artefact: one workbook, and a generated snapshot
 
 ## Where estimation sits, and its one hard precondition
 
@@ -349,7 +349,7 @@ Then name the events that force a **rebuild** rather than an adjustment:
 Each trigger is a pointer back to Step 1: the basis of estimate is what makes a rebuild a
 half-day rather than a restart.
 
-## The artefacts: a narrative and a live model
+## The artefact: one workbook, and a generated snapshot
 
 An estimate that only exists as prose cannot be reviewed properly. Changing one line item from 20
 days to 26 means recomputing the total, the PERT mean, sigma, P50, P80, contingency, labour cost,
@@ -357,15 +357,26 @@ two cost bases and every margin and mark figure downstream — by hand, in a doc
 recalculate. That is where arithmetic drift enters, and it denies the reviewer the one thing they
 most want to do: move an input and see the consequence.
 
-So the estimate ships as two files with one division of labour:
+But shipping a spreadsheet *and* a hand-written narrative is worse: two things to keep in step,
+and nothing keeping them there. **The workbook is the single maintained artefact.** It carries the
+numbers as formulas and the judgement on its own sheets — basis of estimate, techniques and their
+reconciliation, the outside view, calibration, contingency, the pricing-document mapping,
+re-baseline triggers. Prose belongs in a wrapped cell, not in a second file.
 
-| | Carries | Why it is the right medium |
-|---|---|---|
-| `estimation.md` | assumptions, the overlap audit's reasoning, reconciliation, the decision framing | Judgement needs sentences. "This item re-uses that item's fieldwork" is not a number. |
-| `estimation.xlsx` | every number, as **live formulas** over input cells | A model has to recalculate. Yellow = input, blue = formula. |
+```
+workbook (maintained)  ──  export  ─►  markdown snapshot (generated, read-only)
+```
 
-The markdown seeds the workbook; after that **the workbook is the model and the markdown quotes
-it**. Round in the narrative if you like, but do not let the two disagree on anything material.
+**The markdown snapshot is generated, never edited.** It exists for two things a binary cannot
+do: the mechanical gates read text, so an xlsx-only estimate falls out of every lint rule; and
+`git diff` on a workbook shows nothing, which matters on a bid that gets re-priced three times.
+Regenerate it after each round of edits and let it carry a DO-NOT-EDIT banner, so nobody spends
+an afternoon improving a file that the next export overwrites.
+
+**Seeding runs once, and re-seeding is destructive.** The markdown template is a convenient way to
+draft the first version; after that the direction reverses. A tool that rebuilds the workbook from
+the markdown on every run will silently discard the reviewer's edits — which is exactly the bug
+this pack shipped and had to fix.
 
 **The rate card is one table.** Rates typed inline against each grade mean that the day the real
 card lands you edit every row and hope you caught them all. Put them in one place and have the
@@ -377,5 +388,5 @@ zeros do not. Carry an explicit status flag on the card and have the cost sheet 
 itself as committable until it reads `ACTUAL`.
 
 **Guard every division.** A model whose rate card is empty, or whose scope table is not filled in
-yet, must return zeros — not `#DIV/0!` spreading across nine sheets. A half-built estimate should
-still open and still be legible.
+yet, must return zeros — not `#DIV/0!` spreading across nineteen sheets. A half-built estimate
+should still open and still be legible.

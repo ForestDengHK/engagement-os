@@ -281,16 +281,36 @@ def rule_live_index_resolves(root, r):
 
 
 def rule_spine_filled(root, r):
-    """The spine must be real, not the planted placeholder — everything downstream depends on it."""
+    """The spine must be real, not the planted placeholder — everything downstream depends on it.
+
+    Only the spine SECTION is checked, not the whole file. Both index files carry other sections
+    whose placeholders are legitimate and outlive the spine: the research README documents its
+    citation format as `_sources/<bucket>/_md/<file>.md §Page N` and its versioning as
+    `<CLIENT>_<ENG-ID>_...`, and the analysis/output tables stay templated until those artefacts
+    exist. Scanning the whole file made the rule permanently red on a correctly-filled research
+    repo — it fired on the instructions rather than on the spine.
+    """
     checks = [
-        (root / "02_delivery/1_discovery/3_findings/README.md", "findings backbone"),
-        (root / "00_research/README.md", "research question list"),
+        (root / "02_delivery/1_discovery/3_findings/README.md", "findings backbone",
+         r"^##\s+The backbone\b"),
+        (root / "00_research/README.md", "research question list",
+         r"^##\s+1\.\s+The questions\b"),
     ]
-    for f, label in checks:
+    for f, label, spine_head in checks:
         if not f.exists():
             continue
         r.ran()
-        leftover = re.search(r"<[a-z][^>\n]{2,}>", f.read_text(encoding="utf-8", errors="replace"))
+        text = f.read_text(encoding="utf-8", errors="replace")
+        # Narrow to the spine section when the planted heading is there; fall back to the whole
+        # file when it isn't. Policing heading text is not this rule's job, and an adopted-in-place
+        # repo is allowed its own wording — it just doesn't get the narrowing.
+        spine = text
+        start = re.search(spine_head, text, re.M)
+        if start:
+            rest = text[start.end():]
+            end = re.search(r"^##\s", rest, re.M)
+            spine = rest[:end.start()] if end else rest
+        leftover = re.search(r"<[a-z][^>\n]{2,}>", spine)
         if leftover:
             r.warn("spine-unfilled", str(f.relative_to(root)),
                    f"{label} still holds a placeholder ({leftover.group(0)[:40]}…) — "

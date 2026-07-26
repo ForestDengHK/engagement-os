@@ -12,15 +12,25 @@ So the workbook carries **formulas, not values**. Every derived cell is a real E
 input cells, and the input cells are the ones a reviewer is invited to move: rates, day counts,
 the correlation assumption, the assumed competitor range. Nothing downstream has to be re-entered.
 
-    markdown  = the narrative — assumptions, the overlap audit's reasoning, the decision framing
-    workbook  = the model     — the numbers, live, editable, self-recalculating
+ONE MAINTAINED ARTEFACT. The workbook holds everything — the numbers as formulas AND the
+judgement (basis of estimate, techniques and their reconciliation, the outside view, calibration,
+contingency, the pricing-document mapping, re-baseline triggers) on their own sheets. The markdown
+is a GENERATED SNAPSHOT of it, never a second thing to keep in step.
 
-The markdown seeds the workbook (this script reads its tables); after that the workbook is the
-working artefact and the markdown quotes it. `--check` re-runs the arithmetic in Python and
-reports where the markdown's own stated numbers disagree with its own inputs.
+    workbook  (source of truth)  ──  --to-md  ─►  markdown snapshot (generated, read-only)
+
+The markdown seeds the workbook ONCE. After that the direction reverses, and seeding again is a
+destructive act that needs `--reseed` — the first version silently rebuilt the workbook from the
+markdown on every run, so a reviewer's edits were wiped by the next build while the docs told
+them the workbook was the model.
+
+The snapshot is not decoration: it is what lets `eng_lint` read the estimate at all, and what
+makes `git diff` show which numbers moved between two re-prices. A binary does neither.
 
 Usage:
-    python3 build_estimate_workbook.py <estimation.md> [--out <file.xlsx>] [--rho 0.5]
+    python3 build_estimate_workbook.py <estimation.md>                  # seed the workbook once
+    python3 build_estimate_workbook.py --out estimation.xlsx --to-md    # the normal direction
+    python3 build_estimate_workbook.py <estimation.md> --reseed         # discard workbook edits
     python3 build_estimate_workbook.py --blank --out estimation.xlsx    # starter, no markdown yet
     python3 build_estimate_workbook.py <estimation.md> --check          # arithmetic audit only
 
@@ -71,7 +81,47 @@ def _num(s):
 
 
 TABLE_KINDS = ("effort", "overlap", "grades", "ratecard", "client", "scope", "certain")
+
+# The judgement-bearing sections. These used to live only in the markdown, which made the
+# markdown a second thing to maintain — and since the builder regenerated the workbook FROM it,
+# a reviewer's edits in the workbook were silently overwritten on the next build. The workbook
+# is the single source now, so these have to live in it too.
 _MARKER = re.compile(r"^\s*<!--\s*table:(\w+)\s*-->\s*$")
+
+NARRATIVE_SHEETS = [
+    ("BasisOfEstimate", ["1. Basis of estimate"]),
+    ("Techniques", ["2. Techniques"]),
+    ("OutsideView", ["2b. Outside view"]),
+    ("Phasing", ["3c. By phase"]),
+    ("Calibration", ["6. Calibration"]),
+    ("Contingency", ["7. Contingency"]),
+    ("PricingDoc", ["10. Into the buyer"]),
+    ("Triggers", ["11. Re-baseline"]),
+]
+
+
+def parse_narrative(md):
+    """Section body text (prose and any table rows), keyed by sheet name."""
+    lines = md.splitlines()
+    heads = [(i, l[3:].strip()) for i, l in enumerate(lines) if l.startswith("## ")]
+    out = {}
+    for sheet, prefixes in NARRATIVE_SHEETS:
+        body = []
+        for n, (i, title) in enumerate(heads):
+            if not any(title.startswith(pref) for pref in prefixes):
+                continue
+            end = heads[n + 1][0] if n + 1 < len(heads) else len(lines)
+            for raw in lines[i + 1:end]:
+                s = raw.rstrip()
+                if _MARKER.match(s):
+                    continue
+                body.append(s)
+        while body and not body[0].strip():
+            body.pop(0)
+        while body and not body[-1].strip():
+            body.pop()
+        out[sheet] = body
+    return out
 
 
 def parse_tables(md):
@@ -212,10 +262,11 @@ def _named(wb, name, sheet, ref):
     wb.defined_names.add(DefinedName(name, attr_text=f"'{sheet}'!{ref}"))
 
 
-def build(data, rho, out_path, zero_rates=False):
+def build(data, rho, out_path, zero_rates=False, narrative=None):
     from openpyxl import Workbook
 
     wb = Workbook()
+    narrative = narrative or {}
     eff = data["effort"] or [(f"S-{i:02d}", "<activity>", 0, 0, 0, "") for i in range(1, 4)]
     grades = data["grades"] or [("<grade>", 0, 0, "[⚠VERIFY]")]
     # A dedicated rate-card table wins; otherwise fall back to the rate column of the grades
@@ -580,12 +631,78 @@ def build(data, rho, out_path, zero_rates=False):
         ws.cell(row=9 + k, column=1, value=line)
     ws.cell(row=12, column=1).font = __import__("openpyxl").styles.Font(bold=True)
 
+    # ── narrative sheets ──────────────────────────────────────────────────────
+    # Prose and judgement, in the same file as the numbers. Markdown table rows are re-emitted
+    # as real cells so the export round-trips; everything else stays a paragraph per row.
+    for sheet, _prefixes in NARRATIVE_SHEETS:
+        ws = wb.create_sheet(sheet)
+        _widths(ws, [30, 34, 34, 30, 30, 24])
+        ws.cell(row=1, column=1, value=sheet)
+        ws.cell(row=1, column=1).font = __import__("openpyxl").styles.Font(
+            name=FONT, bold=True, size=12)
+        r = 2
+        for line in narrative.get(sheet, []) or ["<not yet written>"]:
+            s = line.strip()
+            if s.startswith("|") and set(s) <= set("|-: "):
+                continue                              # markdown separator row
+            if s.startswith("|"):
+                for c, cell in enumerate(_cells(s), 1):
+                    ws.cell(row=r, column=c, value=re.sub(r"[*`]", "", cell) or None)
+            else:
+                ws.cell(row=r, column=1, value=line or None)
+                ws.cell(row=r, column=1).alignment = __import__("openpyxl").styles.Alignment(
+                    wrap_text=True, vertical="top")
+            r += 1
+
     enforce_conventions(wb)
     wb.save(out_path)
     return {k: len(v) for k, v in data.items()}
 
 
 # ── arithmetic audit of the markdown itself ────────────────────────────────────
+
+def export_markdown(xlsx_path, md_path):
+    """Render the workbook back out as a markdown snapshot — GENERATED, never hand-edited.
+
+    The workbook is the single maintained artefact; this exists so the estimate stays inside the
+    things text gives you for free and a binary does not: `eng_lint` can read it, `git diff` can
+    show what moved between two re-prices, and a reviewer can read it without opening Excel.
+    Values, not formulas — so the workbook must have been recalculated first, or every derived
+    cell reads back empty.
+    """
+    import datetime
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+    out = [f"# Estimation — generated from `{os.path.basename(xlsx_path)}`", "",
+           "> **DO NOT EDIT THIS FILE.** It is a generated snapshot of the workbook, which is the",
+           "> single maintained source. Edit `" + os.path.basename(xlsx_path) + "` and re-run",
+           "> `build_estimate_workbook.py --to-md`. Anything typed here is lost on the next export.",
+           f"> Generated {datetime.date.today().isoformat()}.", ""]
+    blank = 0
+    for ws in wb.worksheets:
+        rows = [[c.value for c in row] for row in ws.iter_rows()]
+        rows = [r for r in rows if any(v is not None and str(v).strip() for v in r)]
+        if not rows:
+            continue
+        out += [f"## {ws.title}", ""]
+        width = max(len(r) for r in rows)
+        for r in rows:
+            cells = [("" if v is None else str(v)).replace("|", "\\|") for v in r]
+            cells += [""] * (width - len(cells))
+            if sum(1 for c in cells if c.strip()) == 1 and cells[0].strip():
+                out.append(cells[0])                  # prose row, not a table row
+            else:
+                out.append("| " + " | ".join(cells) + " |")
+                if r is rows[0]:
+                    out.append("|" + "---|" * width)
+        out.append("")
+        blank += sum(1 for r in rows for v in r
+                     if v is None and False)
+    text = "\n".join(out) + "\n"
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return len(wb.worksheets)
+
 
 def check(data, rho):
     """Recompute in Python and report where the markdown disagrees with its own inputs."""
@@ -692,14 +809,20 @@ def main():
     ap.add_argument("--zero-rates", action="store_true",
                     help="emit the rate card with every rate at 0 — use when no rate card exists "
                          "and a fabricated placeholder would be worse than a visible zero")
+    ap.add_argument("--to-md", action="store_true",
+                    help="export the WORKBOOK back to a markdown snapshot (the normal direction "
+                         "once the workbook exists — it is the maintained source)")
+    ap.add_argument("--reseed", action="store_true",
+                    help="rebuild the workbook FROM the markdown, discarding workbook edits")
     ap.add_argument("--no-recalc", action="store_true",
                     help="skip the xlsx-skill recalculation pass (leaves formulas unevaluated)")
     ap.add_argument("--check", action="store_true",
                     help="recompute the markdown's arithmetic and report; write nothing")
     args = ap.parse_args()
 
-    if not args.blank and not args.markdown:
-        ap.error("give an estimation.md, or --blank for a starter workbook")
+    if not args.blank and not args.markdown and not (args.to_md and args.out):
+        ap.error("give an estimation.md, --blank for a starter workbook, "
+                 "or --to-md --out <workbook.xlsx> to export an existing one")
 
     data = {"effort": [], "overlap": [], "grades": [], "client": [], "scope": [], "certain": []}
     if args.markdown:
@@ -714,6 +837,30 @@ def main():
 
     out = args.out or (os.path.splitext(args.markdown)[0] + ".xlsx" if args.markdown
                        else "estimation.xlsx")
+
+    if args.to_md:
+        if not os.path.exists(out):
+            print(f"ERROR: no workbook at {out} — seed one first", file=sys.stderr)
+            return 2
+        md_out = args.markdown or (os.path.splitext(out)[0] + ".md")
+        # Export reads cached values. openpyxl leaves none behind, and neither does a hand edit
+        # in Excel that was never reopened — so recalculate before reading, or the snapshot is
+        # a page of blanks that looks like a successful export.
+        if not args.no_recalc:
+            recalculate(out)
+        n = export_markdown(out, md_out)
+        print(f"Exported {n} sheet(s) → {md_out}")
+        print("The workbook stays the source of truth; this snapshot is generated.")
+        return 0
+
+    # The workbook is the maintained artefact, so seeding over an existing one destroys work.
+    # This was a real defect: the docs told reviewers to edit the workbook while the builder
+    # silently rebuilt it from the markdown on the next run.
+    if os.path.exists(out) and not args.reseed:
+        print(f"REFUSING to overwrite {out} — it is the source of truth and may hold edits\n"
+              f"  · export it to markdown instead:  --to-md\n"
+              f"  · or discard workbook edits on purpose:  --reseed", file=sys.stderr)
+        return 5
     try:
         counts = build(data, args.rho, out, args.zero_rates)
     except ImportError:
