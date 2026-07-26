@@ -5,7 +5,10 @@
 > already survived an evaluation. This decides, **section by section**, what carries over and what
 > the delta actually is. Do it BEFORE drafting anything. Method: `bid-response.md`.
 
-**Prior bid:** <ref + name> · **Its outcome:** won / lost / withdrawn — *and why, if known*
+**Prior bid:** <ref + name> · **Its outcome:** won / lost / withdrawn / never scored — *and why, if known*
+<!-- If the prior was withdrawn or never scored, say so plainly: its scored-section text then
+     carries NO evaluation signal — reuse is a time-saver, not evidence of what wins. The
+     "a lost bid is evidence too" guardrail only bites when a debrief actually exists. -->
 **Prior response converted to:** `01_pursuit/archive-<PRIOR-ID>/…` (via `eng-ingest-source`)
 **This bid:** {{ENG_ID}} · **Assessed:** {{DATE}}
 
@@ -23,6 +26,12 @@
 Repeat per section. The value is in the **field-level diff**, not the verdict: "same requirement"
 is only trustworthy when you can see the two clauses side by side.
 
+**Assess at the unit the buyer gates independently.** A criterion with three separately-scored or
+separately-page-capped sub-parts is three sections, not one — a flat verdict hides the sub-part
+that moved. And a diff that feeds somewhere other than drafting (e.g. the Form-of-Contract
+old-vs-new diff, which feeds the risk register) still gets its own `###` section, marked
+*(informational)*.
+
 ### <section ref + title>
 **Status:** FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW · **Reuse:** <~%>
 **Maps to:** R-0xx *(compliance-matrix row — reuse and compliance must agree)*
@@ -36,6 +45,19 @@ that moved; a table of elements makes the actual edit list fall out of the analy
 
 **Action required:**
 - <the specific edit, not "review">
+
+## 2b. Expiry register
+
+Every date-sensitive element carried by the prior response, in one table — reference projects,
+financial-year figures, insurance evidence, CV project dates, URLs, attestations. "It was true
+last time" is how a bid fails a minimum requirement, and these items expire *between* the two
+submissions even when the clause text is unchanged. Found on the real GNI re-issue: 9 items
+expired or slid between 25-057 and 26-002 (FY24→FY25 accounts, a 5-year H&S table dropping a
+year, a Modern Slavery URL already stale at the first submission).
+
+| Item | Prior value | This tender's rule | Verdict | Owner |
+|---|---|---|---|---|
+| <e.g. reference project completion> | <2022-06> | within 3 years of submission | ❌ expired / ⚠ borderline / ✅ valid | <name> |
 
 ## 3. Scope deltas that change the whole response
 
@@ -62,6 +84,6 @@ reference goes first, and anything quoting a figure follows the document that fi
 - **A lost prior bid is evidence too** — if the debrief said why, the weak sections are named for
   you. Reusing them unchanged repeats the loss.
 - **Never carry a claim across without re-checking its window.** Reference projects, certifications
-  and financials expire; "it was true last time" is how a bid fails a minimum requirement.
+  and financials expire; §2b is the register that makes the check exhaustive rather than remembered.
 - **Confidentiality still binds.** A prior bid for *another* client is our own material and reusable;
   anything in `_sources/engagement/` from a delivery engagement is not — see `_sources/README.md`.
