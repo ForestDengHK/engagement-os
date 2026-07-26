@@ -13,6 +13,7 @@ angle, and honest about what we don't yet have.
 - Step 4 — multi-role analysis (the panel lens)
 - Step 5 — win-themes & differentiators (evidence, not slogans)
 - Step 6 — risks, red-flags, deal-breakers
+- Step 6b — clarification questions (derived by dimension sweep, panel lens, human sends)
 - Step 7 — materials-needed list (research vs upload)
 - Step 8 — go / no-go recommendation
 
@@ -95,6 +96,42 @@ Flag: onerous / uncapped-liability terms, unpriceable or ambiguous scope, imposs
 mandatory qualifications we may not meet, conflicts of interest, IP/data terms. Each risk gets an
 owner and a mitigation or a clarification-question to submit to the buyer. Deal-breakers feed the
 go/no-go.
+
+## Step 6b — clarification questions (derived, not noticed)
+
+Questions to the buyer are **produced by a sweep, not collected as they occur to someone**. The
+query deadline lands early and closes hard; after it, every remaining ambiguity can only be
+handled by stating an assumption, which scores worse than an answer. Anything not asked in time
+is a permanent loss, so the sweep runs as part of analysis — before the go/no-go, not after.
+
+**Sweep every dimension, one at a time.** Each has its own characteristic ambiguity, and a
+free-form re-read finds the ones in whichever dimension the reader happens to think in.
+
+| Dimension | What to interrogate | Typical ambiguity worth a question |
+|---|---|---|
+| **Scope & deliverables** | what is in, what is explicitly out, acceptance | "assessment of the estate" — which systems, to what depth, whose sign-off ends it |
+| **Solution & architecture** | mandated platforms, constraints, integration surface | is the target platform a decision already taken or one we are asked to make |
+| **Evidence & qualification** | recency rules, referee rules, staff-substitution rules | is "within 3 years" measured from project start or completion (decides whether an asset is in-window) |
+| **Commercial & contract** | liability caps, payment triggers, IP, indexation, change mechanism | uncapped liability, or a milestone whose payment trigger is undefined |
+| **Delivery & resourcing** | timelines, client-side availability, location, security clearance | a timeline that assumes client resources nobody has committed |
+| **Evaluation & process** | scoring split, page limits, format rules, submission mechanics | whether page limits count appendices, whether CVs sit inside the section budget |
+
+**Then run the multi-role lens over the question set** — `panel-discuss` if the Panel Framework
+is installed (the legal, commercial, architecture and delivery roles each find ambiguities the
+others read straight past), otherwise a manual pass through those four angles. This is the same
+lens as Step 4 and for the same reason: a single reader's blind spots become the questions
+nobody asked.
+
+**Then the human reviews and sends.** The agent drafts the full question set with a recommended
+wording and a stated consequence per question; the human decides what actually goes to the
+buyer — some questions reveal more about our position than the answer is worth, and that call
+is not the agent's.
+
+Each question is logged in `clarification_log.md` with: the dimension, the clause it attaches
+to, why it matters (what changes in our response depending on the answer), and — if unanswered —
+the **settled reading** we will proceed on plus its consequence. Buyer answers are circulated to
+all bidders and become part of the tender documents: they re-enter through the source loop and
+move matrix rows like any other arrival.
 
 ## Step 7 — materials-needed list (research vs upload)
 

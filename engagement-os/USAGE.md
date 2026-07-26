@@ -228,7 +228,9 @@ or drop the claim.
 | `/eng-validate-findings` | the precedence + `[⚠VERIFY]` sweep |
 | `/eng-build-deliverable` | assemble from validated findings |
 | `/eng-maintain-memory` | re-index CLAUDE.md / DELIVERABLES / project-context |
+| `/eng-index-assets` | index what the firm holds — what each asset PROVES, dated, in-window |
 | `/eng-rfp-analyze` · `/eng-bid-research` · `/eng-bid-respond` | the three bid stages individually |
+| `/eng-check` | run every mechanical gate that applies and report what is blocking |
 
 Default to the chain commands. A stage run in isolation skips the gates — that's how a
 deliverable ends up built on unvalidated findings.
@@ -244,6 +246,7 @@ deliverable ends up built on unvalidated findings.
 | Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | approve the findings backbone |
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
+| Is it ready | `/eng-check` — any time, not just before shipping | decide what to do about each finding |
 | Ship the file | `/eng-render <dir>` — standalone, any directory | decide document vs deck, and clear the gates |
 | Fix an issued deck | `/eng-render` → splice the redrawn slides, `verify_deck.py` | say which slides are wrong; the rest do not move |
 

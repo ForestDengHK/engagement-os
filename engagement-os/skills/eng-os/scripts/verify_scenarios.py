@@ -48,6 +48,7 @@ SCENARIOS = {
     "4 bid then deliver": ("full", ["eng-new", "eng-rfp", "eng-source", "eng-workshop", "eng-sprint"], []),
     "5 upgrade (pursuit +delivery)": ("pursuit->pursuit,delivery", ["eng-upgrade"], []),
     "6 render (standalone)": ("pursuit", ["eng-render"], []),
+    "8 check (standalone)": ("pursuit", ["eng-check"], []),
     "7 pursuit mini-comp (variant)": ("pursuit|mini-comp", ["eng-rfp"], [
         ("01_pursuit/27-010/2_analysis/rfp_analysis.md", "mini-comp"),
     ]),
@@ -146,9 +147,10 @@ def main():
     tested = {int(k.split()[0]) for k in SCENARIOS}
     if documented is not None:
         # every numbered scenario in USAGE.md is tested; the only tested scenarios
-        # allowed beyond the numbered list are the standalone stages (render, variant)
+        # allowed beyond the numbered list are the standalone stages
+        # (6 render · 7 mini-comp variant · 8 check)
         missing = documented - tested
-        extra = tested - documented - {6, 7}
+        extra = tested - documented - {6, 7, 8}
         if missing or extra:
             fails.append("SCENARIOS↔USAGE.md")
             print(f"✗ scenario mirror: documented-not-tested={sorted(missing)} "

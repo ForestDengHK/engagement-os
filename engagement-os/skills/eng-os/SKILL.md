@@ -65,14 +65,18 @@ Before delivery there's the bid. Same document-and-provenance discipline, aimed 
 winning tender. Runs in `01_pursuit/<ENG-ID>/`, sourced from `_sources/pre_award/` + `_sources/public/`.
 
 ```
-ingest RFP ─► analyse ─► research gaps ─► write response ─► panel red-team gate ─► submit
+ingest RFP ─► index assets ─► analyse ─► research gaps ─► write response ─► R1 panel red-team
+                                  │                             │            ─► R2 human ─► check ─► submit
+                                  └── clarifications (dimension sweep → panel lens → human sends)
 ```
 
 | Stage | Skill | What it does |
 |---|---|---|
-| **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, materials-needed list, go/no-go. |
+| **Index assets** | `eng-index-assets` | Turn our own reusable material into something a bid can cite: what each asset **proves**, dated, in-window against this tender's recency rule, with its permission constraints — plus the gaps we cannot evidence. Decides which matrix rows are genuinely `gap`. |
+| **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, clarification sweep by dimension, materials-needed list, go/no-go. |
 | **Research** | `eng-bid-research` | Close the analysis gaps with comprehensive, cited, zero-fabrication research (external `[T3:OWN]` + firm-held uploads). |
-| **Respond** | `eng-bid-respond` | Assemble the response from the matrix, matching the RFP's mandated format; compliance-first, proof-backed win-themes, every claim traceable; red-team before submit. |
+| **Respond** | `eng-bid-respond` | Assemble the response from the matrix, matching the RFP's mandated format; compliance-first, proof-backed win-themes, every claim traceable. One markdown file per section, each carrying its own review status through **two rounds** — R1 panel red-team (does it score?), R2 experienced human. |
+| **Check** | `eng-check` | Run every mechanical gate that applies and report what is blocking, grouped by what the user must do. Runs throughout, not only before submission — nobody should type a script path to reach a gate. |
 
 (RFP intake reuses `eng-ingest-source`; the RFP is the pursuit-side source of record — tag facts `[RFP §x]`.)
 
@@ -102,6 +106,7 @@ Keep these one level away; read the specific file when the stage needs it.
 - **RFP decomposition — compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
 - **Bid research — depth+breadth, source discipline, zero-fabrication, the [⚠VERIFY] gate** → [references/bid-research.md](references/bid-research.md)
 - **Bid response — requirement-driven assembly, format-match, traceability, red-team gate** → [references/bid-response.md](references/bid-response.md)
+- **Clarification questions — derived by dimension sweep, panel lens, human sends** → [references/rfp-analysis.md](references/rfp-analysis.md) §Step 6b
 
 ## Templates and scripts
 

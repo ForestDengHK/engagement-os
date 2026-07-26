@@ -196,6 +196,18 @@ VARIANT_NOTES = {
 }
 
 
+def slug_id(name):
+    """A folder-safe id for a tender that carries no reference number.
+
+    Plenty of tenders don't: direct awards, framework call-offs, invited bids. Requiring an
+    id meant inventing one anyway, so derive a readable one and say so — a bad id the user
+    can see beats a made-up number that looks official.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    words = slug.split("-")[:4]
+    return "-".join(words) or "untitled"
+
+
 def parse_mode(raw):
     """'full' / comma-list of blocks → the set of blocks to build."""
     tokens = [t.strip().lower() for t in raw.split(",") if t.strip()]
@@ -262,7 +274,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", required=True, help="destination directory for the engagement repo")
     ap.add_argument("--client", required=True, help="client short-code, e.g. ACME")
-    ap.add_argument("--eng-id", required=True, help="engagement/tender id, e.g. 27-010")
+    ap.add_argument("--eng-id", help="engagement/tender id, e.g. 27-010. Many tenders carry no "
+                    "reference number — omit it and one is derived from --name, printed so it "
+                    "can be corrected before any work lands")
     ap.add_argument("--name", required=True, help="engagement name")
     ap.add_argument(
         "--mode",
@@ -282,10 +296,16 @@ def main():
     except ValueError as e:
         ap.error(str(e))
 
+    eng_id = args.eng_id or slug_id(args.name)
+    if not args.eng_id:
+        print(f"  no --eng-id given; using '{eng_id}' (derived from the name).\n"
+              f"  Rename 01_pursuit/{eng_id}/ now if the buyer issues a reference later — "
+              f"it is only a folder name, but it is cited everywhere once work lands.\n")
+
     ctx = {
         "CLIENT": args.client,
         "CLIENT_LOWER": args.client.lower(),
-        "ENG_ID": args.eng_id,
+        "ENG_ID": eng_id,
         "ENGAGEMENT_NAME": args.name,
         "DATE": _dt.date.today().isoformat(),
         "PHASE": args.phase,
