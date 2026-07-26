@@ -406,9 +406,6 @@ DISPATCH = {
 }
 
 
-ASSET_KINDS = ("approaches", "case_studies", "cvs", "credentials", "diagrams", "finance")
-
-
 def scan(root):
     """What showed up in the tree that hasn't been dealt with yet.
 
