@@ -48,8 +48,15 @@ A bid with one wrong or unsourced claim loses trust — and the tender. So:
 Read the whole RFP (and every appendix/schedule) via the ingested markdown. Extract **every**
 obligation, not just the obvious ones — scope items, mandatory qualifications, submission
 mechanics, format rules, deadlines, evaluation weights, contract terms. Give each a stable
-**Req ID** and cite the exact clause (`§`, page, appendix). Mandatory ("must/shall") vs
+**Req ID** and cite the exact clause. Mandatory ("must/shall") vs
 desirable ("should/may") is a required flag — mandatories are pass/fail gates.
+
+**Citation order: the document's own numbering first.** If the RFP numbers its clauses
+(`§2.1(f)`, `§5.1.3`, Appendix 5 clause 16), cite those — they are stable, checkable by the
+buyer, and survive re-pagination. The converted markdown's `## Page N:` anchors are the
+fallback for documents with no native numbering, not the default: pandoc-style headings are
+not guaranteed stable across converters, and "page 12" rots the moment the buyer issues an
+amended PDF.
 
 ## Step 2 — the compliance / response matrix
 

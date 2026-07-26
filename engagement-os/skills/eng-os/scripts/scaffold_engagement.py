@@ -75,6 +75,11 @@ PURSUIT_DIRS = [
     "01_pursuit/_shared/credentials",
     "01_pursuit/_shared/diagrams",
     "01_pursuit/_shared/finance",
+    # Found on the real GNI pursuit: signed SoWs cited as delivery evidence are not case
+    # studies (they're confidential contracts), and the bid-specific org chart is not a
+    # credential — without these two, exactly those assets landed at the _shared/ root.
+    "01_pursuit/_shared/contracts_ref",
+    "01_pursuit/_shared/team_structure",
     "01_pursuit/_shared/_md",
     # The tender pack is not a _sources bucket (it's the contractual artefact of one tender),
     # but it gets the same anchored-markdown treatment so requirements cite by clause/page.
