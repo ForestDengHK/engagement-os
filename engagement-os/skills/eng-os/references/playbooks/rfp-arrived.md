@@ -62,7 +62,16 @@ alone; don't wait for the rest of the material to arrive.
    `bid_reuse_analysis.md`: per section, FULL REUSABLE / PARTIAL / REQUIRES UPDATE / NEW, with a
    field-level diff of the old clause against the new one. Skip only when there genuinely is no
    prior bid — say so rather than assuming.
-5. **Raise clarifications before the query deadline** → `clarification_log.md`. The query
+5. **Index what we hold** → `eng-index-assets` → `01_pursuit/_shared/firm_assets.md`. What each
+   asset **proves** (the claim an evaluator scores, not the title), its date, whether it is
+   **in-window** against this tender's recency rule, and its permission constraints. This is
+   what makes the gap list real: a requirement covered by an indexed, in-window asset is a
+   **citation, not a gap**. Undated is unusable — recency rules are pass/fail.
+6. **Raise clarifications before the query deadline** → `eng-rfp-analyze` step 6b →
+   `clarification_log.md`. Questions are **derived by a dimension sweep** (scope · solution ·
+   evidence/qualification · commercial · delivery · evaluation-process), then run through the
+   multi-role lens (`panel-discuss` if installed), then **the human decides what actually
+   goes** — some questions reveal more about our position than the answer is worth. The query
    deadline is **earlier than the submission deadline** and it is hard: afterwards an ambiguity
    can only be handled by stating an assumption, which scores worse than an answer. Buyer
    answers are circulated to all bidders and become part of the tender documents — they
@@ -96,10 +105,9 @@ a case study, a CV, an answer to a question you raised.
    much as a delivery does**: each bucket's `00_REFERENCE_SUMMARY.md` (facts, cited) and
    `01_REFERENCE_INSIGHTS.md` (what it means for us) are where a fact lands once instead of
    being re-read out of the source every time a section needs it.
-   *Our own* assets don't go through the buckets — they get a row in
-   `01_pursuit/_shared/firm_assets.md` recording what the asset **proves** (the claim an
-   evaluator would score, not the title), its date, and whether it is **in-window** against this
-   tender's recency rule. An asset nobody indexed is one nobody finds under deadline.
+   *Our own* assets don't go through the buckets — they go to `eng-index-assets`, which gives
+   each one a row in `01_pursuit/_shared/firm_assets.md`. An asset nobody indexed is one nobody
+   finds under deadline, and one `eng_lint.py` will fail the moment a section cites it.
 
 3. **Move the spine.** Which matrix rows does this arrival close, weaken, or newly expose? A
    requirement covered by an indexed, in-window asset is a **citation, not a gap** — this is why
@@ -129,10 +137,17 @@ reviewed-r2 → approved`, branching to `revise-r1` / `blocked-r1` with a `block
 The fields and vocabulary are defined once in `references/section-contract.md`; the template
 plants them, `eng_lint.py` enforces them, `eng-render` gates and strips by them.
 
+**Two rounds, not one gate** — the status vocabulary carries the round for a reason:
+
+- **R1 — panel red-team** (`panel-review` if installed, else a manual evaluator / legal /
+  finance / architect pass): *does this score?* Against the scoring note in the frontmatter,
+  not against taste.
+- **R2 — experienced human**: what only experience sees — the claim that will draw a question
+  we cannot answer, the tone that reads wrong to this buyer, the omission a scorer will punish.
+
 This is where the review effort goes, and it goes there **continuously** — a section reaching
-`reviewed-r2` early is finished early, and stops consuming attention. Red-team the set with
-`panel-review` (or a manual evaluator / legal / finance / architect pass) rather than reading a
-finished document for the first time the night before submission.
+`reviewed-r2` early is finished early and stops consuming attention. The alternative is reading
+a finished document for the first time the night before submission.
 
 ---
 
@@ -140,7 +155,8 @@ finished document for the first time the night before submission.
 
 The output format is the *last* step, not a thing you build toward incrementally.
 
-1. **Lint** — `python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/eng_lint.py <repo-root> --strict`.
+1. **Check** → `eng-check` (`--strict` before a freeze). It runs the gates and reports what is
+   blocking; nobody types a script path to reach them.
 2. **Freeze** to `4_final/`; record the submitted version + date.
 3. **Render** → `eng-render --profile bid`, which refuses to build unless every section is
    `reviewed-r2`/`approved` and no `[⚠VERIFY]` survives in body text, then strips the internal
@@ -152,6 +168,7 @@ The output format is the *last* step, not a thing you build toward incrementally
 - **STOP and surface to the human** if research cannot source a claim a win-theme depends on
   (`[⚠VERIFY]` on a load-bearing claim) — that is a go/no-go re-check, not a wording fix.
 - **STOP before submission** if any mandatory requirement is not `met` or any format rule is
-  breached — format non-compliance is a common auto-reject. The lint decides the mandatory-row
-  check, the `[⚠VERIFY]`-in-a-frozen-response check, and the bucket-leak check without a human
-  re-reading the whole response.
+  breached — format non-compliance is a common auto-reject. `eng-check` decides the
+  mandatory-row check, the `[⚠VERIFY]`-in-a-frozen-response check, and the bucket-leak check
+  without a human re-reading the whole response. Run it throughout, not only here: a bucket
+  leak found on the day it happens is a one-line fix.
