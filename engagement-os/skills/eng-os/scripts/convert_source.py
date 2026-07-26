@@ -442,14 +442,20 @@ def scan(root):
     for shared in root.glob("01_pursuit/_shared"):
         index_file = shared / "firm_assets.md"
         indexed = index_file.read_text(encoding="utf-8", errors="replace") if index_file.exists() else ""
-        for kind in ASSET_KINDS:
-            kind_dir = shared / kind
-            if not kind_dir.is_dir():
+        # Walk ALL of _shared/, not a whitelist of kinds. The scaffold plants six, and the
+        # folder's own README tells the user to add a new one rather than force a bad fit —
+        # so a whitelist makes exactly the assets someone thought about hardest invisible.
+        for asset in sorted(shared.rglob("*")):
+            if not asset.is_file() or asset.name.startswith("."):
                 continue
-            for asset in sorted(kind_dir.rglob("*")):
-                # any file type — a rate card or a CV is an asset whether or not we can convert it
-                if asset.is_file() and not asset.name.startswith(".") and asset.name not in indexed:
-                    to_index.append((str(kind_dir.relative_to(root)), asset))
+            if asset.parent.name == "_md" or (shared / "_md") in asset.parents:
+                continue                          # conversions, not assets
+            if asset.name in ("README.md", "firm_assets.md"):
+                continue
+            # any file type — a rate card or a CV is an asset whether or not we can convert it
+            if asset.name not in indexed:
+                where = asset.parent.relative_to(root)
+                to_index.append((str(where), asset))
     return to_ingest, to_index
 
 
