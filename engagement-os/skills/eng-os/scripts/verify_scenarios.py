@@ -135,6 +135,45 @@ def check_doc_links():
     return broken
 
 
+# ── external skill references ─────────────────────────────────────────────────
+# The pack deliberately delegates to skills it does not own — `xlsx`, `docx`, `pptx`, `pdf`,
+# `presentation-builder`, `designing-figures`, the panel roles. A reference to one that has been
+# renamed or uninstalled is worse than no reference: the instruction reads as authoritative and
+# silently sends the agent nowhere, and the usual repair is to reimplement the thing locally,
+# which is exactly what delegating was meant to avoid.
+EXTERNAL_RE = re.compile(
+    r"`(xlsx|docx|pptx|pdf|presentation-builder|designing-figures|panel-[a-z-]+)`")
+
+
+def external_skill_roots():
+    home = pathlib.Path.home()
+    return (list(home.glob(".claude/plugins/marketplaces/*/skills"))
+            + list(home.glob(".claude/plugins/*/*/skills"))
+            + list(home.glob(".claude/plugins/marketplaces/*/plugins/*/skills"))
+            + list(home.glob(".claude/skills")))
+
+
+def check_external_skills():
+    roots = external_skill_roots()
+    referenced = {}
+    for f in list(ROOT.glob("skills/**/*.md")) + list(ROOT.glob("commands/*.md")):
+        for name in EXTERNAL_RE.findall(f.read_text(encoding="utf-8", errors="replace")):
+            referenced.setdefault(name, set()).add(str(f.relative_to(ROOT)))
+    if not referenced:
+        return True
+    missing = {}
+    for name in sorted(referenced):
+        if not any((r / name / "SKILL.md").exists() for r in roots):
+            missing[name] = referenced[name]
+    print(f"\n  external skills referenced: {len(referenced)}"
+          f" ({', '.join(sorted(referenced))})")
+    for name, where in missing.items():
+        print(f"  \u2717 `{name}` referenced by {sorted(where)[0]} but no SKILL.md found")
+    if not missing:
+        print("  \u2713 every externally-referenced skill resolves")
+    return not missing
+
+
 def main():
     keep = "--keep" in sys.argv
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="engos-e2e-"))
@@ -234,6 +273,9 @@ def main():
             print(f"\n(trees kept at {tmp})")
         else:
             shutil.rmtree(tmp, ignore_errors=True)
+
+    if not check_external_skills():
+        fails.append("external-skill-refs")
 
     print("\n" + ("✓ ALL SCENARIOS RUNNABLE" if not fails else f"✗ {len(fails)} FAILURE(S): {fails}"))
     return 0 if not fails else 1

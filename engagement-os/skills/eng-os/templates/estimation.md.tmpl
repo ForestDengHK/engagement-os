@@ -1,0 +1,261 @@
+# Estimation — {{CLIENT}} {{ENG_ID}}
+
+> Bottom-up effort → range → cost. Every effort line traces to an S-ID in `rfp_analysis.md` §3;
+> every rate traces to the rate card or is `[⚠VERIFY]`. Nothing invented.
+> **This is decision support for the pricing call, not a price.** Method: `estimation.md`.
+> **The live model is `estimation.xlsx`** — same numbers, as formulas. Build/rebuild it with
+> `build_estimate_workbook.py estimation.md`; edit inputs there and everything recalculates.
+> Tables marked `<!--table:...-->` are machine-read — keep their column order.
+
+**Scope baseline:** `rfp_analysis.md` §3 as of <date> · **Estimated:** {{DATE}} · **Owner:** <name>
+**Pricing mechanism:** <fixed lump sum / T&M / capped T&M / rate card> `[RFP §x]`
+**Term:** <n months, dates; working days after public holidays> `[RFP §x]`
+**Payment profile:** <milestones> `[RFP §x]`
+**Estimate stage (cone of uncertainty):** <pre-award, from tender prose / post-discovery / definitive> — <the honest accuracy band at this stage>
+
+## 1. Basis of estimate
+
+**Volumetric baseline** *(from `rfp_analysis.md` §3 — the counts this model multiplies by)*
+
+| Driver | Count | Source | Confidence |
+|---|---|---|---|
+| | | `[RFP §x]` | cited / `[⚠VERIFY]` |
+
+**Load-bearing assumptions** *(each changes a number if wrong. These are the **scope-variance**
+drivers quantified in §5b — and every one must also appear in the response's methodology section:
+an assumption that lives only here defends nothing.)*
+
+| # | Assumption | What it's holding up | If wrong |
+|---|---|---|---|
+| A1 | | S-0x effort | +<n> days |
+
+**Exclusions** *(what the price does not buy — on a fixed price this is the whole defence)*
+- <exclusion, and where it is stated in the response>
+
+**Constraints** *(term, mandated milestones, named-personnel lock-in, clearance, blackout periods)*
+- <constraint> `[RFP §x]`
+
+## 2. Techniques, and whether they are actually independent
+
+<!-- Independence is a property of the PROCESS. Write the second estimate down BEFORE looking at
+     the bottom-up total, and draw it from a different data source. -->
+
+| Technique | Result | Estimated before or after seeing the bottom-up? | Data source |
+|---|---|---|---|
+| Bottom-up (WBS) | <n> days | — (primary) | `rfp_analysis.md` §3 |
+| <parametric / analogous / three-point> | <n> days | **before / after** | <delivered engagements / prior effort record / this model ⚠> |
+
+**Reconciliation:** <the gap in %, which estimate we take, and **why the other one is wrong** —
+"parametric is lower because it has no line for X" is a reconciliation; "we take the bottom-up"
+is a preference.>
+
+**Analogous check — is it circular?** <If the baseline is a prior *price*, redo the conversion at
+2–3 plausible EXTERNAL rates. If the verdict flips between "reconciles" and "does not", the check
+has no discriminating power and must be reported inconclusive, not as a pass.>
+
+| Conversion rate used | Prior implied days | Ratio to ours | Verdict |
+|---|---|---|---|
+| <our own model's rate ⚠ circular> | | | |
+| <external rate A> | | | |
+| <external rate B> | | | |
+
+## 2b. Outside view (reference class)
+
+<!-- Every technique in §2 is an INSIDE view and inherits this engagement's optimism. -->
+
+**Reference class:** <engagements of this shape> · **Band:** <n>–<n> days
+**Source:** <the firm's own delivered engagements, by recorded days — or, if that dataset does not
+exist, say so plainly: this band is judgement, not a benchmark>
+
+**Our P50 vs the band:** <inside / above / below by n days>. <If outside: find the MECHANISM, do
+not edit the number. Either a real scope-specific cause, or padding/double-counting (§3b).>
+
+## 3. Effort model
+
+### 3a. By scope item
+<!-- Every S-ID gets a row. An S-ID missing here is work we've agreed to do for free.
+     Days shown are AFTER the §3b overlap audit. -->
+
+<!--table:effort-->
+| S-ID | Activity | Driver × factor | O | M | P | Expected days | Lead role |
+|---|---|---|---|---|---|---|---|
+| S-01 | | <n units × n days> | | | | | |
+| | | | | | **Total** | **<n>** | |
+
+**Completeness sweep** — the activities no clause mentions but every engagement pays for:
+mobilisation ☐ · governance / steering ☐ · QA ☐ · document production ☐ · client review cycles
+and the rework they cause ☐. Left out, they come out of margin.
+
+## 3b. Overlap audit
+<!-- THE step that decides whether the number is inflated, and the one everybody skips.
+     A decomposition is built for COMPLETENESS; nothing in it stops two S-IDs describing the same
+     work from two angles. Omission gets caught by the client — duplication just gets paid for. -->
+
+<!--table:overlap-->
+| Item | Original | Revised | Pattern | Why it re-uses another item's fieldwork |
+|---|---|---|---|---|
+| S-0x | <n> | <n> | re-framing / synthesis-as-fieldwork / downstream inheritance / thread-as-workstream | |
+| | | **Deduction** | **−<n> d** | naive total <n> → **<n>** |
+
+**Examined and kept** *(an audit that only ever cuts is a discount, not an audit)*
+- <item> — genuinely separate fieldwork because <reason>
+
+## 3c. By phase
+<!-- Computed from the AUDITED numbers, not the naive ones. -->
+
+| Phase | Weeks | Days | % of total | Key output |
+|---|---|---|---|---|
+| | | | | |
+
+## 3d. By grade
+
+Rates come from the **rate card** — one table, one place. The workbook's `Grades` sheet looks
+them up, so replacing a placeholder card with the firm's real one re-costs the whole model without
+touching another cell. Keep the grade names identical on both sides.
+
+<!--table:ratecard-->
+| Grade | Cost rate/day € | Sell rate/day € | Effective date | Source / status |
+|---|---|---|---|---|
+| <grade> | <n or 0> | <n, if a rate schedule must be submitted> | <date> | `A-nnn` rate card / **PLACEHOLDER** |
+
+<!--table:grades-->
+| Grade | Cost rate/day | Days | Cost | Source of rate |
+|---|---|---|---|---|
+| <partner / director / manager / consultant / analyst> | € | | € | `A-nnn` rate card / `[⚠VERIFY]` |
+| **Blended** | **€** | **<n>** | **€** | |
+
+**Grade pyramid:** <split> — <deliverable AND affordable AND scoreable against a Personnel
+criterion? An all-senior model prices itself out; a junior-heavy one fails the CV section it is
+being marked on, and cannot be quietly rebalanced later under a named-personnel clause.>
+
+## 4. Client-side effort
+<!-- Their hours, by group. Required outright by some RFPs; on a fixed price it is the biggest
+     hidden dependency either way. Quantifying the ask IS the scope protection. -->
+
+<!--table:client-->
+| Their role / group | Activity | People | Sessions | Hours each | Total hours | When |
+|---|---|---|---|---|---|---|
+| | | <n> | <n> | <n> | =P×S×H | week n–n |
+| | | | | | **<n> hrs** | |
+
+**Dependency statement** *(the sentence that goes into the response — what slips if these hours
+don't arrive)*
+
+## 5. The range
+
+### 5a. Execution variance — how long the work takes, given the scope as defined
+
+**Correlation assumption: <independent / partially correlated ρ≈0.5 / fully correlated>** —
+<why. Textbook PERT sums variances in quadrature, which assumes independence; on a decomposed
+consulting scope the items share the same assumptions and the same team, so when one is wrong
+several are wrong together. If σ comes out implausibly tight, this assumption is the bug.>
+
+| | Days |
+|---|---|
+| ΣO (everything goes right) | |
+| ΣM (most likely) | |
+| ΣP (everything goes wrong) | |
+| **P50** — the planning number | **<n>** |
+| **P80** — the commitment number | **<n>** |
+| P80 − P50 → contingency (§7) | <n> d |
+
+### 5b. Scope variance — whether this is the work at all
+
+<!--table:scope-->
+| Assumption | If wrong | Days |
+|---|---|---|
+| A<n> | | +<n> |
+| | **Upside exposure** | **+<n> d** |
+
+**The two bands are different quantities and are managed with different instruments:** execution
+variance → contingency days, carried in the price. Scope variance → assumptions and exclusions,
+carried in the contract's words. <State which is larger here, and by how much — on a bounded
+scope the scope band is routinely several times the execution band, and that is the single most
+decision-useful thing this estimate produces.>
+
+## 6. Calibration & sanity checks
+
+| Check | Result | Verdict |
+|---|---|---|
+| Overlap audit (§3b) | −<n> d | reviewer's first question — answered |
+| Outside view (§2b) | P50 <n> vs band <n>–<n> | inside / outside + the mechanism |
+| Implied FTE (P50 ÷ working days in term) | <n> FTE | staffable with the named team? |
+| Phase shape | <split> | plausible, or is the unplanned work hiding in "synthesis"? |
+| Grade pyramid | <split> | deliverable · affordable · scores on Personnel? |
+| Days per deliverable | <n>/D<n> | credible for a board-ready output? |
+| Reconciliation gap (§2) | <n>% | and is the second technique genuinely independent? |
+
+## 7. Contingency and excluded exposure
+
+**Contingency = P80 − P50 = <n> days = €<n>.** Derived from the distribution, not hand-picked —
+adding up chosen risk lines double-counts what the three-point spread already captured.
+
+**Certain-but-not-effort cost lines** *(not contingency — these are owed, not uncertain)*
+
+<!--table:certain-->
+| Line | € | Basis |
+|---|---|---|
+| Financing (back-loaded payment: we fund the engagement) | | <cost base × rate × duration + payment lag> |
+| | | |
+
+**Excluded exposure** *(scope variance from §5b — carried by assumptions, not by days)*
+
+| Risk (→ analysis §7) | Exposure | Disposition |
+|---|---|---|
+| | <n d / €> | excluded by assumption A<n> / consciously accepted |
+| | **Total excluded** | **€<n>** |
+
+<That total is what the partner accepts when signing a fixed price. It should never be discovered
+after signature.>
+
+## 8. Cost base
+
+| Line | at P50 € | at P80 € | Note |
+|---|---|---|---|
+| Labour (§3d) | | | `[⚠VERIFY]` rates? |
+| Non-labour (travel, licences, third parties, production) | | | |
+| Financing / certain cost (§7) | | | |
+| **Cost base** | | | |
+
+**Cash-flow mechanics** *(these move cash, not margin — do not conflate them)*
+- <withholding tax: timing effect, creditable, do NOT gross the price up for it>
+- <payment profile, validity period, extension rate card>
+
+**Margin is not set here.** It is the pricing decision — see §9.
+
+## 9. Price vs marks — the decision table
+<!-- Only where the buyer publishes the formula. Cap the ratio at 1: below the lowest bid you
+     score full marks, not more than full marks. -->
+
+**Formula:** <e.g. marks = lowest ÷ ours × max, capped> `[RFP §x]`
+**Assumed competitor range:** <€–€> — *an assumption, stated as one*
+
+| Candidate price | Marks if lowest = €<a> | Marks if lowest = €<b> | Margin | Quality marks needed to offset |
+|---|---|---|---|---|
+| | | | | |
+
+**What only this model can tell you:**
+- Below €<n> we are **under cost base**. <This is a go/no-go input, not a rounding exercise.>
+- Each €<n>k of margin costs **<n> marks** at the assumed lowest bid.
+- <any other non-obvious arithmetic>
+
+**The pricing decision is the partner's.** This section deliberately stops at the tradeoff — it
+does not nominate a bid price. Record the decision, once taken, in `_pm/raid_and_decisions.md`.
+
+## 10. Into the buyer's pricing document
+
+| Their cell / field | Number | Notes |
+|---|---|---|
+| <sheet + cell> `[RFP App n]` | € <once decided> | |
+
+**Format rules to obey:** <e.g. lump sum only, no breakdown; ex-VAT; EUR> `[RFP §x]`
+**Restated where else:** <form of tender, cover letter> — arithmetic checked against each ☐
+
+## 11. Re-baseline triggers
+
+Rebuild the estimate — do not adjust it — if:
+- <a clarification answer that widens or bounds scope; name the assumption it kills>
+- <a volumetric turns out wrong>
+- <a deliverable or milestone appears in an addendum>
+- <the named team changes>
+- <the rate card lands, if §3d is running on `[⚠VERIFY]` placeholders>

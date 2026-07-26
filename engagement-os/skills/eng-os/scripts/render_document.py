@@ -275,6 +275,24 @@ def reference_docx(font: str, size: str, paper: str, workdir: str) -> str:
 
 # ---------------------------------------------------------------- main
 
+def _soffice_wrapper():
+    """The office skills' soffice wrapper, if installed.
+
+    Bare `soffice` hangs in sandboxed environments — the `pptx` / `xlsx` skills ship
+    `scripts/office/soffice.py` for exactly that reason. Prefer theirs; fall back to bare
+    `soffice` only when it is not on this machine, rather than reimplementing the workaround.
+    """
+    import pathlib as _pl
+    env = os.environ.get("OFFICE_SKILL_DIR")
+    roots = [_pl.Path(env)] if env else []
+    roots += list(_pl.Path.home().glob(".claude/plugins/marketplaces/*/skills/*/scripts/office"))
+    for r in roots:
+        c = r / "soffice.py"
+        if c.exists():
+            return c
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -399,9 +417,11 @@ def main() -> int:
                         "--reference-doc", ref], check=True)
     print(f"wrote {docx_path}")
 
-    if args.to in ("pdf", "both") and shutil.which("soffice"):
+    if args.to in ("pdf", "both") and (_soffice_wrapper() or shutil.which("soffice")):
         with tempfile.TemporaryDirectory() as td:
-            subprocess.run(["soffice", "--headless", "--convert-to", "pdf",
+            w = _soffice_wrapper()
+            cmd = [sys.executable, str(w)] if w else ["soffice"]
+            subprocess.run(cmd + ["--headless", "--convert-to", "pdf",
                             docx_path, "--outdir", td], check=True, stdout=subprocess.DEVNULL)
             pdf_path = os.path.join(out_dir, args.name + ".pdf")
             shutil.copy(os.path.join(td, args.name + ".pdf"), pdf_path)

@@ -66,14 +66,16 @@ winning tender. Runs in `01_pursuit/<ENG-ID>/`, sourced from `_sources/pre_award
 
 ```
 ingest RFP ─► index assets ─► analyse ─► research gaps ─► write response ─► R1 panel red-team
-                                  │                             │            ─► R2 human ─► check ─► submit
+                                  │  │                          │            ─► R2 human ─► check ─► submit
+                                  │  └── estimate (scope → effort → price)
                                   └── clarifications (dimension sweep → panel lens → human sends)
 ```
 
 | Stage | Skill | What it does |
 |---|---|---|
 | **Index assets** | `eng-index-assets` | Turn our own reusable material into something a bid can cite: what each asset **proves**, dated, in-window against this tender's recency rule, with its permission constraints — plus the gaps we cannot evidence. Decides which matrix rows are genuinely `gap`. |
-| **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, clarification sweep by dimension, materials-needed list, go/no-go. |
+| **Analyse** | `eng-rfp-analyze` | Decompose the RFP: requirement/compliance matrix, **scope decomposition + volumetric baseline**, our-understanding-and-solution read, evaluation-weight map, multi-role read, evidence-backed win-themes, risks/deal-breakers, clarification sweep by dimension, materials-needed list, go/no-go. |
+| **Estimate** | `eng-estimate` | Turn the scope decomposition into a bottom-up effort model with an overlap audit, a P50/P80 range kept separate from scope-variance scenarios, the client-side hours ask, and the price-vs-marks decision table. Ships a **formula-live workbook** alongside the narrative. Priced tenders only — and it needs §3 of the analysis to exist. |
 | **Research** | `eng-bid-research` | Close the analysis gaps with comprehensive, cited, zero-fabrication research (external `[T3:OWN]` + firm-held uploads). |
 | **Respond** | `eng-bid-respond` | Assemble the response from the matrix, matching the RFP's mandated format; compliance-first, proof-backed win-themes, every claim traceable. One markdown file per section, each carrying its own review status through **two rounds** — R1 panel red-team (does it score?), R2 experienced human. |
 | **Check** | `eng-check` | Run every mechanical gate that applies and report what is blocking, grouped by what the user must do. Runs throughout, not only before submission — nobody should type a script path to reach a gate. |
@@ -103,7 +105,8 @@ Keep these one level away; read the specific file when the stage needs it.
 - **Deck round trip — splice corrected slides back in, then verify the package** → [references/deck-assembly.md](references/deck-assembly.md)
 - **CLAUDE.md / project-context / DELIVERABLES / memory discipline (incl. AGENTS.md)** → [references/memory-discipline.md](references/memory-discipline.md)
 - **Guided elicitation — how to fill an artefact WITH the user instead of handing them a blank** → [references/guided-elicitation.md](references/guided-elicitation.md)
-- **RFP decomposition — compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
+- **RFP decomposition — compliance matrix, scope decomposition, understanding-and-solution, eval-weight map, multi-role read, win-themes, go/no-go** → [references/rfp-analysis.md](references/rfp-analysis.md)
+- **Estimation — scope → effort → cost → price, two techniques, client-side hours, price-vs-marks** → [references/estimation.md](references/estimation.md)
 - **Bid research — depth+breadth, source discipline, zero-fabrication, the [⚠VERIFY] gate** → [references/bid-research.md](references/bid-research.md)
 - **Bid response — requirement-driven assembly, format-match, traceability, red-team gate** → [references/bid-response.md](references/bid-response.md)
 - **Clarification questions — derived by dimension sweep, panel lens, human sends** → [references/rfp-analysis.md](references/rfp-analysis.md) §Step 6b
@@ -112,11 +115,19 @@ Keep these one level away; read the specific file when the stage needs it.
 
 - **Templates** (`templates/`) are the fill-in-the-blank artefacts `eng-scaffold` plants, by block:
   - *core* — `CLAUDE.md.tmpl` (mode-aware: `<!--IF:block-->` fences), `project-context.md.tmpl`, `sources-README.md.tmpl`, the per-bucket source trio (`SOURCES_GO_HERE` + `reference-pack-README` + `REFERENCE_SUMMARY` + `REFERENCE_INSIGHTS`, planted once per bucket), `engagement_log.md.tmpl`, `raid_and_decisions.md.tmpl`, `source_precedence_register.md.tmpl`, `MEMORY.md.tmpl`.
-  - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`, `clarification_log.md.tmpl` (the query deadline lands before the submission deadline, so this one is needed from day 1). On demand: `bid_reuse_analysis.md.tmpl` (only when a prior bid exists — but **check whether one does before drafting**), `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
+  - *pursuit* — `rfp_analysis.md.tmpl`, `compliance_matrix.md.tmpl`, `clarification_log.md.tmpl` (the query deadline lands before the submission deadline, so this one is needed from day 1). On demand — **created because the condition held, never because the list names it**: `estimation.md.tmpl` (the tender is priced), `bid_reuse_analysis.md.tmpl` (a prior bid exists — **check whether one does before drafting, and record the negative when it doesn't**), `bid_research_log.md.tmpl`, `bid_response_outline.md.tmpl`.
   - *delivery* — `DELIVERABLES.md.tmpl`, `FINDING_STANDARD.md.tmpl`, `findings-README.md.tmpl`, `finding.md.tmpl`, `discovery_questions.md.tmpl`.
-- **Scripts** (`scripts/`):
+- **Scripts** (`scripts/`). **Reuse before building.** Where a capability already has a skill —
+  `xlsx`, `docx`, `pptx`, `pdf` — these scripts *call* it rather than reimplement it, and own only
+  the packaging the pack's discipline needs and no general tool provides: provenance headers,
+  citable anchors, the estimation formula graph, the deliverable gates. Extraction goes through
+  `pandoc` / `markitdown`; spreadsheet recalculation and model conventions come from the `xlsx`
+  skill; OOXML schema validation is the `pptx` skill's `office/validate.py`; `soffice` is invoked
+  through the office skills' wrapper, because bare `soffice` hangs in sandboxes. A script here
+  that starts re-teaching one of those skills is a bug.
   - `scaffold_engagement.py` — deterministic: assemble the tree from the selected blocks (`--mode`) and plant templates with placeholder substitution. Idempotent and additive.
   - `convert_source.py` — deterministic: pdf/pptx/docx/xlsx/image → markdown with `## Page N:` / `## Slide N:` / `## Sheet:` / `## Section N:` anchors + image extraction for triage. `--scan <root>` answers "what arrived that I haven't ingested?" by diffing source files against their `_md/` outputs — so nobody types a path for a file already in the tree.
+  - `build_estimate_workbook.py` — turns `estimation.md` into a **formula-live** `.xlsx`: rate card → grade lookup → effort → P50/P80 → cost base → the price/marks decision table, every derived cell a real formula so a reviewer can move an input and watch it recalculate. Reads the tables marked `<!--table:KIND-->`; `--check` re-runs the arithmetic and reports drift without writing. Behind the **`eng-estimate`** skill.
   - `eng_lint.py` — **the mechanical gate**. The rule set is the registry (`RULES`); read it with `python3 eng_lint.py --list` rather than trusting any prose copy — including this one. Every rule has clean-tree + violated-tree fixtures in `tests/run_tests.py`; run that after editing a rule. Lint exists so nobody asks a reviewer to check what a script can decide.
   - `section_contract.py` — machine form of `references/section-contract.md`: the status vocabulary, frontmatter fields, and id syntax that lint and `render_document.py` both import. Change doc and module in the same commit.
   - `render_document.py` — the render engine behind the **`eng-render`** skill (sections → docx/pdf via a pandoc reference.docx, or a deck manifest for `presentation-builder`). It lives here because eng-lint and the scaffolder are its siblings; `eng-render` is the skill facade and declares the dependency.
