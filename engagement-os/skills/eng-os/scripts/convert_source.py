@@ -696,13 +696,23 @@ def scan(root):
         # The same mechanism lets the index mark editable companions and build helpers as
         # handled without pretending each one is a separate A-nnn evidence asset.
         indexed = set()
-        for token in re.findall(r"`([^`\n]+)`", index_text):
-            rel = token.strip().replace("\\", "/")
-            prefix = "01_pursuit/_shared/"
-            if rel.startswith(prefix):
-                rel = rel[len(prefix):]
-            if rel and not rel.startswith(("/", "../")) and "<" not in rel:
-                indexed.add(pathlib.PurePosixPath(rel).as_posix())
+        primaries = set()
+        for line in index_text.splitlines():
+            tokens = re.findall(r"`([^`\n]+)`", line)
+            # a row keyed by an A-nnn id is an Index row; its FIRST backticked path is the
+            # conversion target — anything after it is a companion (one logical asset = one
+            # conversion)
+            is_row = bool(re.match(r"\s*\|?\s*A-\d{3}\b", line))
+            for j, token in enumerate(tokens):
+                rel = token.strip().replace("\\", "/")
+                prefix = "01_pursuit/_shared/"
+                if rel.startswith(prefix):
+                    rel = rel[len(prefix):]
+                if rel and not rel.startswith(("/", "../")) and "<" not in rel:
+                    rel = pathlib.PurePosixPath(rel).as_posix()
+                    indexed.add(rel)
+                    if is_row and j == 0:
+                        primaries.add(rel)
         # Walk ALL of _shared/, not a whitelist of kinds. The scaffold plants six, and the
         # folder's own README tells the user to add a new one rather than force a bad fit —
         # so a whitelist makes exactly the assets someone thought about hardest invisible.
@@ -722,8 +732,12 @@ def scan(root):
                 where = asset.parent.relative_to(root)
                 to_index.append((str(where), asset))
             if asset.suffix.lower() in DISPATCH and asset.stem.lower() not in converted:
-                where = asset.parent.relative_to(root)
-                to_convert.append((str(where), asset))
+                # one logical asset = one conversion: the row's FIRST path (its primary) or a
+                # file nothing mentions (a new arrival). Companions and §1b helpers named
+                # elsewhere in the index need no md of their own.
+                if rel in primaries or rel not in indexed:
+                    where = asset.parent.relative_to(root)
+                    to_convert.append((str(where), asset))
     return to_ingest, to_index, to_convert
 
 

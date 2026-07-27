@@ -24,6 +24,11 @@ touches what already exists.
 
 ## Pointers to single-source-of-truth files
 
+**The md layer is the working text.** Every source, the tender pack, and every convertible
+firm asset has markdown under a `_md/` — read THAT for analysis and page-level citation, and
+never re-extract from the binaries. Originals are evidence (untouched), not working text.
+`convert_source.py --scan <root>` reports anything waiting for conversion or indexing.
+
 | Topic | Source-of-truth file | Use when |
 |---|---|---|
 | Canonical project facts (stack, stakeholders, scope, pre-decisions) | `.claude/project-context.md` | You need a fact about the engagement |
@@ -31,6 +36,8 @@ touches what already exists.
 | Unrestricted factual baseline (public / sector / regulatory) | `_sources/public/_md/00_REFERENCE_SUMMARY.md` | You need a fact citable **anywhere** |
 <!--IF:pursuit-->
 | Pre-award factual baseline (what the buyer published + market research) | `_sources/pre_award/_md/00_REFERENCE_SUMMARY.md` | You need what the **bid** is allowed to rely on |
+| The tender pack, converted and citable | `01_pursuit/{{ENG_ID}}/1_received/_md/` | Any requirement, clause or figure from the RFP — cite `[RFP §x]`, never re-parse the .docx |
+| Our assets: what each proves + the converted text | `01_pursuit/_shared/firm_assets.md` · `01_pursuit/_shared/_md/` | You need evidence for a requirement, or a fact/page out of a case study, CV or credential |
 | Requirement completeness spine | `01_pursuit/{{ENG_ID}}/2_analysis/compliance_matrix.md` | You need what the RFP demands / what's still a gap |
 | RFP analysis, win-themes, go/no-go | `01_pursuit/{{ENG_ID}}/2_analysis/rfp_analysis.md` | You need the bid's strategy and its evidence |
 <!--/IF:pursuit-->
