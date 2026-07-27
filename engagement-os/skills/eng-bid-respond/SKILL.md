@@ -82,7 +82,18 @@ Bid Response Progress:
         not a prose restatement of the form. On the pack's worked example the entire price
         response was two cells in the buyer's workbook (tenderer name, lump sum) and the first
         draft answered it with 565 words of prose instead. Lint warns while drafting and errors
-        once a package is frozen (`buyer-form-not-filled`)
+        once a package is frozen (`buyer-form-not-filled`), and it checks content, not just
+        presence: a working copy byte-identical to the original, unresolved `[TBD]` markers,
+        and cells still holding the buyer's bare currency placeholder all fire
+        (`buyer-form-unfilled-copy` / `buyer-form-tbd-open` / `buyer-form-placeholder-cell`).
+        **The cover note must never outrun the form.** "Filled" means every mandatory cell holds
+        an answer and the boxes are ticked; anything less is "structure carried, answers owed",
+        and the note must say which. On the worked example a transmittal claimed answers were
+        written while the form held 119 `[TBD]` markers and zero ticked boxes.
+        **One price, transcribed once, in one edit.** When the partner commits the number, the
+        same figure lands in the workbook's Decision, the buyer's pricing form, and any Form of
+        Tender — in a single edit, and the forms check above verifies no placeholder survives.
+        A price that lives in three places without a check will eventually disagree with itself.
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:
@@ -147,20 +158,24 @@ routes each kind to the skill that owns it rather than re-implementing it:
 | A workbook (pricing, questionnaire) | **their workbook, filled** in `3_drafting/forms/` | `xlsx` |
 | Their Word form (data sheet, declaration) | **their form, filled** in `3_drafting/forms/` | `docx` |
 | A deck | a re-cut argument, not a paginated document | `eng-render --to deck-manifest` → `presentation-builder` |
-| A web portal with per-question boxes | a transcription pack: one plain-text answer per question id, inside their character limits, plus the attachments | sections stay the source; the pack is generated for pasting |
+| A web portal with per-question boxes | a transcription pack: one plain-text answer per question id, inside their character limits, plus the attachments | sections stay the source; **you** produce the pack by hand |
 
-The first four are wired. The **portal** case is the one to watch: the answer never becomes a file,
-so nothing downstream can verify it — write the sections as normal, then produce the plain-text
-pack and check each answer against the portal's own limit before anyone starts pasting.
+The first four are wired. The **portal** case is NOT: no mode, no generator, no character-limit
+check exists for it today. If a tender is portal-submission, say so in the outline and treat the
+transcription pack as a manual work item with an owner — do not let a rendered `.docx` stand in
+for an answer that is never submitted as a file. (Claiming this was wired, before it was, is
+exactly the label-with-nothing-behind-it failure this pack exists to catch.)
 
 **Match the buyer's format exactly** — volume split, page/word limits, mandated forms. Format
 non-compliance is a common auto-reject; don't impose our own structure. The mandated format is a
 **fact from the RFT**, so record it in the outline's `## Submission format (machine-checked)` table
-(volumes · accepted file formats · paper · minimum font · separator pages). `eng_lint.py` reads it:
-an artefact built in a format the buyer does not accept is an error under `4_final/`, and a
-declared volume with no sections is reported. Otherwise the required format reaches the build only
-through whatever someone types on the command line — a tender that demands Word would accept a deck
-without a word of protest.
+(volumes · accepted file formats · paper · minimum font · separator pages · buyer document label).
+The label matters: citation shorthand renders as `(RFP §…)` by default, and a tender whose buyer
+calls their document an RFT or an ITT must say so there rather than ship the wrong word.
+`eng_lint.py` reads the table: an artefact built in a format the buyer does not accept is an error
+under `4_final/`, and a declared volume with no sections is reported. Otherwise the required format
+reaches the build only through whatever someone types on the command line — a tender that demands
+Word would accept a deck without a word of protest.
 
 ## Review rounds (not one gate)
 A section is finished when the rounds stop producing changes, not when it is written. Each section

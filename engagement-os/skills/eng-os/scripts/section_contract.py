@@ -28,6 +28,7 @@ VERDICT_STATUS = {
 FIELDS = {
     "section":      "render (output title)",
     "rft_clause":   None,
+    "buyer_clause": None,   # alias of rft_clause for non-RFT tenders (RFP / ITT / RFQ)
     "marks":        None,
     "pass_mark":    None,
     "scoring":      None,
