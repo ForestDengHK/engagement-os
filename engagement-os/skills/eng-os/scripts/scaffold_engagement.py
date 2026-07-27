@@ -184,6 +184,7 @@ PURSUIT_FILES = [
     ("clarification_log.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/clarification_log.md", {}),
     ("firm_assets.md.tmpl", "01_pursuit/_shared/firm_assets.md", {}),
     ("pursuit-shared-README.md.tmpl", "01_pursuit/_shared/README.md", {}),
+    ("pursuit-shared-md-README.md.tmpl", "01_pursuit/_shared/_md/README.md", {}),
 ]
 
 DELIVERY_FILES = [
