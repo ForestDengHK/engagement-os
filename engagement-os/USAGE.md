@@ -293,6 +293,15 @@ claude plugin update engagement-os@engagement-os   # the bare name fails: "Plugi
 diff -rq ~/.claude/plugins/cache/engagement-os/engagement-os/<version> engagement-os
 ```
 
-then **restart the session** (an update does not apply to the session that ran it) and confirm the
-Skill tool loads the new version — invoke one skill and check its body carries the release's
-changes.
+`claude plugin update` records the new version but leaves the harness's own link pointing at the
+old one, which is what "Restart to apply changes" means. **A restart is not actually required** —
+repoint the link and the new bodies load immediately:
+
+```
+ln -sfn ~/.claude/plugins/cache/engagement-os/engagement-os/<version> \
+        ~/.claude/plugins/.codepilot-links/engagement-os
+```
+
+Then confirm the Skill tool really loads the new version: invoke one skill and grep its body for a
+string this release introduced. "Updated" in the CLI output is not evidence that the skill a user
+reads has changed — that gap is how a pack ships fifteen releases nobody runs.
