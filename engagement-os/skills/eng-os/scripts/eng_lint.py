@@ -184,6 +184,133 @@ def rule_verify_not_shipped(root, r):
                         "unverified claim in a shipped artefact — close it or cut it")
 
 
+def rule_verify_open_in_draft(root, r):
+    """Unresolved `[⚠VERIFY]` markers in a draft section are counted, not just tolerated.
+
+    rule_verify_not_shipped only looks at frozen artefacts, so the count stayed invisible
+    until the response was already frozen — the one moment it is most expensive to learn.
+    A marker is legitimate in a draft; an UNKNOWN NUMBER of them is not.
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    r.ran()
+    for p in secs:
+        meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        n = len(sc.VERIFY_RE.findall(body))
+        if not n:
+            continue
+        status = meta.get("status", "")
+        where = str(p.relative_to(root))
+        if status in ("approved", "reviewed-r2", "issued"):
+            r.error("verify-in-shippable", where,
+                    f"{n}x unresolved [⚠VERIFY] in a section marked '{status}' — the render "
+                    "gate will refuse it; close or cut each one")
+        else:
+            r.warn("verify-open", where,
+                   f"{n}x unresolved [⚠VERIFY] — each is an external input someone must close "
+                   "before this section can ship")
+
+
+def research_log_rows(root):
+    """Parse every bid research log into {BR-nnn: status-word}. None when no log exists.
+
+    Row ids are written either as a bare number (the template's own `| 1 |`) or as the
+    id the rest of the pack uses (`BR-001`) — both are accepted here and in
+    change_impact.py, because a register whose ids the tooling cannot read is a register
+    the tooling silently ignores.
+    """
+    logs = sorted(root.glob("01_pursuit/*/2_analysis/bid_research_log.md"))
+    if not logs:
+        return None
+    rows = {}
+    for log in logs:
+        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.lstrip().startswith("|") or re.match(r"^\s*\|?[\s:|-]+\|", line):
+                continue
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) < 2:
+                continue
+            key = research_row_id(cells[0])
+            if not key or "<" in cells[-1]:
+                continue                          # planted template row
+            rows[key] = cells[-1].lower()
+    return rows
+
+
+def research_row_id(cell):
+    """`BR-001`, `br-1`, `#3` and `3` all name the same row. Anything else is not a row id."""
+    cell = cell.strip().strip("`*")
+    m = sc.RESEARCH_ID_RE.search(cell.upper()) or re.fullmatch(r"BR-?(\d+)", cell, re.I)
+    if m:
+        digits = re.search(r"(\d+)", m.group(0))
+        return f"BR-{int(digits.group(1)):03d}"
+    m = re.fullmatch(r"#?(\d{1,3})", cell)
+    return f"BR-{int(m.group(1)):03d}" if m else None
+
+
+def rule_research_rows_closed(root, r):
+    """A section may only rest on research rows the log has CLOSED.
+
+    The pack's central promise — "no number, credential or outcome enters the response
+    without a closed row + citation" — was prose only. A section citing an `open` row, or
+    citing a BR id no log knows, now says so here instead of at submission.
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    rows = research_log_rows(root)
+    r.ran()
+    if rows is None:
+        r.warn("research-log-missing", "01_pursuit/<eng>/2_analysis/bid_research_log.md",
+               "sections are being drafted with no research log — every sourced claim in them "
+               "is uncheckable; run eng-bid-research")
+        return
+    for p in secs:
+        _, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        where = str(p.relative_to(root))
+        cited = set(sc.RESEARCH_ID_RE.findall(body))
+        cited |= {f"BR-{int(n):03d}" for n in re.findall(r"\blog\s*#\s*(\d+)\b", body, re.I)}
+        for br in sorted(cited):
+            if br not in rows:
+                r.error("research-row-unknown", where,
+                        f"cites {br} — no such row in bid_research_log.md")
+            elif not rows[br].startswith("closed"):
+                r.warn("research-row-open", where,
+                       f"rests on {br}, whose log row is '{rows[br][:40]}' — close it or cut "
+                       "the claim before this section ships")
+
+
+def rule_outline_covers_matrix(root, r):
+    """Every compliance-matrix row must appear in the response outline.
+
+    Uniqueness is deliberately NOT checked: a real tender scores the same requirement in
+    two places (a roadmap graded under both Deliverables and Methodology), and roughly a
+    third of a matrix is process or contract obligation that belongs to a named control,
+    not to a written section. Presence is what a machine can decide; where it lands is the
+    outline's own job to state.
+    """
+    outlines = sorted(root.glob("01_pursuit/*/3_drafting/bid_response_outline.md"))
+    if not outlines:
+        return
+    req_ids = matrix_req_ids(root)
+    if not req_ids:
+        return
+    r.ran()
+    for o in outlines:
+        text = o.read_text(encoding="utf-8", errors="replace")
+        if "{{" in text or "<section title from RFP>" in text:
+            continue                              # still the planted template
+        mapped = set(sc.REQ_ID_RE.findall(text))
+        where = str(o.relative_to(root))
+        for req in sorted(req_ids - mapped):
+            r.error("outline-row-unmapped", where,
+                    f"{req} appears in no response section and under no named control")
+        for req in sorted(mapped - req_ids):
+            r.error("outline-row-phantom", where,
+                    f"{req} is mapped here but no compliance-matrix row defines it")
+
+
 def rule_mandatory_met(root, r):
     """Every Mandatory compliance-matrix row must reach `met` before a response is frozen."""
     mats = matrix_paths(root)
@@ -609,6 +736,16 @@ def rule_section_frontmatter(root, r):
         for f in sorted(in_body - declared):
             r.warn("section-figure-undeclared", where,
                    f"body references {f} but the frontmatter doesn't declare it")
+        # A caption is client-facing text. The editable-master pointer belongs on the
+        # `**Figure source.**` scaffolding line, which render strips; inside an italic caption
+        # it survives the strip and ships our internal filenames to the evaluator.
+        for i, line in enumerate(body.splitlines(), 1):
+            if line.lstrip().startswith("**Figure source."):
+                continue
+            if re.match(r"^\s*[*_].*F-\d{2}_\S+\.(?:html|pptx)", line):
+                r.warn("figure-source-in-caption", f"{where}:{i}",
+                       "a figure caption names the internal .html/.pptx master — move it to a "
+                       "`**Figure source.**` line so the render strips it")
 
 
 def rule_section_budget(root, r):
@@ -622,7 +759,7 @@ def rule_section_budget(root, r):
     if not secs:
         return
     r.ran()
-    shared = {}
+    shared, marks = {}, {}
     for p in secs:
         meta, prose = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         if not meta:
@@ -637,6 +774,8 @@ def rule_section_budget(root, r):
         figs = len(re.findall(r"^\s*!\[", prose, re.M))
         pages = words / 525 + figs * 0.5
         budget = meta.get("page_budget", "")
+        if meta.get("marks", "").strip().isdigit():
+            marks[p] = int(meta["marks"])
         m = re.search(r"(\d+)\s*A4", budget)
         if not m:
             continue
@@ -651,10 +790,22 @@ def rule_section_budget(root, r):
             r.error("section-overlength", str(p.relative_to(root)),
                     f"~{pages:.1f} A4 estimated against a stated limit of {limit} — "
                     "format non-compliance is a common auto-reject")
+        elif limit >= 3 and pages < limit * 0.6 and meta.get("marks", "").strip().isdigit() \
+                and int(meta["marks"]) >= 100:
+            # Under-use is not free on a scored section: "the level of detail provided" is an
+            # explicit scoring dimension, so an unused half of the page budget on a high-mark
+            # criterion is marks left on the table. Only a warning — brevity can be a choice.
+            r.warn("section-underlength", str(p.relative_to(root)),
+                   f"~{pages:.1f} A4 used of {limit} allowed on a {meta['marks']}-mark section — "
+                   "check the unused budget is a decision, not an omission")
 
     for budget, members in shared.items():
         total = sum(pg for _p, pg in members)
         limit = int(re.search(r"(\d+)\s*a4", budget).group(1))
+        if total < limit * 0.6 and any(marks.get(f, 0) >= 100 for f, _pg in members):
+            r.warn("section-underlength", ", ".join(str(f.name) for f, _ in members),
+                   f"~{total:.1f} A4 used of {limit} allowed across the shared pool — "
+                   "check the unused budget is a decision, not an omission")
         if total > limit:
             r.error("section-overlength", ", ".join(str(f.name) for f, _ in members),
                     f"~{total:.1f} A4 across {len(members)} sections sharing a {limit}-page budget "
@@ -693,7 +844,7 @@ def rule_review_status(root, r):
                 if "verdict" in lowered:
                     vcol = lowered.index("verdict")
                 continue
-            if len(cells) > vcol and re.fullmatch(r"R\d+", cells[1] if len(cells) > 1 else ""):
+            if len(cells) > vcol and sc.ROUND_LABEL_RE.match(cells[1] if len(cells) > 1 else ""):
                 v = cells[vcol].strip("*").lower()
                 if v in sc.VERDICT_STATUS:
                     verdicts.append((cells[1], v))
@@ -756,7 +907,9 @@ def rule_figures_exist(root, r):
 
 RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
-         rule_verify_not_shipped, rule_mandatory_met, rule_citations_resolve,
+         rule_verify_not_shipped, rule_verify_open_in_draft,
+         rule_research_rows_closed, rule_outline_covers_matrix,
+         rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
          rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,
          rule_change_impact_pending,

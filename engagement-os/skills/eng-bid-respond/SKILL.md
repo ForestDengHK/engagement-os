@@ -10,20 +10,23 @@ response. Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/bid-response.m
 Figures: the `designing-figures` skill owns them — spec before pixels, archetype from the message.
 
 ## Prerequisite
-Build only from a closed analysis (`compliance_matrix.md`) and a cited research log
-(`bid_research_log.md`). Draft in `01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`.
-Start the section map from `bid_response_outline.md.tmpl`, and each section file from
-`bid_section.md.tmpl` — both in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
+Build from a **settled** analysis and a cited research log (`bid_research_log.md`). Settled means
+the go/no-go decision is taken, every requirement is extracted into `compliance_matrix.md`, and the
+evidence is indexed — **not** that the rows are `met`. Rows close *because* the response answers
+them; waiting for a closed matrix would mean never starting. Draft in
+`01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`. Start the section map from
+`bid_response_outline.md.tmpl`, and each section file from `bid_section.md.tmpl` — both in
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
-**If missing:** the matrix isn't closed (mandatory rows still `open`) or there is no research
-log → go back to `Skill(engagement-os:eng-rfp-analyze)` /
-`Skill(engagement-os:eng-bid-research)`. Drafting from an open analysis writes chapters the
-go/no-go may throw away, and claims without a cited source cannot survive here.
+**If missing:** no matrix or no go decision → `Skill(engagement-os:eng-rfp-analyze)`; no research
+log → `Skill(engagement-os:eng-bid-research)`. Drafting before the go decision writes chapters it
+may throw away, and a claim with no cited row cannot survive the traceability gate — lint errors on
+a `BR-nnn` no log knows and warns on a section resting on an `open` row.
 
 Before writing or reviewing, invoke `Skill(engagement-os:eng-propagate-change)`. Work only the
-sections it identifies. An approved section whose content or load-bearing dependency changed is
-no longer approved even if its frontmatter still says so; the change-impact gate returns it to
-`revise-r2`.
+sections it identifies. A reviewed section whose content or load-bearing dependency changed is no
+longer reviewed even if its frontmatter still says so; the change-impact gate returns it to the
+revise state of the round it had reached.
 
 ## Workflow
 
@@ -34,17 +37,27 @@ an argument to fit a slide before knowing whether the argument is right.
 ```
 Bid Response Progress:
 - [ ] 1. Build the section map from the matrix (bid_response_outline.md) — every requirement row
-        lands in exactly one section, and no section exists without a row
+        lands in a written section OR under a named control (a submission control sheet, the
+        clarification register, commercial sign-off, contract acceptance). Process obligations and
+        accepted terms are not prose questions; inventing a section for them makes the matrix lie.
+        A requirement the RFT scores in two places names its primary section and its second one.
+        Lint errors if a row appears nowhere at all
 - [ ] 2. One MD per section in 3_drafting/sections/, from bid_section.md.tmpl — frontmatter carries
         marks, scoring basis, page budget, reqs answered, figures, evidence
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:
         .html (edit here) + .png (2x, goes in the document) + .pptx (one slide, native shapes,
-        so a reviewer can correct it)
+        so a reviewer can correct it). A figure bound for an A4 *document* keeps the skill's
+        canvas and grid but drops slide furniture that the document already provides — the
+        section heading and the markdown caption. The editable-master pointer goes on the
+        `**Figure source.**` line, never in the caption: the strip removes that line, and a
+        caption naming `F-01_x.html` ships our internal filenames to the evaluator
 - [ ] 4. Weave the 3–5 win-themes at the high-weight criteria, each backed by a cited log row or
         an indexed firm asset (A-nnn)
-- [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a closed research-log row; kill any [⚠VERIFY]
+- [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a `closed` research-log row (`BR-nnn`);
+        kill any [⚠VERIFY]. Lint reports a section resting on an `open` row and counts every
+        unresolved marker while you draft — not for the first time at the freeze
 - [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
         R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
         → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
@@ -64,6 +77,23 @@ blurs them loses marks six times over.
 
 **Page budgets: per-question or shared?** "Max 5 A4 for 3 questions" is a shared budget; "max 3 A4
 per question response" is not. Confusing them always errs toward writing too much.
+
+**Measure the budget in pages, mid-flight, before anything is approved.** The only build that
+measures the *submission* page count is the one the gate refuses until every section is approved —
+so measure a single section on its own, with the strip applied:
+
+```
+python3 .../render_document.py --sections <a dir holding just that section> \
+    --out /tmp/pb --name s513 --to pdf --profile bid --force
+```
+
+`--force` here is legitimate and it reports everything it overrides (open `[⚠VERIFY]`, unapproved
+status) as advisories. The internal review copy is rendered with `--profile plain`, which keeps the
+scaffolding — its page count is NOT the buyer's page count.
+
+**Under-use costs marks too.** "The level of detail provided" is an explicit scoring dimension, so
+half an unused page budget on a 100+-mark criterion is marks left on the table. Lint warns in both
+directions (`section-overlength` / `section-underlength`); the call is yours, but make it a call.
 
 **Requirement-driven, not narrative-driven.** The response is assembled from the compliance
 matrix; when every row is `met` and every mandatory satisfied, it's complete. The matrix is the

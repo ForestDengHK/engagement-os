@@ -8,8 +8,19 @@
 
 | # | Serves (Req/theme) | Claim | Stream | Source + locator | Tag | Confidence | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | R-00x / theme-1 | <the sourced fact> | ext / int | <URL or doc §page> | `[T3:OWN]` / `[RFP §x]` | H/M/L | closed |
-| 2 | | | | | `[⚠VERIFY]` | | open — needs <what> |
+| BR-001 | R-00x / theme-1 | <the sourced fact> | ext / int | <URL or doc §page> | `[T3:OWN]` / `[RFP §x]` | H/M/L | closed |
+| BR-002 | | | | | `[⚠VERIFY]` | | open — needs <what> |
 
 **Stream:** `ext` = our research of the outside world · `int` = firm-held (user-uploaded case study / CV / past bid).
 **Rule:** no number, credential, or outcome enters the response without a `closed` row + citation here.
+**Row ids:** `BR-nnn`, cited from a response section as `BR-003` (or `log #3`). Both forms are read by
+lint and by the change-impact engine; a section citing an `open` row is reported, not shipped.
+
+## Still dark — researched, not closed
+<!-- A gap you worked and could NOT close is a finding too: keep it visible here rather than
+     letting it disappear from the list. Each row: the gap, why it is still open, what would
+     close it, and who owns that. -->
+
+| Gap (from `rfp_analysis.md` §8) | Why it is still open | What would close it |
+|---|---|---|
+| <the gap> | <what the research found and did not find> | <the specific input, and from whom> |

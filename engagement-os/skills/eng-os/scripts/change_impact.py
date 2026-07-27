@@ -138,6 +138,7 @@ def section_record(root, path):
         | list_value(meta.get("depends_on", ""))
     )
     dependencies |= {f"BR-{int(n):03d}" for n in re.findall(r"\blog\s*#\s*(\d+)\b", body, re.I)}
+    dependencies |= set(sc.RESEARCH_ID_RE.findall(body))
     return {
         "content_sha256": sha256_bytes(canonical_section_text(text).encode("utf-8")),
         "status": meta.get("status", ""),
@@ -163,6 +164,19 @@ def deliverable_index(root):
     return out
 
 
+def numbered_row_id(cell, prefix):
+    """Row id from a register's first cell. `BR-001`, `br-1`, `#3` and `3` all name row 3.
+
+    The template plants bare numbers; every human and every other register in the pack
+    writes the prefixed id. Accepting only one of the two forms made a ten-row research log
+    read as zero rows — no error, just an entity set that was silently empty, so a changed
+    research claim invalidated nothing.
+    """
+    cell = cell.strip().strip("`*")
+    m = re.fullmatch(rf"{prefix}-?0*(\d{{1,3}})", cell, re.I) or re.fullmatch(r"#?(\d{1,3})", cell)
+    return f"{prefix}-{int(m.group(1)):03d}" if m else None
+
+
 def table_entities(path, id_re, prefix=None):
     """Return stable row hashes keyed by an ID found in pipe-table rows."""
     out = {}
@@ -172,9 +186,9 @@ def table_entities(path, id_re, prefix=None):
             continue
         if prefix:
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if not cells or not re.fullmatch(r"\d+", cells[0]):
+            key = numbered_row_id(cells[0] if cells else "", prefix)
+            if not key:
                 continue
-            key = f"{prefix}-{int(cells[0]):03d}"
         else:
             match = id_re.search(line)
             if not match:
@@ -351,7 +365,8 @@ def scan(root):
         status = record.get("status", "")
         if status in REVIEWED:
             affected[section]["required_status"] = (
-                "revise-r2" if section.startswith("01_pursuit/") else "revise")
+                sc.revise_status_for(status, delivery=not section.startswith("01_pursuit/"))
+                or "revise")
 
     for c in changes:
         rel, role = c["path"], c["role"]
@@ -431,11 +446,24 @@ def scan(root):
         if match
     }
     for fig in sorted(changed_figures):
+        # Which companions of this figure moved in the same batch? A source edit followed by
+        # a re-render is the NORMAL sequence; telling the user to regenerate what they have
+        # just regenerated is how a gate's output becomes noise you learn to scroll past.
+        moved = {pathlib.PurePosixPath(c["path"]).suffix.lower()
+                 for c in changes if c["role"] == "figure"
+                 and pathlib.PurePosixPath(c["path"]).name.startswith(fig + "_")}
+        exported = {".png", ".pptx"} <= moved
         for c in changes:
             if c["role"] == "figure" and pathlib.PurePosixPath(c["path"]).suffix == ".html" \
                     and pathlib.PurePosixPath(c["path"]).name.startswith(fig + "_"):
-                add_impact(impacts, c["path"], "regenerate PNG and editable PPTX",
-                           f"{fig} source changed", "designing-figures")
+                if exported:
+                    add_impact(impacts, c["path"],
+                               "confirm the regenerated PNG and PPTX match the new source",
+                               f"{fig} source and both exports changed together",
+                               "designing-figures", "info")
+                else:
+                    add_impact(impacts, c["path"], "regenerate PNG and editable PPTX",
+                               f"{fig} source changed", "designing-figures")
         for rel, record in current_sections.items():
             if fig in record.get("dependencies", []):
                 affect(rel, f"figure changed: {fig}")
@@ -515,7 +543,12 @@ def invalidate_section(path, required_status, reasons):
     if not n:
         return False
     reason = "; ".join(reasons).replace("|", "/")
-    row = f"| R3 | change-impact gate | {dt.date.today().isoformat()} | revise | {reason} |"
+    # Label the row with the round the section actually reached. A hardcoded `R3` on a
+    # section that has only ever had R1 reads as two reviews that never happened — and
+    # then becomes the "latest verdict" every downstream gate trusts.
+    label = sc.round_of(required_status)
+    row = (f"| {label} (change-impact) | change-impact gate | "
+           f"{dt.date.today().isoformat()} | revise | {reason} |")
     heading = re.search(r"^##\s+Review log\s*$", text, re.M | re.I)
     if heading:
         tail = text[heading.end():]

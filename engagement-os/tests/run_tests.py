@@ -55,6 +55,20 @@ def clean_tree():
             "| R-0xx | <requirement> | M / D | <evidence> | <status> |\n"
             "| R-001 | The bidder must do x | M | A-001 | met |\n"
             "| R-002 | The bidder should do y | D | — | n/a |\n"),
+        "01_pursuit/27-010/2_analysis/bid_research_log.md": (
+            "# Bid research log\n\n"
+            "| # | Serves | Claim | Stream | Source | Tag | Confidence | Status |\n"
+            "|---|---|---|---|---|---|---|---|\n"
+            "| BR-001 | R-001 | The benchmark is 12 weeks | ext | example.org/x | `[T3:OWN]` | H | closed |\n"
+            "| BR-002 | R-002 | Referee permission pending | int | A-001 | internal | M | open — needs sign-off |\n"),
+        "01_pursuit/27-010/3_drafting/bid_response_outline.md": (
+            "# Bid response outline\n\n"
+            "| § | Section | Answers Req IDs | Owner | Status |\n"
+            "|---|---|---|---|---|\n"
+            "| V2 1.1 | Experience | R-001 | Bid Manager | draft |\n\n"
+            "## Rows that are NOT written sections\n\n"
+            "| Control | Rows it owns |\n|---|---|\n"
+            "| Submission control sheet | R-002 |\n"),
         "01_pursuit/_shared/firm_assets.md": (
             "# Firm assets\n\n"
             "| ID | Asset | Date |\n|---|---|---|\n"
@@ -72,7 +86,7 @@ def clean_tree():
             "status: draft\n"
             "---\n\n"
             "# 1.1 Experience\n\n"
-            "We did the thing. [RFP §5.1.1]\n\n"
+            "We did the thing. [RFP §5.1.1] Benchmarked at 12 weeks per BR-001.\n\n"
             "![coverage](../figures/F-01_x.png)\n"
             "*Figure 1 — coverage.*\n\n"
             "## Review log\n\n"
@@ -87,6 +101,8 @@ def clean_tree():
 
 
 SEC = "01_pursuit/27-010/3_drafting/sections/s1.md"
+LOG = "01_pursuit/27-010/2_analysis/bid_research_log.md"
+OUTLINE = "01_pursuit/27-010/3_drafting/bid_response_outline.md"
 MATRIX = "01_pursuit/27-010/2_analysis/compliance_matrix.md"
 FINDING = "02_delivery/1_discovery/3_findings/platform/f1.md"
 ASSETS = "01_pursuit/_shared/firm_assets.md"
@@ -121,6 +137,93 @@ CASES = [
      lambda t: _sub(t, SEC, "We did the thing.",
                     "We did the thing. Nothing in `_sources/engagement/` is reusable."),
      set(), set(), {"bucket-leak"}),
+
+    # ── [⚠VERIFY] while drafting, in every written form ──────────────────────
+    # The render gate matched the bare literal `[⚠VERIFY]` only, so the explanatory form
+    # every real pack writes went through eight-at-a-time. Both halves are checked here.
+    ("verify-open-explanatory-form",
+     lambda t: _sub(t, SEC, "We did the thing.",
+                    "We did the thing for [⚠VERIFY — client name and permission owed]."),
+     set(), {"verify-open"}, set()),
+    ("verify-open-bare-form",
+     lambda t: _sub(t, SEC, "We did the thing.", "We did the thing. [⚠VERIFY]"),
+     set(), {"verify-open"}, set()),
+    ("verify-in-shippable-status-is-an-error",
+     lambda t: (_approve_section(t),
+                _sub(t, SEC, "We did the thing.",
+                     "We did the thing for [⚠VERIFY — the referee is unconfirmed].")),
+     {"verify-in-shippable"}, set(), set()),
+    ("verify-clean-section-stays-quiet",
+     lambda t: None, set(), set(), {"verify-open", "verify-in-shippable"}),
+
+    # ── review rounds ITERATE ────────────────────────────────────────────────
+    # R1 sends a section back, the author fixes it, R1 runs again. An exact `R\d+` match
+    # ignored the second row and read the stale 'revise' as the latest verdict — which
+    # forced the author to overwrite the first row and lose what R1 caught.
+    ("review-round-iterated-is-the-latest-verdict",
+     lambda t: (_sub(t, SEC, "status: draft", "status: reviewed-r1"),
+                _sub(t, SEC, "|---|---|---|---|---|\n",
+                     "|---|---|---|---|---|\n"
+                     "| R1 | panel red-team | 2026-01-01 | revise | tighten the measures |\n"
+                     "| R1 (2nd pass) | panel red-team | 2026-01-02 | pass | measures fixed |\n")),
+     set(), set(), {"status-contradicts-review", "status-stale"}),
+    ("review-round-iterated-still-catches-a-real-contradiction",
+     lambda t: (_sub(t, SEC, "status: draft", "status: approved"),
+                _sub(t, SEC, "|---|---|---|---|---|\n",
+                     "|---|---|---|---|---|\n"
+                     "| R1 | panel red-team | 2026-01-01 | pass | none |\n"
+                     "| R2 (re-check) | experienced human | 2026-01-02 | blocked | referee owed |\n")),
+     {"status-contradicts-review"}, set(), set()),
+
+    # ── the research log is the claim's backing, and it is now checked ────────
+    ("research-row-open-is-a-warning",
+     lambda t: _sub(t, SEC, "per BR-001.", "per BR-001, with the referee at BR-002."),
+     set(), {"research-row-open"}, set()),
+    ("research-row-unknown-is-an-error",
+     lambda t: _sub(t, SEC, "per BR-001.", "per BR-014."),
+     {"research-row-unknown"}, set(), set()),
+    ("research-log-row-id-may-be-a-bare-number",
+     lambda t: _sub(t, LOG, "| BR-001 |", "| 1 |"),
+     set(), set(), {"research-row-unknown"}),
+    ("research-citation-may-be-log-hash-form",
+     lambda t: _sub(t, SEC, "per BR-001.", "per log #1."),
+     set(), set(), {"research-row-unknown"}),
+    ("research-log-missing-while-drafting-is-a-warning",
+     lambda t: t.pop(LOG),
+     set(), {"research-log-missing"}, set()),
+
+    # ── outline coverage ─────────────────────────────────────────────────────
+    ("outline-unmapped-requirement",
+     lambda t: _sub(t, OUTLINE, "| Submission control sheet | R-002 |", ""),
+     {"outline-row-unmapped"}, set(), set()),
+    ("outline-phantom-requirement",
+     lambda t: _sub(t, OUTLINE, "| V2 1.1 | Experience | R-001 |",
+                    "| V2 1.1 | Experience | R-001, R-404 |"),
+     {"outline-row-phantom"}, set(), set()),
+    ("no-outline-yet-is-not-a-failure",
+     lambda t: t.pop(OUTLINE),
+     set(), set(), {"outline-row-unmapped", "outline-row-phantom"}),
+
+    # ── a figure caption must not carry our internal filenames ───────────────
+    # Found for real: the template's own caption shipped `F-01_x.html` / `.pptx` into a
+    # rendered tender page, because the render strip never touches a caption.
+    ("figure-source-inside-a-caption",
+     lambda t: _sub(t, SEC, "*Figure 1 — coverage.*",
+                    "*Figure 1 — coverage. Source: `F-01_x.html`; editable `F-01_x.pptx`.*"),
+     set(), {"figure-source-in-caption"}, set()),
+    ("figure-source-on-its-own-line-is-fine",
+     lambda t: _sub(t, SEC, "*Figure 1 — coverage.*",
+                    "*Figure 1 — coverage.*\n\n**Figure source.** `F-01_x.html` is the master."),
+     set(), set(), {"figure-source-in-caption"}),
+
+    # ── the page budget bites in BOTH directions on a scored section ─────────
+    ("scored-section-well-under-its-budget",
+     lambda t: (_sub(t, SEC, "marks: 20", "marks: 100"),
+                _sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
+                     'page_budget: "5 A4, Arial 10 (per section)"')),
+     set(), {"section-underlength"}, set()),
+    ("small-section-with-few-marks-is-not-nagged",
+     lambda t: None, set(), set(), {"section-underlength"}),
 
     # ── [⚠VERIFY] in shipped artefacts ───────────────────────────────────────
     ("verify-in-frozen",
@@ -664,6 +767,34 @@ def converter_tests():
          'w:ascii="Arial"' in styles and 'w:sz w:val="20"' in styles),
         ("reference enforces A4",
          'w:pgSz w:w="11906" w:h="16838"' in document),
+    ]
+
+    # ── the render gate, on the forms a real section actually carries ──────────
+    gate_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-gate-")) / "sections"
+    gate_dir.mkdir(parents=True)
+    (gate_dir / "g.md").write_text(
+        "---\nsection: Gated\nstatus: approved\n---\n\n"
+        "# Gated\n\nOur referee is [⚠VERIFY — permission owed] and the date is [⚠VERIFY].\n\n"
+        "![f](../figures/F-01_x.png)\n*Figure 1 — coverage.*\n\n"
+        "**Figure source.** `F-01_x.html` is the master; `F-01_x.pptx` is the export.\n",
+        encoding="utf-8")
+    figs = gate_dir.parent / "figures"
+    figs.mkdir()
+    for ext in ("png", "html", "pptx"):
+        (figs / f"F-01_x.{ext}").write_text("x", encoding="utf-8")
+    gated = render.discover(str(gate_dir))
+    blocking, _adv = render.gate(gated, "bid", False)
+    stripped, _n = render.strip_internal(gated[0]["body"], True)
+    forced_blocking, forced_adv = render.gate(gated, "bid", True)
+    contract_checks += [
+        # matching the bare literal let the explanatory form — the one every real pack
+        # writes — through the gate eight markers at a time
+        ("gate counts every VERIFY form",
+         any("2x unresolved" in b for b in blocking)),
+        ("figure-source line is stripped from the client artefact",
+         "F-01_x.html" not in stripped and "Figure 1 — coverage" in stripped),
+        ("--force reports what it overrides rather than silently passing",
+         not forced_blocking and any("FORCED past" in a for a in forced_adv)),
     ]
 
     for name, ok in contract_checks:

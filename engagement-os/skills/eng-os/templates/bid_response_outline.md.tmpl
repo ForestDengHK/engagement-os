@@ -7,14 +7,35 @@
 **RFP response format:** <volumes / sections the RFP mandates> · **Limits:** <page/word> · **Deadline:** <date/time>
 
 ## Volume / section map
-| § | Response section (per RFP format) | Answers Req IDs | Win-theme(s) | Evidence (research-log #) | Owner | Status |
-|---|---|---|---|---|---|---|
-| V1.1 | <section title from RFP> | R-00x, R-00y | theme-1 | log #3, #7 | <name> | outline |
+| § | Response section (per RFP format) | Answers Req IDs | Also answers (scored here too) | Win-theme(s) | Evidence (BR-nnn / A-nnn) | Owner | Status |
+|---|---|---|---|---|---|---|---|
+| V1.1 | <section title from RFP> | R-00x, R-00y | R-0zz | theme-1 | BR-003, A-001 | <name> | outline |
 
 **Status key:** `outline` → `draft` → `red-teamed` → `final`.
 
+**One requirement, two scored places.** A real tender grades the same requirement twice — a
+roadmap under *Deliverables* and again under *Methodology*. Name the primary section in
+`Answers Req IDs` and the second one in *Also answers*; do not drop the row or duplicate the
+answer wholesale.
+
+## Rows that are NOT written sections — and the control that owns each
+
+Some matrix rows are obligations on the bid *process* or terms accepted by submitting, not
+questions to answer in prose. Mapping those onto an invented section is how a compliance matrix
+starts lying. Give each a named control instead — an artefact someone signs off:
+
+| Control | Rows it owns | What the control is |
+|---|---|---|
+| Submission control sheet (bid manager's pre-flight) | R-00x | deadline, volume split, font/page limits, no qualified language |
+| Clarification register | R-00x | the written-query log and its deadline |
+| Commercial sign-off | R-00x | validity period, rates adequacy, withholding tax |
+| Partner-level contract acceptance | R-00x | terms accepted as issued, with background IP scheduled |
+
+Coverage is machine-checked: `eng_lint.py` errors if a matrix row appears **nowhere** in this
+file. Where it lands — a section or a control — is this file's judgement, not the linter's.
+
 ## Compliance check before submission
-- [ ] Every RFP requirement maps to a response section (matrix fully closed).
+- [ ] Every RFP requirement maps to a response section **or a named control** (nn/nn).
 - [ ] Every **mandatory** requirement is `met`; exceptions stated plainly.
 - [ ] Every claim traces to `[RFP §x]` or a `closed` research-log row (no `[⚠VERIFY]` left).
 - [ ] Format / volume split / page limits / forms comply exactly.

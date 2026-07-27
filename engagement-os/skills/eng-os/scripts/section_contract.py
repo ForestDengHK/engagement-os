@@ -44,9 +44,46 @@ FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 REQ_ID_RE = re.compile(r"\bR-\d{3}\b")
 ASSET_ID_RE = re.compile(r"\bA-\d{3}\b")
 FIG_ID_RE = re.compile(r"\bF-\d{2}\b")
+RESEARCH_ID_RE = re.compile(r"\bBR-\d{3}\b")
 #: Figure FILES are named F-nn_<name>.ext — the id is followed by a word character,
 #: so \b never matches there; use this against filenames, FIG_ID_RE against prose.
 FIG_FILE_RE = re.compile(r"^(F-\d{2})_")
+
+#: An unresolved fact. The explanatory form `[⚠VERIFY — what would close it]` is the one
+#: the templates and every real pack actually write, so ANY matcher must accept it.
+#: Matching the bare literal `[⚠VERIFY]` let eight markers through a render gate for real.
+VERIFY_RE = re.compile(r"\[⚠VERIFY[^\]]*\]")
+
+#: A review-log round label. Rounds ITERATE — R1 sends a section back, the author fixes it,
+#: R1 runs again — and the contract says one row per pass, so the label carries a suffix
+#: (`R1 (2nd pass)`, `R1b`, `R1 · re-check`). An exact `R\d+` match ignored those rows and
+#: read a stale verdict as the latest one.
+ROUND_LABEL_RE = re.compile(r"^R\d+\b")
+
+
+def revise_status_for(status, delivery=False):
+    """The send-back state for a section currently in `status` — the SAME round it passed.
+
+    A `reviewed-r1` section pushed to `revise-r2` claims an R2 round that never ran; the
+    mechanical invalidator must not invent review history it did not observe.
+    `delivery` selects the plainer client-deliverable vocabulary, where `approved` sends
+    back to `revise`. Returns None when the status is not one a gate may invalidate.
+    """
+    if delivery:
+        return "revise" if status in ("reviewed", "approved", "issued") else None
+    return {
+        "reviewed-r1": "revise-r1",
+        "reviewed-r2": "revise-r2",
+        "approved": "revise-r2",            # bid: approval follows R2
+        "reviewed": "revise",               # a delivery-vocabulary section under a bid path
+        "issued": "revise",
+    }.get(status)
+
+
+def round_of(status):
+    """The review round a status belongs to, for labelling an appended log row."""
+    m = re.search(r"r(\d+)$", status or "")
+    return f"R{m.group(1)}" if m else "R1"
 
 
 def parse_frontmatter(text):

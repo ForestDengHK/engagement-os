@@ -19,7 +19,16 @@ traceable response — every requirement answered, every claim sourced, red-team
 
 The response is assembled **from the compliance matrix**, not free-written. Every requirement row
 maps to a response section that answers it; when the matrix closes (every row `met`, every
-mandatory satisfied), the response is complete. This is the pursuit-side analogue of building a
+mandatory satisfied), the response is complete.
+
+Two things a real matrix does that the neat version does not. **A third of it is not prose.**
+Submission mechanics, the query deadline, and the terms accepted by tendering are obligations on
+the bid process, not questions — each belongs to a named control (a submission control sheet, the
+clarification register, commercial sign-off, partner-level contract acceptance) recorded in the
+outline. Inventing a response section for "submit by 12:00" is how a compliance matrix starts
+lying. **And a requirement can be scored twice** — a roadmap graded under Deliverables and again
+under Methodology — so the outline names a primary section and a second one rather than dropping
+the row. Coverage (every row appears somewhere) is machine-checked; placement is judgement. This is the pursuit-side analogue of building a
 deliverable from validated findings: the matrix is the fact base, the response adds the persuasion.
 
 ## Draft per section, in markdown, before any output format
@@ -60,7 +69,11 @@ argument is right. Get the content correct and reviewed first; §"Match the buye
 format" is the *last* step, not the first.
 
 **Track the page budget as you go, though** — it is the one format constraint that changes what
-you write rather than how it looks. Note whether the limit is **per question or shared across
+you write rather than how it looks. And track it in **both** directions: the buyer scores "the
+level of detail provided", so an unused half of a 5-page budget on a 280-mark criterion is marks
+left on the table, not discipline. Measuring it before approval means rendering one section on its
+own with `--profile bid --force` (which reports what it overrides); the `plain` internal review
+copy keeps the scaffolding and therefore does not measure the buyer's page count. Note whether the limit is **per question or shared across
 questions**: an RFT saying "max 5 A4 pages for 3 questions" is a shared budget, while "max 3 A4
 pages per question response" is not, and the two are easy to confuse in the direction of writing
 too much. At Arial 10, roughly 500-550 words fill one side of A4; a full-width figure costs about
@@ -91,6 +104,16 @@ A flattened image is not enough: review rounds produce figure corrections, and a
 cannot edit sends the change back as prose instead. Generate the PPTX from the same HTML, so the
 three never diverge.
 
+**The caption is client-facing; the pointer to the master is not.** Name the `.html` and `.pptx`
+on a `**Figure source.**` line, which the render strips — a caption survives the strip, so a
+caption naming `F-01_x.html` prints our internal filenames on a tender page (that happened, from
+the pack's own template).
+
+**A figure for an A4 document is not a slide.** Keep `designing-figures`' canvas, grid and tokens,
+but drop the furniture the document already supplies: the section heading, and a source footer the
+markdown caption repeats. On A4 portrait a 16:9 exhibit lands at roughly a third of a page, which
+is the right budget for one — two full-width figures and half the page is gone.
+
 **The mechanics — canvas conventions, the headless-Chrome render, the editable export, and the
 verification of both outputs — live in `designing-figures/references/render-pipeline.md`. Do not
 copy them here; that document owns them, including the traps this pack hit the hard way
@@ -109,6 +132,12 @@ different times and a single project-wide gate hides that.
 | **R1 — panel red-team** | Does it score? Multi-lens: evaluator, legal, finance, delivery |
 | **R2 — experienced human** | What only experience sees: a claim that will not survive a client conversation, a promise delivery cannot staff, a tone wrong for this buyer |
 | **R3 — final read** | Consistency across sections, format compliance, nothing left `[⚠VERIFY]` |
+
+A round that sends the section back and is then re-run is **two rows**, appended: `R1` with
+`revise`, then `R1 (2nd pass)` with `pass`. Overwriting the first row to satisfy the status check
+erases exactly what the log is for. R2 is a *human* round by definition — an agent that marks its
+own R2 has removed the gate rather than passed it, so a section drafted end-to-end by an agent
+tops out at `reviewed-r1`.
 
 Do not collapse R1 and R2. They fail differently: R1 is structural and can be reasoned about from
 the RFT; R2 is judgement and cannot.
