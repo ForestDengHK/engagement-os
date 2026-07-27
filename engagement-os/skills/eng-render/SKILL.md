@@ -103,6 +103,15 @@ write. A `plain` build measures a different document (it keeps the scaffolding).
 `[⚠VERIFY — what would close it]` that real sections carry. Matching only the bare literal let
 eight markers through onto a rendered tender page.
 
+## What this skill does NOT build
+
+**A buyer's own form.** When the answer is their workbook or their Word form, the artefact is that
+file filled in — `3_drafting/forms/`, through the `xlsx` / `docx` skills — and this renderer never
+sees it. A submission package is therefore *sections rendered* **plus** *forms filled*, and a
+volume that builds cleanly can still be missing the half that matters: on the worked example the
+entire price answer was two cells in the buyer's workbook. `eng_lint` carries that half
+(`buyer-form-not-filled`).
+
 ## Authoring shorthand in, the reader's language out
 
 A section is **authored** in an internal shorthand, because that is what makes traceability

@@ -162,6 +162,26 @@ The scaffolding is already in the repo: `eng-ingest-source` converted the RFT to
 whose clause carries answer boxes but which was written as free prose
 (`response-structure-invented`), and a `buyer-form` that names no file.
 
+### Filling their form is the work, not describing it
+
+A `buyer-form` answer is finished when **their file is filled**, in `3_drafting/forms/` — a working
+copy, because `1_received/` must stay exactly as issued or the repo loses its evidence of what the
+buyer actually sent. The section that declares the mode is a **cover note**: what was filled, what
+is still owed, who signs it. It is not a prose restatement of the form, and the two are easy to
+confuse when the form is somewhere else and the markdown is in front of you.
+
+**A form is often a table inside their document, not a separate file.** This tender attaches its
+pricing workbook but keeps the Project Reference Data Sheet and the CV Reference Data Sheet as
+tables inside the RFT itself — and a markdown conversion carries the *reference* to them without
+carrying the *form*. Extract the table into a working copy and fill it in their field order; the
+labels and their sequence are exactly what an evaluator checks against.
+
+The worked example is stark: this tender's whole price response is **two cells** — the tenderer's
+name on the cover sheet and one lump sum on the pricing sheet, which the workbook then totals into
+the Form of Tender. The first draft answered it with 565 words of prose about the pricing approach
+and left both cells empty. Every one of those words was unreadable by the evaluator, who opens the
+workbook.
+
 **Why this is not pedantry.** Format non-compliance is one of the few ways to lose a tender before
 the content is read at all. A pass/fail questionnaire re-organised into our own table risks an
 evaluator recording "did not answer question 3" against an answer that is on the page.

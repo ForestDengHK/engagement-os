@@ -65,6 +65,17 @@ Bid Response Progress:
                                     document, identified in that box
         Inventing a structure where the buyer supplied one is a format non-compliance, and
         format non-compliance is a common auto-reject: the content never gets read.
+- [ ] 2c. FILL THE BUYER'S FORMS — for every `buyer-form` section, put a working copy in
+        `3_drafting/forms/` and fill it there with `Skill(xlsx)` / `Skill(docx)`. A form is often
+        **a table inside their RFT** rather than a separate file (a reference data sheet, a CV
+        sheet): extract that table into a working copy with `Skill(docx)` and fill it in their
+        field order — the labels and the row order are the format they are checking against.
+        **Never edit `1_received/`**: that is what they sent, and it is the evidence of what was issued.
+        The section itself becomes the cover note — what was filled, what is owed, who signs —
+        not a prose restatement of the form. On the pack's worked example the entire price
+        response was two cells in the buyer's workbook (tenderer name, lump sum) and the first
+        draft answered it with 565 words of prose instead. Lint warns while drafting and errors
+        once a package is frozen (`buyer-form-not-filled`)
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:
@@ -119,6 +130,21 @@ directions (`section-overlength` / `section-underlength`); the call is yours, bu
 **Requirement-driven, not narrative-driven.** The response is assembled from the compliance
 matrix; when every row is `met` and every mandatory satisfied, it's complete. The matrix is the
 fact base; the response adds the persuasion.
+
+**Any format they mandate, not just Word.** The response format is theirs to choose, and the pack
+routes each kind to the skill that owns it rather than re-implementing it:
+
+| They mandate | The answer is | Owned by |
+|---|---|---|
+| A document (Word / searchable PDF) | our sections, rendered | `eng-render` → `docx` |
+| A workbook (pricing, questionnaire) | **their workbook, filled** in `3_drafting/forms/` | `xlsx` |
+| Their Word form (data sheet, declaration) | **their form, filled** in `3_drafting/forms/` | `docx` |
+| A deck | a re-cut argument, not a paginated document | `eng-render --to deck-manifest` → `presentation-builder` |
+| A web portal with per-question boxes | a transcription pack: one plain-text answer per question id, inside their character limits, plus the attachments | sections stay the source; the pack is generated for pasting |
+
+The first four are wired. The **portal** case is the one to watch: the answer never becomes a file,
+so nothing downstream can verify it — write the sections as normal, then produce the plain-text
+pack and check each answer against the portal's own limit before anyone starts pasting.
 
 **Match the buyer's format exactly** — volume split, page/word limits, mandated forms. Format
 non-compliance is a common auto-reject; don't impose our own structure. The mandated format is a

@@ -247,6 +247,21 @@ CASES = [
                 _sub(t, SEC, "response_form: prose", "response_form: buyer-structure")),
      set(), set(), {"response-structure-invented"}),
 
+    # ── a buyer-form section must produce the FILLED form ────────────────────
+    # Declaring the mode was not enough: the render builds from markdown, so a buyer-form section
+    # rendered as prose ABOUT their form while the form stayed empty. On the worked example the
+    # whole price answer was two cells in the buyer's workbook.
+    ("buyer-form-declared-but-never-filled",
+     lambda t: _sub(t, SEC, "response_form: prose",
+                    "response_form: buyer-form: Appendix 6 Pricing (in the RFT)"),
+     set(), {"buyer-form-not-filled"}, set()),
+    ("buyer-form-with-a-filled-working-copy",
+     lambda t: (_sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 6 Pricing (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/Appendix 6 - RESPONSE.xlsx",
+                              "PK-filled")),
+     set(), set(), {"buyer-form-not-filled"}),
+
     # ── an internal register id in body prose has no client-facing form ──────
     ("internal-id-in-body-prose",
      lambda t: _sub(t, SEC, "We did the thing.", "We did the thing, evidenced by A-001."),
