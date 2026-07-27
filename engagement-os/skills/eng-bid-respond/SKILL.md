@@ -51,6 +51,20 @@ Bid Response Progress:
         questionnaires (H&S, data protection, information security) are prose answers that must
         exist before the evidence arrives, and lint errors on an outline row marked drafted with
         no file behind it
+- [ ] 2b. READ THE BUYER'S RESPONSE SCAFFOLDING FIRST, from the ingested RFT under
+        `1_received/_md/` — it is already converted, so nothing re-parses the .docx. A tender
+        nearly always supplies its own: numbered questions with Yes / No / N-A options, a
+        "TENDERER'S RESPONSE (identify document attached)" box, appendix forms to fill.
+        Each section declares which one applies in `response_form`:
+          buyer-form: <their file>  the answer IS their form, filled — Appendix 3 reference data
+                                    sheet, Appendix 4 CV sheet, the pricing workbook. Fill it with
+                                    `Skill(docx)` / `Skill(xlsx)`; NEVER re-typeset it in our layout
+          buyer-structure           they numbered the questions and gave the answer options —
+                                    reproduce their numbering and their wording exactly
+          prose                     they gave a response box and a page limit; the answer is our
+                                    document, identified in that box
+        Inventing a structure where the buyer supplied one is a format non-compliance, and
+        format non-compliance is a common auto-reject: the content never gets read.
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:

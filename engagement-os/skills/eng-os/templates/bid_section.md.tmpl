@@ -8,6 +8,16 @@ answers_reqs: [R-0xx]
 page_budget: "<N> A4[, shared across <which questions>][, typography note]"
 figures: [F-0x]
 evidence: [A-0xx]
+response_form: prose      # HOW the buyer expects this answer to arrive — check the RFT before writing:
+                         #   buyer-form: <their file>  the answer IS their form, filled (Appendix 3
+                         #                             data sheet, Appendix 4 CV, pricing workbook).
+                         #                             Fill it with the `docx` / `xlsx` skill; never
+                         #                             re-typeset it in our own layout
+                         #   buyer-structure           they numbered the questions and gave the answer
+                         #                             options (Yes / No / N-A). Mirror their numbering
+                         #                             and their wording exactly
+                         #   prose                     they gave a response box and a page limit; the
+                         #                             answer is our document, identified in that box
 depends_on: []            # e.g. [estimation.xlsx, S-01]; only load-bearing extra dependencies
 status: draft            # draft → reviewed-r1 → reviewed-r2 → approved
                          # send-back states: revise-r1/r2 · blocked-r1/r2 (blocked = needs external input)
@@ -29,7 +39,13 @@ status: draft            # draft → reviewed-r1 → reviewed-r2 → approved
 
 <Answer the question the buyer asked, in the order they asked it. If they enumerate required
 elements, use their enumeration — an evaluator scoring against a checklist should not have to
-hunt for the items.>
+hunt for the items.
+
+Where the RFT supplies the answer structure, REPRODUCE IT rather than designing your own: their
+question numbers, their wording, their Yes / No / N-A options. A tenderer who re-organises a
+pass/fail questionnaire into a nicer table makes the evaluator hunt for each answer, and format
+non-compliance is a common auto-reject. The structure is in the ingested RFT markdown under
+`1_received/_md/` — lift it from there.>
 
 ![<caption>](../figures/F-0x_<name>.png)
 *Figure N — <what it shows, not what it is called>.*

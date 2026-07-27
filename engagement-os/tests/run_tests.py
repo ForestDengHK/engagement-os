@@ -89,10 +89,12 @@ def clean_tree():
             'page_budget: "4 A4, Arial 10 (per section)"\n'
             "figures: [F-01]\n"
             "evidence: [A-001]\n"
+            "response_form: prose\n"
             "status: draft\n"
             "---\n\n"
             "# 1.1 Experience\n\n"
-            "We did the thing. [RFP §5.1.1] Benchmarked at 12 weeks per BR-001.\n\n"
+            "We did the thing. [RFP §5.1.1] Benchmarked at 12 weeks.\n\n"
+            "**Traceability.** Benchmark → BR-001.\n\n"
             "![coverage](../../figures/F-01_x.png)\n"
             "*Figure 1 — coverage.*\n\n"
             "## Review log\n\n"
@@ -101,6 +103,12 @@ def clean_tree():
         "01_pursuit/27-010/3_drafting/figures/F-01_x.png": "png",
         "01_pursuit/27-010/3_drafting/figures/F-01_x.html": "<html></html>",
         "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx": "pptx",
+        "01_pursuit/27-010/1_received/rft.docx": "PK-rft",
+        "01_pursuit/27-010/1_received/_md/README.md": (
+            "# received pack manifest\n\n- `rft.md` — converted from `rft.docx`\n"),
+        "01_pursuit/27-010/1_received/_md/rft.md": (
+            "# RFT\n\n## §1.1 Experience\n\nDescribe your experience.\n\n"
+            "## §2.1 Security\n\nDo you hold ISO 27001?\n\nYes ☐  No ☐\n"),
         "_sources/public/_md/README.md": (
             "# public pack manifest\n\nNo converted documents yet.\n"),
     }
@@ -183,16 +191,16 @@ CASES = [
 
     # ── the research log is the claim's backing, and it is now checked ────────
     ("research-row-open-is-a-warning",
-     lambda t: _sub(t, SEC, "per BR-001.", "per BR-001, with the referee at BR-002."),
+     lambda t: _sub(t, SEC, "Benchmark → BR-001.", "Benchmark → BR-001; referee → BR-002."),
      set(), {"research-row-open"}, set()),
     ("research-row-unknown-is-an-error",
-     lambda t: _sub(t, SEC, "per BR-001.", "per BR-014."),
+     lambda t: _sub(t, SEC, "Benchmark → BR-001.", "Benchmark → BR-014."),
      {"research-row-unknown"}, set(), set()),
     ("research-log-row-id-may-be-a-bare-number",
      lambda t: _sub(t, LOG, "| BR-001 |", "| 1 |"),
      set(), set(), {"research-row-unknown"}),
     ("research-citation-may-be-log-hash-form",
-     lambda t: _sub(t, SEC, "per BR-001.", "per log #1."),
+     lambda t: _sub(t, SEC, "Benchmark → BR-001.", "Benchmark → log #1."),
      set(), set(), {"research-row-unknown"}),
     ("research-log-missing-while-drafting-is-a-warning",
      lambda t: t.pop(LOG),
@@ -209,6 +217,35 @@ CASES = [
     ("no-outline-yet-is-not-a-failure",
      lambda t: t.pop(OUTLINE),
      set(), set(), {"outline-row-unmapped", "outline-row-phantom"}),
+
+    # ── the buyer's own response form ────────────────────────────────────────
+    # A tender supplies most of the answer scaffolding — numbered questions with Yes/No boxes,
+    # forms to fill. Inventing our own where they gave one is a format non-compliance, and format
+    # non-compliance is a common auto-reject: the content never gets read.
+    ("response-form-missing-is-flagged",
+     lambda t: _sub(t, SEC, "response_form: prose\n", ""),
+     set(), {"response-form-undeclared"}, set()),
+    ("response-form-outside-the-vocabulary",
+     lambda t: _sub(t, SEC, "response_form: prose", "response_form: freestyle"),
+     {"response-form-unknown"}, set(), set()),
+    ("buyer-form-must-name-the-form",
+     lambda t: _sub(t, SEC, "response_form: prose", "response_form: buyer-form"),
+     {"response-form-nameless"}, set(), set()),
+    ("buyer-form-naming-a-missing-file",
+     lambda t: _sub(t, SEC, "response_form: prose",
+                    "response_form: buyer-form: Appendix 9 Pricing.xlsx"),
+     set(), {"response-form-missing-file"}, set()),
+    ("buyer-form-named-inside-the-rft-need-not-be-a-file",
+     lambda t: _sub(t, SEC, "response_form: prose",
+                    "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
+     set(), set(), {"response-form-missing-file"}),
+    ("prose-where-the-buyer-supplied-answer-boxes",
+     lambda t: _sub(t, SEC, 'rft_clause: "§5.1.1"', 'rft_clause: "§2.1"'),
+     set(), {"response-structure-invented"}, set()),
+    ("buyer-structure-where-the-buyer-supplied-answer-boxes",
+     lambda t: (_sub(t, SEC, 'rft_clause: "§5.1.1"', 'rft_clause: "§2.1"'),
+                _sub(t, SEC, "response_form: prose", "response_form: buyer-structure")),
+     set(), set(), {"response-structure-invented"}),
 
     # ── an internal register id in body prose has no client-facing form ──────
     ("internal-id-in-body-prose",
@@ -467,14 +504,16 @@ CASES = [
                               "| File | Source |\n|---|---|\n| `rft.md` | RFT.pdf |\n")),
      set(), {"images-untriaged"}, set()),
     ("tender pack converted with no manifest",
-     lambda t: t.__setitem__("01_pursuit/27-010/1_received/_md/rft.md", "# RFT\n"),
+     lambda t: t.pop("01_pursuit/27-010/1_received/_md/README.md"),
      {"manifest-absent"}, set(), set()),
     # Real tender filenames have spaces — the row reader must match what the writer writes.
     ("manifest row with spaces in the filename",
-     lambda t: (t.__setitem__("01_pursuit/27-010/1_received/_md/27-010 - Main RFT.md",
-                              "# RFT\n"),
-                t.__setitem__("01_pursuit/27-010/1_received/_md/README.md",
-                              "- `27-010 - Main RFT.md` — converted from `27-010 - Main RFT.docx`\n")),
+     lambda t: (t.__setitem__("01_pursuit/27-010/1_received/27-010 - Main RFT.docx", "PK"),
+                t.__setitem__("01_pursuit/27-010/1_received/_md/27-010 - Main RFT.md", "# RFT\n"),
+                _sub(t, "01_pursuit/27-010/1_received/_md/README.md",
+                     "- `rft.md` — converted from `rft.docx`\n",
+                     "- `rft.md` — converted from `rft.docx`\n"
+                     "- `27-010 - Main RFT.md` — converted from `27-010 - Main RFT.docx`\n")),
      set(), set(), {"manifest-missing", "manifest-absent", "manifest-stale-row"}),
     ("manifest-absent",
      lambda t: (t.pop("_sources/public/_md/README.md"),
@@ -874,6 +913,17 @@ def converter_tests():
          "../../figures/F-01_x.png" in delivered),
         ("the internal review copy keeps the apparatus a reviewer needs",
          "[⚠VERIFY" in render.strip_internal(raw, False)[0]),
+    ]
+
+    narrow = ("| # | Question | Yes | No |\n|---|---|---|---|\n"
+              "| 1 | " + "x" * 120 + " | **[TBD]** | **[TBD]** |\n")
+    balanced = render.balance_tables(narrow).splitlines()[1]
+    cols = [len(c) for c in balanced.strip("|").split("|")]
+    contract_checks += [
+        # pandoc derives Word column widths from the DASH COUNT; uniform dashes squeezed a
+        # 120-character question into a 15-character column, and raw ratios starved "Yes"
+        ("table columns are sized from their content", cols[1] > cols[0] and cols[1] > cols[2]),
+        ("an answer column keeps room for its widest cell", min(cols) >= 4),
     ]
 
     for name, ok in contract_checks:

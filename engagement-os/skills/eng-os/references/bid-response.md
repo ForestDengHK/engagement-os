@@ -142,6 +142,30 @@ tops out at `reviewed-r1`.
 Do not collapse R1 and R2. They fail differently: R1 is structural and can be reasoned about from
 the RFT; R2 is judgement and cannot.
 
+## Use the buyer's own response form — do not design your own
+
+Before a word is written, read what the buyer supplied. A real tender carries most of the answer
+scaffolding already, and on the pack's own worked example (GNI 26-002) that meant **51 Yes / No /
+N-A answer boxes, four "TENDERER'S RESPONSE (identify document attached)" boxes and five appendix
+forms** — none of which the first draft reproduced, because nothing told it to look.
+
+Three modes, declared per section in `response_form`:
+
+| Mode | What the buyer gave | What we do |
+|---|---|---|
+| `buyer-form: <file>` | A form to fill — reference data sheet, CV sheet, pricing workbook, declaration | Fill **their file** through `docx` / `xlsx`. Re-typesetting it in our own layout is the error: the evaluator is checking against their template |
+| `buyer-structure` | Numbered questions and the answer options (Yes / No / N-A) | Reproduce their numbering and wording exactly, then answer under each. A tidier table of our own makes them hunt |
+| `prose` | A response box and a page limit | Our document, written to the page budget and identified in that box |
+
+The scaffolding is already in the repo: `eng-ingest-source` converted the RFT to markdown under
+`1_received/_md/`, so lifting the structure is reading, not parsing. `eng_lint` flags a section
+whose clause carries answer boxes but which was written as free prose
+(`response-structure-invented`), and a `buyer-form` that names no file.
+
+**Why this is not pedantry.** Format non-compliance is one of the few ways to lose a tender before
+the content is read at all. A pass/fail questionnaire re-organised into our own table risks an
+evaluator recording "did not answer question 3" against an answer that is on the page.
+
 ## Match the buyer's required format
 
 **This is the last step, once the content is reviewed and approved** — assembling section
