@@ -108,6 +108,13 @@ an error (pandoc degrades it to alt text — the document builds and the figure 
 `F-nn` figure · `BR-nnn` research row (`bid_research_log.md`, cited in a body as `BR-003`
 or `log #3`). Ids are allocated in their owning register and only there.
 
+**Authored shorthand is not delivered shorthand.** Write `[RFP §3.3]`, `A-014`, `BR-005` and
+`[⚠VERIFY — what would close it]` in the source: that is what makes traceability checkable. The
+render normalises them for the recipient — clause refs into the buyer's own vocabulary, unresolved
+facts into a neutral `[TBD]`, internal ids **deleted**. Because deletion is the only possible
+rendering of an id, a body sentence must not depend on one: put the id on the `**Traceability.**`
+line and name the evidence in words. Lint warns (`internal-id-in-prose`) when it does not.
+
 **A marker with an explanation is still the marker.** `[⚠VERIFY]` and
 `[⚠VERIFY — what would close it]` are the same thing, and the explanatory form is the one
 worth writing. Every matcher accepts both (`section_contract.VERIFY_RE`); a gate that

@@ -249,6 +249,37 @@ def research_row_id(cell):
     return f"BR-{int(m.group(1)):03d}" if m else None
 
 
+def rule_internal_ids_in_prose(root, r):
+    """An internal register id in a section's BODY prose has no client-facing form.
+
+    The render normalises authoring shorthand on the way out — `[RFP §3.3]` becomes `(RFT §3.3)`,
+    an unresolved marker becomes `[TBD]` — but a bare `A-014` or `BR-005` can only be deleted,
+    which leaves a sentence that has lost its evidence. Cite the asset in the `**Traceability.**`
+    line (scaffolding, stripped) and name the thing itself in the prose. Found by reading a
+    rendered tender that printed our own asset-register ids to the evaluator.
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    r.ran()
+    id_re = re.compile(r"\b(?:BR|A|R|S)-\d{2,3}\b")
+    for p in secs:
+        _meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        body = re.split(r"^\*\*Traceability\.\*\*", body, maxsplit=1, flags=re.M)[0]
+        body = re.split(r"^##\s+Review log", body, maxsplit=1, flags=re.M)[0]
+        hits = set()
+        for i, line in enumerate(body.splitlines(), 1):
+            ls = line.lstrip()
+            if ls.startswith((">", "**Figure source.", "!")):
+                continue                      # scaffolding lines are stripped at render
+            hits |= set(id_re.findall(line))
+        if hits:
+            r.warn("internal-id-in-prose", str(p.relative_to(root)),
+                   f"body prose names {', '.join(sorted(hits))} — the render can only delete an "
+                   "internal id; move the citation to the Traceability line and name the evidence "
+                   "in words")
+
+
 def rule_research_rows_closed(root, r):
     """A section may only rest on research rows the log has CLOSED.
 
@@ -1049,7 +1080,7 @@ def rule_figures_exist(root, r):
 RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
-         rule_research_rows_closed, rule_outline_covers_matrix,
+         rule_research_rows_closed, rule_internal_ids_in_prose, rule_outline_covers_matrix,
          rule_outline_sections_exist, rule_submission_format,
          rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
