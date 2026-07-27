@@ -65,6 +65,11 @@ def is_relevant(root, path):
         return True
     if re.search(r"01_pursuit/[^/]+/3_drafting/(?:sections|figures)/", s):
         return path.suffix.lower() in {".md", *FIGURE_EXTS}
+    if re.search(r"01_pursuit/[^/]+/3_drafting/bid_response_outline\.md$", s):
+        # the outline is a maintained SOURCE: its format table drives the render, and
+        # untracked, a re-render after an outline edit read as a hand-edited output —
+        # an error that refused the checkpoint on the normal sequence
+        return True
     if re.search(r"01_pursuit/[^/]+/3_drafting/", s) and path.suffix.lower() in OUTPUT_EXTS:
         return True
     if s.startswith("00_research/1_analysis/") and path.suffix.lower() == ".md":
@@ -97,6 +102,8 @@ def role_of(rel):
         return "response-section"
     if "figures" in parts:
         return "figure"
+    if name == "bid_response_outline.md":
+        return "response-outline"
     if "3_drafting" in parts and "forms" in parts:
         # Filled buyer forms are MAINTAINED artefacts: the xlsx/docx skill edits them in
         # place and there is no upstream source to re-render them from. Classing them as
@@ -208,9 +215,15 @@ def table_entities(path, id_re, prefix=None):
     return out
 
 
-def heading_section_hash(path, heading_number):
+def heading_section_hash(path, name_pattern):
+    """Hash of one numbered-or-not heading's section, located by NAME.
+
+    It was located by hardcoded number ('## 10.'): any renumbering made the hash empty on
+    both sides of a checkpoint — edits to the estimate headline became invisible AND a
+    permanent spurious impact fired on every workbook change.
+    """
     text = path.read_text(encoding="utf-8", errors="replace")
-    match = re.search(rf"^##\s+{re.escape(str(heading_number))}\.?\s+.*$"
+    match = re.search(rf"^##\s*\d*\.?\s*{name_pattern}.*$"
                       r"(.*?)(?=^##\s+|\Z)", text, re.M | re.S)
     return sha256_bytes(match.group(0).strip().encode("utf-8")) if match else ""
 
@@ -241,7 +254,7 @@ def snapshot(root):
             entities["requirements"].update(table_entities(path, sc.REQ_ID_RE))
         elif files[rel]["role"] == "rfp-analysis":
             entities["scope"].update(table_entities(path, re.compile(r"\bS-\d{2,3}\b")))
-            entities["analysis_estimate"][rel + " §10"] = heading_section_hash(path, 10)
+            entities["analysis_estimate"][rel + " §estimate"] = heading_section_hash(path, r"Estimate\b")
         elif files[rel]["role"] == "firm-assets":
             entities["assets"].update(table_entities(path, sc.ASSET_ID_RE))
         elif files[rel]["role"] == "research-log":
@@ -422,7 +435,9 @@ def scan(root):
                     "engagement-os:eng-render")
             else:
                 add_impact(
-                    impacts, rel, "reconcile the edit into its maintained source, then re-render",
+                    impacts, rel, "reconcile the edit into its maintained source, then re-render"
+                                  " — or, if this IS the re-render (the renderer itself changed), "
+                                  "simply checkpoint",
                     "a generated output changed directly; the next render would otherwise lose it",
                     "engagement-os:eng-render", "error")
         elif role == "estimate-snapshot" and "estimate-workbook" not in roles_changed:
@@ -441,7 +456,7 @@ def scan(root):
                            "estimation.xlsx changed", "engagement-os:eng-estimate")
         changed_headlines = set(entities["analysis_estimate"])
         for rel in sorted(p for p, f in current["files"].items() if f["role"] == "rfp-analysis"):
-            headline = rel + " §10"
+            headline = rel + " §estimate"
             if headline not in changed_headlines:
                 add_impact(impacts, headline, "refresh estimate headline and price posture",
                            "estimation.xlsx changed", "engagement-os:eng-rfp-analyze")
@@ -616,8 +631,12 @@ def invalidate_section(path, required_status, reasons):
                 # verdict) is not history — appending after it would date this row later than
                 # rounds that never happened. Insert above the first such placeholder.
                 cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                # `<date>` / `<pass/revise/blocked>` placeholders are as empty as empty
+                # cells — the template plants those, and treating them as real dated the
+                # change-impact row AFTER rounds that never ran
+                vals = [re.sub(r"<[^>]*>", "", c).strip() for c in cells[2:4]]
                 if sc.ROUND_LABEL_RE.match(cells[0] if cells else "") and \
-                        len(cells) > 3 and not any(cells[2:4]):
+                        len(cells) > 3 and not any(vals):
                     break
                 insert_at += len(line)
                 trailing = 0
