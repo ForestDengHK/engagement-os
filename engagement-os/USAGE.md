@@ -282,3 +282,17 @@ harnesses, not commands users run to operate an engagement:
 | `python3 tests/run_tests.py` | one clean tree + one violated tree per `eng_lint.py` rule |
 | `python3 tests/test_verify_deck.py` | one passing + one failing deck per `verify_deck.py` check |
 | `python3 tests/test_change_impact.py` | workbook, R/S/A/BR/F, approved-section, generated-output and frozen-package propagation |
+
+**Then test what a user gets, not the working copy.** Every E2E until 2026-07-27 ran the git
+checkout directly; the installed plugin was meanwhile fifteen releases behind, missing five skills
+including every gate. A release is not done until:
+
+```
+claude plugin validate .                      # manifest
+claude plugin update engagement-os@engagement-os   # the bare name fails: "Plugin not found"
+diff -rq ~/.claude/plugins/cache/engagement-os/engagement-os/<version> engagement-os
+```
+
+then **restart the session** (an update does not apply to the session that ran it) and confirm the
+Skill tool loads the new version — invoke one skill and check its body carries the release's
+changes.

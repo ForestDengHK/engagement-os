@@ -361,6 +361,58 @@ def case_invalidation_keeps_the_round_it_observed():
     assert "status-contradicts-review" not in lint.stdout
 
 
+def case_recorded_re_review_stops_the_repeat_demand():
+    """Once the author records the re-review, the gate asks for a checkpoint, not another round.
+
+    Following the skill exactly — edit, invalidate, re-review, re-render — left the report
+    repeating "set status to revise-r1 and re-review" verbatim, which trains a user to ignore it.
+    """
+    items = tree()
+    rel = "01_pursuit/27-010/3_drafting/sections/s1.md"
+    items[rel] = items[rel].replace("status: approved", "status: reviewed-r1").replace(
+        "| R2 | experienced human | 2026-07-26 | pass | approved |",
+        "| R1 | panel red-team | 2026-07-26 | pass | scores |")
+    root = build(items)
+    ci.checkpoint(root)
+    mutate_text(root, rel, "Our P50 is €100", "Our P50 is €120")
+    assert has_action(ci.scan(root), "set status to revise-r1 and re-review")
+
+    # the author does what the gate asked: a later round, recorded, with the status restored
+    mutate_text(root, rel, "| R1 | panel red-team | 2026-07-26 | pass | scores |",
+                "| R1 | panel red-team | 2026-07-26 | pass | scores |\n"
+                "| R1 (2nd pass) | panel red-team | 2099-01-01 | pass | price change re-read |")
+    report = ci.scan(root)
+    assert not has_action(report, "set status to revise-r1 and re-review")
+    assert has_action(report, "then checkpoint")
+    assert report["has_pending"], "still pending until the checkpoint lands"
+
+
+def case_change_row_lands_above_unrun_rounds():
+    """The appended row must not sit after rows planted for rounds that never ran.
+
+    The section template used to plant empty R2/R3 rows, so every appended row landed last —
+    a log that reads R1, R2, R3, then R1 again. The row goes above the first placeholder,
+    and the blank line separating the table from the prose survives.
+    """
+    items = tree()
+    rel = "01_pursuit/27-010/3_drafting/sections/s1.md"
+    items[rel] = (items[rel]
+                  .replace("status: approved", "status: reviewed-r1")
+                  .replace("| R2 | experienced human | 2026-07-26 | pass | approved |\n",
+                           "| R1 | panel red-team | 2026-07-26 | pass | scores |\n"
+                           "| R2 | <named human> | | | |\n"
+                           "| R3 | <final read> | | | |\n"
+                           "\n**Rounds are not a formality.**\n"))
+    root = build(items)
+    ci.checkpoint(root)
+    mutate_text(root, rel, "Our P50 is €100", "Our P50 is €120")
+    ci.apply_invalidations(root, ci.scan(root))
+    lines = [l for l in (root / rel).read_text().splitlines() if l.startswith("|")]
+    labels = [l.split("|")[1].strip() for l in lines[2:]]
+    assert labels == ["R1", "R1 (change-impact)", "R2", "R3"], labels
+    assert "|\n\n**Rounds are not a formality.**" in (root / rel).read_text()
+
+
 def case_regenerated_exports_are_not_renagged():
     """Source edited AND both exports rebuilt is the normal sequence — say 'confirm', not 'redo'."""
     root = build()
@@ -394,6 +446,8 @@ CASES = [
     ("research rows route in either id form", case_research_row_ids_in_either_form),
     ("invalidation keeps the round it observed", case_invalidation_keeps_the_round_it_observed),
     ("regenerated figure exports are not re-nagged", case_regenerated_exports_are_not_renagged),
+    ("change row lands above rounds that never ran", case_change_row_lands_above_unrun_rounds),
+    ("a recorded re-review stops the repeat demand", case_recorded_re_review_stops_the_repeat_demand),
 ]
 
 

@@ -139,10 +139,13 @@ def section_record(root, path):
     )
     dependencies |= {f"BR-{int(n):03d}" for n in re.findall(r"\blog\s*#\s*(\d+)\b", body, re.I)}
     dependencies |= set(sc.RESEARCH_ID_RE.findall(body))
+    verdict = sc.latest_verdict(text)
     return {
         "content_sha256": sha256_bytes(canonical_section_text(text).encode("utf-8")),
         "status": meta.get("status", ""),
         "dependencies": sorted(dependencies),
+        "latest_review": {"round": verdict[0], "verdict": verdict[1], "date": verdict[2]}
+                         if verdict else None,
     }
 
 
@@ -501,11 +504,26 @@ def scan(root):
                     "an upstream research analysis changed",
                     "engagement-os:eng-build-deliverable")
 
+    baseline_day = (old.get("recorded_at") or "")[:10]
     for rel, item in affected.items():
         if item["required_status"]:
-            add_impact(
-                impacts, rel, f"set status to {item['required_status']} and re-review",
-                "; ".join(item["reasons"]), "engagement-os:eng-bid-respond")
+            # A re-review recorded AFTER the baseline is the author saying they have already
+            # done what this gate asks. Repeating the demand verbatim is how a gate's output
+            # becomes noise; the outstanding step is then the checkpoint, not another round.
+            review = (current_sections.get(rel) or {}).get("latest_review") or {}
+            reviewed_since = (review.get("verdict") == "pass"
+                              and review.get("date", "") >= baseline_day
+                              and item["current_status"] in REVIEWED)
+            if reviewed_since:
+                add_impact(
+                    impacts, rel,
+                    f"confirm the {review['round']} re-review covers this change, then checkpoint",
+                    "; ".join(item["reasons"]) + f" — re-review recorded {review['date']}",
+                    "engagement-os:eng-bid-respond", "info")
+            else:
+                add_impact(
+                    impacts, rel, f"set status to {item['required_status']} and re-review",
+                    "; ".join(item["reasons"]), "engagement-os:eng-bid-respond")
         else:
             add_impact(
                 impacts, rel, "carry change into the next render",
@@ -553,17 +571,27 @@ def invalidate_section(path, required_status, reasons):
     if heading:
         tail = text[heading.end():]
         lines = tail.splitlines(keepends=True)
-        insert_at, saw_table = 0, False
+        insert_at, saw_table, trailing = 0, False, 0
         for line in lines:
             if line.lstrip().startswith("|"):
                 saw_table = True
+                # A row the template PLANTED for a round that has not run yet (empty date and
+                # verdict) is not history — appending after it would date this row later than
+                # rounds that never happened. Insert above the first such placeholder.
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                if sc.ROUND_LABEL_RE.match(cells[0] if cells else "") and \
+                        len(cells) > 3 and not any(cells[2:4]):
+                    break
                 insert_at += len(line)
+                trailing = 0
             elif saw_table and line.strip():
                 break
             else:
                 insert_at += len(line)
+                trailing += len(line)          # blank lines after the table belong to it
+        insert_at -= trailing
         absolute = heading.end() + insert_at
-        text = text[:absolute].rstrip() + "\n" + row + "\n" + text[absolute:].lstrip("\n")
+        text = text[:absolute].rstrip("\n") + "\n" + row + "\n" + text[absolute:].lstrip("\n")
     path.write_text(text, encoding="utf-8")
     return True
 
