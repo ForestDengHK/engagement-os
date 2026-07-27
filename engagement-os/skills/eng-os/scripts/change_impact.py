@@ -384,6 +384,22 @@ def scan(root):
                     impacts, rel, "restore frozen copy and create a new dated version",
                     f"the frozen package was {c['change']}; submitted evidence is immutable",
                     "engagement-os:eng-propagate-change", "error")
+        elif role == "rendered-output" and c["change"] == "deleted":
+            add_impact(
+                impacts, rel, "re-render when the sources are ready",
+                "the generated output was deleted; nothing to verify until it is rebuilt",
+                "engagement-os:eng-render", "info")
+        elif role == "figure" and c["change"] == "deleted":
+            pass                        # handled once per figure id below
+        elif role == "response-section" and c["change"] == "deleted":
+            lost = sorted(x for x in old_sections.get(rel, {}).get("dependencies", [])
+                          if x.startswith("R-"))
+            add_impact(
+                impacts, rel, "restore it or re-map its requirements in the outline",
+                ("a response section was deleted; "
+                 + (f"it answered {', '.join(lost)}, which are now answered nowhere"
+                    if lost else "its requirement coverage went with it")),
+                "engagement-os:eng-bid-respond")
         elif role == "rendered-output":
             if source_change:
                 add_impact(
@@ -456,10 +472,17 @@ def scan(root):
                  for c in changes if c["role"] == "figure"
                  and pathlib.PurePosixPath(c["path"]).name.startswith(fig + "_")}
         exported = {".png", ".pptx"} <= moved
+        deleted_set = {c["change"] for c in changes if c["role"] == "figure"
+                       and pathlib.PurePosixPath(c["path"]).name.startswith(fig + "_")} == {"deleted"}
         for c in changes:
             if c["role"] == "figure" and pathlib.PurePosixPath(c["path"]).suffix == ".html" \
                     and pathlib.PurePosixPath(c["path"]).name.startswith(fig + "_"):
-                if exported:
+                if deleted_set:
+                    add_impact(
+                        impacts, c["path"],
+                        f"remove {fig} from any section that declares it, or restore the figure",
+                        f"{fig} and its exports were deleted", "engagement-os:eng-bid-respond")
+                elif exported:
                     add_impact(impacts, c["path"],
                                "confirm the regenerated PNG and PPTX match the new source",
                                f"{fig} source and both exports changed together",

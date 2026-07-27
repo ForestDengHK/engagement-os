@@ -780,6 +780,13 @@ def rule_section_budget(root, r):
         if not m:
             continue
         limit = int(m.group(1))
+        per_item = re.search(r"\bper\s+(?!section\b)", budget, re.I)
+        if per_item:
+            # "3 A4 per CV Reference Data Sheet" bounds each ITEM, and the linter does not know
+            # how many items there will be. Measuring the cover section against it reported a
+            # deliberately short cover as under-length; measuring it as a section cap would be
+            # worse. Neither check applies.
+            continue
         if "shared" in budget.lower():
             # A shared budget spans several files, so per-file checking always passes while the
             # group overruns. Pool on the NORMALIZED budget string — pooling on the raw string
