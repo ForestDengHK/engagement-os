@@ -154,7 +154,7 @@ Three modes, declared per section in `response_form`:
 | Mode | What the buyer gave | What we do |
 |---|---|---|
 | `buyer-form: <file>` | A form to fill — reference data sheet, CV sheet, pricing workbook, declaration | Fill **their file** through `docx` / `xlsx`. Re-typesetting it in our own layout is the error: the evaluator is checking against their template |
-| `buyer-structure` | Numbered questions and the answer options (Yes / No / N-A) | Reproduce their numbering and wording exactly, then answer under each. A tidier table of our own makes them hunt |
+| `buyer-structure` | Numbered questions and the answer options (Yes / No / N-A), usually as tables in their document | **Copy that range out of their file and fill it.** Reproducing it as our own markdown tables looks close and is not — their incident table is 12 rows × 8 columns and a re-drawn one was 5 × 4, so the evaluator marks a form we redesigned |
 | `prose` | A response box and a page limit | Our document, written to the page budget and identified in that box |
 
 The scaffolding is already in the repo: `eng-ingest-source` converted the RFT to markdown under
