@@ -361,6 +361,30 @@ def case_invalidation_keeps_the_round_it_observed():
     assert "status-contradicts-review" not in lint.stdout
 
 
+def case_deletions_are_not_edits():
+    """Deleting a draft is a real workflow (start the response over) and must read as deletion.
+
+    Deleted outputs asked to be "verified", a deleted figure set asked to be "regenerated", and a
+    deleted response section — which takes its requirement coverage with it — produced no impact
+    at all.
+    """
+    root = build()
+    ci.checkpoint(root)
+    for rel in ("01_pursuit/27-010/3_drafting/sections/s1.md",
+                "01_pursuit/27-010/3_drafting/figures/F-01_x.html",
+                "01_pursuit/27-010/3_drafting/figures/F-01_x.png",
+                "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx",
+                "01_pursuit/27-010/3_drafting/bid.docx"):
+        (root / rel).unlink()
+    report = ci.scan(root)
+    assert has_action(report, "restore it or re-map its requirements"), "deleted section silent"
+    assert has_action(report, "R-001"), "the lost requirement is not named"
+    assert has_action(report, "remove F-01 from any section that declares it")
+    assert not has_action(report, "regenerate PNG and editable PPTX")
+    assert has_action(report, "re-render when the sources are ready")
+    assert not has_action(report, "verify this regenerated output")
+
+
 def case_recorded_re_review_stops_the_repeat_demand():
     """Once the author records the re-review, the gate asks for a checkpoint, not another round.
 
@@ -448,6 +472,7 @@ CASES = [
     ("regenerated figure exports are not re-nagged", case_regenerated_exports_are_not_renagged),
     ("change row lands above rounds that never ran", case_change_row_lands_above_unrun_rounds),
     ("a recorded re-review stops the repeat demand", case_recorded_re_review_stops_the_repeat_demand),
+    ("deletions read as deletions, not edits", case_deletions_are_not_edits),
 ]
 
 

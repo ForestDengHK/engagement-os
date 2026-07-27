@@ -30,6 +30,7 @@ It does NOT design figures (`designing-figures` owns that), build slides
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import re
@@ -345,6 +346,8 @@ def main() -> int:
     pol = PROFILES[args.profile]
     report(sections, pol["strip"])
     blocking, advisory = gate(sections, args.profile, args.force)
+    blocking_overridden = [a[len("FORCED past: "):] for a in advisory
+                           if a.startswith("FORCED past: ")]
 
     for a in advisory:
         print(f"  advisory: {a}")
@@ -411,6 +414,17 @@ def main() -> int:
         parts.append(text)
     for note in stripped_notes:
         print(f"  note: {note}", file=sys.stderr)
+    if args.force and pol["shippable"] and blocking_overridden:
+        # A forced strict-profile build is a legitimate artefact — a reviewer needs to see the
+        # real thing, page counts and all, before every gate closes. What it must never be is
+        # indistinguishable from the submission: the only difference used to be the filename.
+        banner = ["**DRAFT — NOT FOR SUBMISSION.** Built "
+                  f"{dt.date.today().isoformat()} with `--force`, past "
+                  f"{len(blocking_overridden)} unresolved gate finding(s):", ""]
+        banner += [f"- {b}" for b in blocking_overridden]
+        banner += ["", "Re-run without `--force` once they are closed; that build carries no "
+                   "banner and is the one that may be submitted.", ""]
+        parts.insert(0, "\n".join(banner))
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write("\n\n\\newpage\n\n".join(parts))
     print(f"\nwrote {md_path}")

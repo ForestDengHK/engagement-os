@@ -39,6 +39,19 @@ the facade; both live with the eng-os kernel. Pruning skills individually must k
         a list of what ran is indistinguishable from "I didn't run anything".
 ```
 
+## "I want the document anyway"
+
+A finding is information, not a veto. When the user wants the real artefact before every gate
+closes — to read it, to circulate it, to measure the page count — the answer is not to argue: hand
+to `Skill(engagement-os:eng-render)` with `--force`. A forced strict-profile build is a full,
+correctly stripped, correctly paginated document that **labels itself**: a first-page banner names
+every gate finding it was built past, and any `[⚠VERIFY]` marker stays visible in the text. What it
+must never become is a file indistinguishable from the submission — that is the whole reason the
+banner exists, and it is why re-running without `--force` (once the findings close) is the build
+that may actually be sent.
+
+What this skill will not do is close a finding to make the build quiet.
+
 ## What this does NOT do
 
 - **It does not fix.** A lint error is usually a real gap in the work (a requirement genuinely

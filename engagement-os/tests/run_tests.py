@@ -216,6 +216,21 @@ CASES = [
                     "*Figure 1 — coverage.*\n\n**Figure source.** `F-01_x.html` is the master."),
      set(), set(), {"figure-source-in-caption"}),
 
+    # ── a per-ITEM budget is not a section budget ────────────────────────────
+    # "3 A4 per CV Reference Data Sheet" bounds each sheet; the linter cannot know how many
+    # sheets there will be, so measuring the cover section against it reported a deliberately
+    # short cover as under-length.
+    ("per-item-budget-is-neither-over-nor-under",
+     lambda t: (_sub(t, SEC, "marks: 20", "marks: 100"),
+                _sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
+                     'page_budget: "3 A4 per CV Reference Data Sheet, Arial 10"')),
+     set(), set(), {"section-underlength", "section-overlength"}),
+    ("per-section-budget-still-checked",
+     lambda t: (_sub(t, SEC, "marks: 20", "marks: 100"),
+                _sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
+                     'page_budget: "6 A4, Arial 10 (per section)"')),
+     set(), {"section-underlength"}, set()),
+
     # ── the page budget bites in BOTH directions on a scored section ─────────
     ("scored-section-well-under-its-budget",
      lambda t: (_sub(t, SEC, "marks: 20", "marks: 100"),

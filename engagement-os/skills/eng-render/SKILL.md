@@ -88,7 +88,10 @@ the recipient; add a new one in the script's `PROFILES` table rather than specia
 
 `--force` overrides a policy gate and **reports every gate it overrode as an advisory**, so a
 forced build still tells you the status it ignored and how many `[⚠VERIFY]` markers are in the
-text. **A missing figure is never overridable** in any profile: pandoc degrades a missing image to
+text. Under `bid`/`deliverable` it also **writes that list into the document** as a first-page
+`DRAFT — NOT FOR SUBMISSION` banner: the artefact is real, complete and correctly stripped, and it
+says out loud what it was built past. Nothing else distinguished a forced build from the submission
+but its filename. **A missing figure is never overridable** in any profile: pandoc degrades a missing image to
 its alt text, so the document builds happily and the figure is simply gone.
 
 The legitimate use of `--force` is measurement, not shipping: pointing it at a single unapproved
