@@ -86,14 +86,26 @@ the recipient; add a new one in the script's `PROFILES` table rather than specia
 | `bid` | every section `reviewed-r2`/`approved`, no `[⚠VERIFY]` in body text | a tender is scored once |
 | `deliverable` | every section `reviewed`/`approved`/`issued`, no `[⚠VERIFY]` | it carries our name |
 
-`--force` overrides a policy gate. **A missing figure is never overridable** in any profile:
-pandoc degrades a missing image to its alt text, so the document builds happily and the figure
-is simply gone.
+`--force` overrides a policy gate and **reports every gate it overrode as an advisory**, so a
+forced build still tells you the status it ignored and how many `[⚠VERIFY]` markers are in the
+text. **A missing figure is never overridable** in any profile: pandoc degrades a missing image to
+its alt text, so the document builds happily and the figure is simply gone.
+
+The legitimate use of `--force` is measurement, not shipping: pointing it at a single unapproved
+section under `--profile bid` is the only way to learn that section's real submission page count
+before the review rounds finish — and the page budget is the one constraint that changes what you
+write. A `plain` build measures a different document (it keeps the scaffolding).
+
+`[⚠VERIFY]` is matched in every written form, including the explanatory
+`[⚠VERIFY — what would close it]` that real sections carry. Matching only the bare literal let
+eight markers through onto a rendered tender page.
 
 ## What gets stripped
 
 Sections are written to be *checkable*; that scaffolding must not reach a reader — scoring notes
-(`>` blocks), the traceability line, the review log. The strip is mechanical and lives in the
+(`>` blocks), the `**Figure source.**` pointer to a figure's editable master, the traceability
+line, the review log. A figure *caption* is client-facing text and is NOT stripped, so the
+editable-master filenames belong on the `**Figure source.**` line and nowhere else. The strip is mechanical and lives in the
 script, because doing it by hand is how internal scaffolding reaches an evaluator.
 
 Stripping happens **only under `bid`/`deliverable`** — the blockquote = scoring-note convention

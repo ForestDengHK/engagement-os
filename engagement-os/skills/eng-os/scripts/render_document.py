@@ -61,14 +61,14 @@ PROFILES = {
     },
     "bid": {
         "shippable": {"reviewed-r2", "approved"},
-        "block_markers": ["[⚠VERIFY]"],
+        "block_markers": [sc.VERIFY_RE],
         "strip": True,
         "why": "a tender is scored once; an unfixed R1 finding or an open VERIFY "
                "reaches the evaluator as a claim",
     },
     "deliverable": {
         "shippable": {"reviewed", "approved", "issued"},
-        "block_markers": ["[⚠VERIFY]"],
+        "block_markers": [sc.VERIFY_RE],
         "strip": True,
         "why": "a client deliverable carries our name; unvalidated facts do not ship in it",
     },
@@ -146,6 +146,12 @@ def strip_internal(body: str, scaffolding: bool = True):
                 i += 1
             continue
 
+        if line.strip().startswith("**Figure source.**"):      # where the editable master lives
+            i += 1
+            while i < len(lines) and lines[i].strip():
+                i += 1
+            continue
+
         if line.strip().startswith("**Traceability.**"):       # traceability + its rule
             while out and not out[-1].strip():
                 out.pop()
@@ -180,6 +186,12 @@ def gate(sections, profile, override):
                                 f".pptx sibling — a reviewer cannot correct it")
 
     if override:
+        # --force is legitimate mid-flight (measuring the real page count of a section that
+        # is not approved yet). It must still report what it is overriding: a silent force
+        # is how an open VERIFY reaches a reviewer who believed the gate had run.
+        forced_blocking, forced_advisory = gate(sections, profile, False)
+        advisory += [f"FORCED past: {b}" for b in forced_blocking if b not in blocking]
+        advisory += [a for a in forced_advisory if a not in advisory]
         return blocking, advisory
 
     if pol["shippable"]:
@@ -192,9 +204,9 @@ def gate(sections, profile, override):
                                 "section-contract vocabulary")
     for marker in pol["block_markers"]:
         for s in sections:
-            n = strip_internal(s["body"], pol["strip"])[0].count(marker)
+            n = len(marker.findall(strip_internal(s["body"], pol["strip"])[0]))
             if n:
-                blocking.append(f"{s['file']}: {n}x unresolved {marker} in body text")
+                blocking.append(f"{s['file']}: {n}x unresolved [⚠VERIFY] in body text")
     return blocking, advisory
 
 

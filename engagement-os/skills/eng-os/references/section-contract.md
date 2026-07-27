@@ -52,6 +52,13 @@ review log: a `pass` verdict pairs with `reviewed-rN`/`approved`, `revise` with
 `revise-rN`, `blocked` with `blocked-rN`. Lint checks the pairing, not just the two
 extremes.
 
+**Rounds iterate — append, never overwrite.** R1 sends a section back, the author fixes
+it, R1 runs again. That is two rows: `R1` (verdict `revise`) then `R1 (2nd pass)`
+(verdict `pass`), and the latest row is the one the status must agree with. Any label
+beginning `R<digits>` is read as a round, so `R1b` and `R1 · re-check` work too. Never
+edit the first row to make lint quiet: what R1 originally caught is the audit trail the
+"one row per pass" rule exists to keep.
+
 ## `page_budget` format
 
 `<N> A4[, shared across <which questions>][, <typography note>]`
@@ -71,6 +78,10 @@ a page. The estimate is a warning device; the build's printed PAGE COUNT is the 
   blockquote IS scaffolding by definition; never put real content (a quotation, a
   callout that must ship) in one. Every stripped run is reported on stderr.
 - `**Traceability.** …` line — the claim-by-claim provenance.
+- `**Figure source.** …` line — where a figure's editable master and PPTX live. It exists so a
+  reviewer can correct the figure; an evaluator must never read our internal filenames, so the
+  pointer goes on this line and NEVER in the figure caption. (Found for real: the template's own
+  caption shipped `F-01_x.html` / `.pptx` straight into a rendered tender page.)
 - `## Review log` section — one row per round: `| Round | Reviewer / lens | Date | Verdict | What changed |`.
   Verdicts: `pass` / `revise` / `blocked`. The verdict column is located by its
   header name, not by position.
@@ -81,7 +92,9 @@ a page. The estimate is a warning device; the build's printed PAGE COUNT is the 
 Every figure exists as three siblings in `3_drafting/figures/`:
 `F-nn_<name>.html` (the master — edit this) · `F-nn_<name>.png` (goes in the document) ·
 `F-nn_<name>.pptx` (one editable slide — a reviewer corrects the figure instead of
-describing the correction). Sections reference the png: `![caption](../figures/F-nn_<name>.png)`.
+describing the correction). Sections reference the png: `![caption](../figures/F-nn_<name>.png)`. The caption itself is
+client-facing text only — the editable-companion pointer belongs on the `**Figure source.**`
+scaffolding line below it.
 Design belongs to the `designing-figures` skill; the pipeline and export to its
 render-pipeline reference. A missing companion is a lint warning; a missing png is
 an error (pandoc degrades it to alt text — the document builds and the figure is gone).
@@ -89,4 +102,10 @@ an error (pandoc degrades it to alt text — the document builds and the figure 
 ## ID syntax
 
 `R-nnn` requirement (compliance matrix) · `A-nnn` firm asset (`firm_assets.md`) ·
-`F-nn` figure. Ids are allocated in their owning register and only there.
+`F-nn` figure · `BR-nnn` research row (`bid_research_log.md`, cited in a body as `BR-003`
+or `log #3`). Ids are allocated in their owning register and only there.
+
+**A marker with an explanation is still the marker.** `[⚠VERIFY]` and
+`[⚠VERIFY — what would close it]` are the same thing, and the explanatory form is the one
+worth writing. Every matcher accepts both (`section_contract.VERIFY_RE`); a gate that
+matched only the bare literal let eight markers reach a rendered tender page.

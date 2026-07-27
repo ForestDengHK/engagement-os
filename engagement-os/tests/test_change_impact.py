@@ -306,6 +306,79 @@ def case_cli_contract():
     assert json.loads(refused.stdout)["status"] == "checkpoint_refused"
 
 
+def case_research_row_ids_in_either_form():
+    """A log written with `BR-001` ids, cited inline as `BR-001`, must route.
+
+    The engine read row ids only as bare integers and section citations only as `log #n`,
+    so a ten-row log written the way the rest of the pack writes ids tracked as ZERO
+    entities: a changed research claim invalidated nothing, silently.
+    """
+    items = tree()
+    items["01_pursuit/27-010/2_analysis/bid_research_log.md"] = (
+        "| # | Serves | Claim | Status |\n|---|---|---|---|\n"
+        "| BR-001 | R-001 | Benchmark is 12 weeks | closed |\n"
+        "| BR-002 | R-002 | Named lead required | closed |\n")
+    items["01_pursuit/27-010/3_drafting/sections/s1.md"] = section(
+        "Pricing", "R-001", "A-001", "estimation.xlsx",
+        "Our P50 is €100, benchmarked per BR-001.")
+    root = build(items)
+    ci.checkpoint(root)
+    assert json.loads((root / "_pm/change_impact_state.json").read_text()
+                      )["entities"]["research"], "BR rows tracked as zero"
+    mutate_text(root, "01_pursuit/27-010/2_analysis/bid_research_log.md",
+                "Benchmark is 12 weeks", "Benchmark is 14 weeks")
+    report = ci.scan(root)
+    matches = [x for x in report["affected_sections"] if x["path"].endswith("s1.md")]
+    assert len(matches) == 1 and "BR-001" in " ".join(matches[0]["reasons"])
+
+
+def case_invalidation_keeps_the_round_it_observed():
+    """A `reviewed-r1` section sent back goes to `revise-r1`, logged as an R1 row.
+
+    Pushing it to `revise-r2` and appending a row labelled `R3` claimed two review rounds
+    that never ran — and the fabricated round then became the 'latest verdict' every
+    downstream gate trusts.
+    """
+    items = tree()
+    items["01_pursuit/27-010/3_drafting/sections/s1.md"] = (
+        items["01_pursuit/27-010/3_drafting/sections/s1.md"]
+        .replace("status: approved", "status: reviewed-r1")
+        .replace("| R2 | experienced human | 2026-07-26 | pass | approved |",
+                 "| R1 | panel red-team | 2026-07-26 | pass | scores |"))
+    root = build(items)
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/figures/F-01_x.html", "v1", "v2")
+    report = ci.scan(root)
+    target = affected(report)["01_pursuit/27-010/3_drafting/sections/s1.md"]
+    assert target["required_status"] == "revise-r1", target["required_status"]
+    ci.apply_invalidations(root, report)
+    text = (root / "01_pursuit/27-010/3_drafting/sections/s1.md").read_text()
+    assert "status: revise-r1" in text
+    assert "| R1 (change-impact) |" in text and "| R3 |" not in text
+    # and the mutated file must be self-consistent under the contract
+    lint = subprocess.run([sys.executable, str(LINT), str(root)],
+                          capture_output=True, text=True)
+    assert "status-contradicts-review" not in lint.stdout
+
+
+def case_regenerated_exports_are_not_renagged():
+    """Source edited AND both exports rebuilt is the normal sequence — say 'confirm', not 'redo'."""
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/figures/F-01_x.html", "v1", "v2")
+    report = ci.scan(root)
+    assert has_action(report, "regenerate PNG and editable PPTX")
+
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/figures/F-01_x.html", "v1", "v2")
+    (root / "01_pursuit/27-010/3_drafting/figures/F-01_x.png").write_bytes(b"png-v2")
+    (root / "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx").write_bytes(b"PK-pptx-v2")
+    report = ci.scan(root)
+    assert not has_action(report, "regenerate PNG and editable PPTX")
+    assert has_action(report, "confirm the regenerated PNG and PPTX")
+
+
 CASES = [
     ("baseline, clean scan, untracked file ignored, hashes only", case_baseline_and_untracked),
     ("estimate change routes pricing only and preserves final", case_estimate_propagates_only_pricing),
@@ -318,6 +391,9 @@ CASES = [
     ("approved body edit invalidates then checkpoints clean", case_approved_body_and_checkpoint),
     ("strict lint blocks pending impact", case_lint_blocks_pending),
     ("CLI emits JSON and refuses unsafe checkpoint", case_cli_contract),
+    ("research rows route in either id form", case_research_row_ids_in_either_form),
+    ("invalidation keeps the round it observed", case_invalidation_keeps_the_round_it_observed),
+    ("regenerated figure exports are not re-nagged", case_regenerated_exports_are_not_renagged),
 ]
 
 
