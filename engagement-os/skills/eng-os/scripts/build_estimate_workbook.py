@@ -1254,6 +1254,21 @@ def find_recalc():
     return None
 
 
+def has_cached_values(xlsx_path):
+    """Does the workbook carry cached formula results an export could read?
+
+    openpyxl writes formulas with no cached value; only a real recalculation (the xlsx
+    skill, LibreOffice, Excel) fills them in. Spot-checking one derived cell is enough —
+    they are all written by the same build.
+    """
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+    try:
+        return wb["Effort"]["F2"].value is not None
+    except (KeyError, TypeError):
+        return False
+
+
 def recalculate(path):
     """Run the xlsx skill's recalc and surface its verdict. Returns True when the file is clean."""
     script = find_recalc()
@@ -1360,9 +1375,16 @@ def main():
         md_out = args.markdown or (os.path.splitext(out)[0] + ".md")
         # Export reads cached values. openpyxl leaves none behind, and neither does a hand edit
         # in Excel that was never reopened — so recalculate before reading, or the snapshot is
-        # a page of blanks that looks like a successful export.
-        if not args.no_recalc:
-            recalculate(out)
+        # a page of blanks that looks like a successful export. And when recalculation is
+        # unavailable AND no cached values exist, REFUSE: a blank snapshot overwrites a good
+        # one, exits 0, and the freshness check then passes on mtime alone — invisible loss.
+        recalced = False if args.no_recalc else recalculate(out)
+        if not recalced and not has_cached_values(out):
+            print("ERROR: formulas are unevaluated and the workbook holds no cached values — "
+                  "the export would be a page of blanks over the last good snapshot.\n"
+                  "  Recalculate first (the `xlsx` skill), or open and save the workbook in "
+                  "Excel so cached values exist.", file=sys.stderr)
+            return 3
         n = export_markdown(out, md_out)
         print(f"Exported {n} sheet(s) → {md_out}")
         print("The workbook stays the source of truth; this snapshot is generated.")
