@@ -749,6 +749,20 @@ CASES = [
                 t.__setitem__("01_pursuit/27-010/1_received/_md/README.md",
                               "| File | Source |\n|---|---|\n| `rft.md` | RFT.pdf |\n")),
      set(), {"images-untriaged"}, set()),
+    # The ASSET layer is a pack too: converted case studies carry images, and md_packs used
+    # to skip `01_pursuit/_shared/_md` entirely — 387 extracted images on the real project
+    # were invisible to every rule while lint reported "0 image warnings".
+    ("images-untriaged in the shared asset pack",
+     lambda t: (t.__setitem__("01_pursuit/_shared/_md/case-study.md",
+                              "# Case\n\n- `[uncertain]` the result chart\n"),
+                t.__setitem__("01_pursuit/_shared/_md/README.md",
+                              "- `case-study.md` — converted from `case-study.pdf`\n")),
+     set(), {"images-untriaged"}, set()),
+    ("asset pack conversion with no manifest row",
+     lambda t: (t.__setitem__("01_pursuit/_shared/_md/orphan.md", "# Orphan\n"),
+                t.__setitem__("01_pursuit/_shared/_md/README.md",
+                              "- `case-study.md` — converted from `case-study.pdf`\n")),
+     {"manifest-missing"}, {"manifest-stale-row"}, set()),
     ("tender pack converted with no manifest",
      lambda t: t.pop("01_pursuit/27-010/1_received/_md/README.md"),
      {"manifest-absent"}, set(), set()),

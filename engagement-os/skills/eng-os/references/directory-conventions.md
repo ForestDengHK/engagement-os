@@ -74,7 +74,7 @@ Blocks are marked `[core]` / `[research]` / `[pursuit]` / `[delivery]`.
 │   │   ├── README.md                   # what belongs here vs in _sources/ (decided by ORIGIN, not subject)
 │   │   ├── firm_assets.md              # the index the bid consumes: what each asset PROVES + date + in-window
 │   │   ├── approaches/ case_studies/ cvs/ credentials/ diagrams/ finance/
-│   │   └── _md/                        # conversions of the above, when an asset is cited often enough to warrant one
+│   │   └── _md/                        # conversions of the above — the md layer analysis reads
 │   ├── <ENG-ID>/                       # the live/won bid, one folder per tender id
 │   │   ├── 1_received/                 # the tender pack exactly as issued (never edited) + _md/
 │   │   ├── 2_analysis/                 # rfp_analysis.md · compliance_matrix.md · bid_research_log.md · Q&A
@@ -115,6 +115,14 @@ The deliverable folder names above (`2_assessment`…`6_executive_summary`) are 
 Don't confuse `_sources/` with the phase-level `_shared/` folders: `_sources/` holds material we
 were **given or found**, bucketed by who may see it; `01_pursuit/_shared/` and
 `02_delivery/_shared/` hold **our own** reusable assets and derived research.
+
+**One doctrine for every class of material: the md layer is the working text.** Sources, the
+tender pack, and convertible firm assets all get converted into a `_md/`; analysis and
+page-level citation read that layer, and originals are evidence — never edited, never
+re-extracted per consumer. "Analysing from the raw PDF is how citations get invented" applies
+to our own case studies exactly as much as to the RFP. `convert_source.py --scan <root>` is
+the audit: anything unconverted or unindexed shows up there, and one logical asset gets one
+conversion (duplicates and build helpers are named in `firm_assets.md` §1b, not converted).
 
 ## The `_sources/` boundary — why bid and delivery material stay apart
 

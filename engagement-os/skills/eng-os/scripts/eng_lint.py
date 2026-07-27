@@ -999,6 +999,9 @@ def md_packs(root):
     """
     areas = list(root.glob("_sources/*/_md"))
     areas += list(root.glob("01_pursuit/*/1_received/_md"))
+    # the asset layer is a pack too — converted case studies/CVs carry images and citations
+    # like any other, and leaving it out made 387 extracted images invisible to every rule
+    areas += list(root.glob("01_pursuit/_shared/_md"))
     for pack in areas:
         content = [p for p in pack.rglob("*.md") if p.name not in PACK_ROOT_FILES]
         yield pack, content
