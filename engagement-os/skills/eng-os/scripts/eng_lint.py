@@ -460,6 +460,74 @@ def rule_buyer_forms_filled(root, r):
                     "currency symbol) — an unfilled mandatory field, not a price")
 
 
+def rule_anonymised_names(root, r):
+    """A client name whose citation permission is still owed must not appear in submission text.
+
+    The asset index's `## Anonymised until permission` block is the machine-readable record:
+    while a name's state is not `granted`, finding it in a section's prose or inside a filled
+    form is a confidentiality breach in progress — a "[⚠VERIFY] permission owed" note beside
+    the printed name is not anonymisation, it is just hope (seen on the real pack).
+    """
+    secs = section_files(root)
+    idx = root / "01_pursuit/_shared/firm_assets.md"
+    if not idx.exists():
+        return
+    text = idx.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^##\s+[\dA-Za-z.]*\s*Anonymised until permission[^\n]*\n(.*?)(?=^##\s|\Z)",
+                  text, re.M | re.S | re.I)
+    if not m:
+        return
+    names = {}
+    seen_row = False
+    for line in m.group(1).splitlines():
+        if not line.lstrip().startswith("|"):
+            if seen_row:
+                break                      # end of the FIRST table — a later table (the gaps
+                                           # list) is not a names register
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 3 or set(cells[0]) <= set("-: ") or "name" in cells[0].lower():
+            continue
+        seen_row = True
+        state = cells[2].lower()
+        if state.startswith("grant"):
+            continue
+        for variant in cells[0].split("/"):
+            variant = variant.strip().strip("*")
+            if variant and "<" not in variant:
+                names[variant] = cells[1] if len(cells) > 1 else ""
+    if not names:
+        return
+    r.ran()
+    for p in secs:
+        _meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        body = re.split(r"^##\s+Review log", body, maxsplit=1, flags=re.M)[0]
+        for name, asset in sorted(names.items()):
+            if re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", body):
+                r.warn("anonymised-name-in-prose", str(p.relative_to(root)),
+                       f"prints '{name}' ({asset}) while its citation permission is owed — "
+                       "use the descriptor until the index state reads 'granted'")
+    # filled forms are submission text too — scan their XML with the same names
+    for forms in sorted(root.glob("01_pursuit/*/3_drafting/forms")):
+        for f in sorted(forms.glob("*")):
+            if not f.is_file() or f.name.startswith(("~$", ".")):
+                continue
+            import zipfile
+            xml = ""
+            try:
+                with zipfile.ZipFile(f) as z:
+                    for n in z.namelist():
+                        if n == "word/document.xml" or (n.startswith("xl/") and n.endswith(".xml")):
+                            xml += z.read(n).decode("utf-8", errors="replace")
+            except (zipfile.BadZipFile, OSError):
+                continue
+            for name, asset in sorted(names.items()):
+                if re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", xml):
+                    r.warn("anonymised-name-in-form", str(f.relative_to(root)),
+                           f"prints '{name}' ({asset}) while its citation permission is owed — "
+                           "the form is submission text; the descriptor goes here too")
+
+
 def rule_internal_ids_in_prose(root, r):
     """An internal register id in a section's BODY prose has no client-facing form.
 
@@ -1364,6 +1432,7 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
          rule_research_rows_closed, rule_internal_ids_in_prose,
+         rule_anonymised_names,
          rule_response_form_matches_rft, rule_buyer_forms_filled,
          rule_outline_covers_matrix,
          rule_outline_sections_exist, rule_submission_format,

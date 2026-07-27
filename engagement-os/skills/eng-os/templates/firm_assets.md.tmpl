@@ -65,6 +65,21 @@ evidence, so it becomes a research task or an upload request rather than a silen
 |---|---|---|---|
 | <e.g. utility-sector reference within 3 yrs> | R-0xx | <the nearest asset and why it falls short> | research / request / **cut the claim** |
 
+## 4. Anonymised until permission (machine-checked)
+
+Client names we may NOT print in submission text until written permission lands. `eng_lint.py`
+reads this table and reports any name that appears in a section or a filled form while its
+state is not `granted` — on the worked example the name sat in the draft for days behind a
+"[⚠VERIFY] permission owed" note, which is not anonymisation, just hope.
+
+| Client name (and variants, /-separated) | Asset | State (owed / granted) |
+|---|---|---|
+| <name> | A-00x | owed |
+
+When permission arrives in writing, flip the state to `granted` and write the name back into
+the sections — the lint goes quiet. Until then the submission text uses the descriptor
+("a regulated European network operator"), never the name.
+
 ## Guardrails
 
 - **An asset is not evidence until someone has read it.** "We have a case study on that" is how a

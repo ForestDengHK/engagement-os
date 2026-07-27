@@ -141,6 +141,18 @@ map each to the requirements and to where our response will earn the points. Ide
 **high-weight, high-differentiation** areas — that's where to concentrate win-themes and proof.
 If weights aren't published, infer and mark `[⚠VERIFY]`.
 
+**Extract the rubric, not just the weights.** Most tenders define what each score BAND means
+("90–100% = exceptional evidence of capability" … "0–10% = failed to address the question"),
+usually as an unnumbered table beside the evaluation section, not inside the weights table.
+The rubric tells you the evidence density each band demands — it is the difference between
+writing eloquently and writing to the evidence count. An analysis that maps weights but misses
+the rubric has read how much each answer is worth and not what a full-marks answer looks like.
+
+**Date sanity.** Every extracted date gets compared against the analysis date. A deadline in
+the past is a red-flag row in §7 and the first clarification question (closed? extended?
+re-issued?) — never a quietly-recorded fact. A team that discovers a closed tender at
+submission has burned the engagement; this is the cheapest check in the whole method.
+
 ## Step 4 — multi-role analysis (the panel lens)
 
 Read the RFP from multiple role perspectives (reuse the Panel Framework roles if installed;
