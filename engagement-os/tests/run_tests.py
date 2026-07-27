@@ -1000,6 +1000,45 @@ def converter_tests():
              and "--to-md" not in p.read_text(encoding="utf-8")
              for p in user_surfaces)))
 
+    # ── the schedule: duration is not effort, and the two must reconcile ──────
+    import openpyxl as _oxl
+    sched_wb = _oxl.load_workbook(out)
+    sched = sched_wb["Schedule"]
+    hdr = [c.value for c in next(sched.iter_rows(max_row=1))]
+    row2 = {h: c.value for h, c in zip(hdr, next(sched.iter_rows(min_row=2, max_row=2)))}
+    names = {n: str(d.value) for n, d in sched_wb.defined_names.items()}
+    wb_checks += [
+        ("schedule sheet exists with a Gantt beside it",
+         "Schedule" in sched_wb.sheetnames and "Gantt" in sched_wb.sheetnames),
+        ("effort days are a link, not a retyped number",
+         str(row2["Effort d"]).startswith("=ROUND(Effort!")),
+        ("duration is derived from effort and capacity, unless a span is given",
+         "days_per_week" in str(row2["Duration wk"]) and str(row2["Duration wk"]).startswith("=IF(F")),
+        ("a level-of-effort span overrides the derived duration",
+         str(row2["Duration wk"]).startswith("=IF(F2>0,F2")),
+        # the ranges the FTE curve reads MUST track the column layout; they were hard-coded once
+        # in the upgrade path and silently pointed one column left after a column was added
+        ("named ranges point at the schedule's real columns",
+         "$J$" in names.get("sched_start", "") and "$K$" in names.get("sched_end", "")
+         and "$G$" in names.get("sched_dur", "") and "$C$" in names.get("sched_days", "")),
+        ("the FTE curve is weekly demand, not the average",
+         "SUMPRODUCT" in str(sched_wb["Gantt"].cell(row=4, column=2).value)),
+        ("gantt bars are formulas over Schedule, not drawn",
+         "Schedule!$J" in str(sched_wb["Gantt"].cell(row=6, column=2).value)),
+    ]
+    sched_text = " ".join(str(c.value) for r in sched.iter_rows() for c in r if c.value)
+    wb_checks += [
+        ("schedule checks the estimate is fully scheduled", "MISMATCH" in sched_text),
+        ("schedule checks the term is not overrun", "OVERRUN" in sched_text),
+        ("schedule names the peak, not the average", "peak" in sched_text.lower()),
+        ("milestones carry a gate, a week and what it decides", "What it decides" in sched_text),
+    ]
+
+    # Seeding from the GENERATED snapshot produced a workbook of placeholders, and --reseed then
+    # wrote it over the real model. The guard reads the banner the exporter itself writes.
+    wb_checks.append(("a generated snapshot is refused as a seed",
+                      bw.is_generated_snapshot(snap) and not bw.is_generated_snapshot(GOOD_MD)))
+
     # A half-built estimate must still produce a legible workbook.
     empty = {k: [] for k in bw.TABLE_KINDS}
     blank_out = out.with_name("blank.xlsx")

@@ -107,6 +107,48 @@ and the rework they cause ☐. Left out, they come out of margin.
 |---|---|---|---|---|
 | | | | | |
 
+## 3e. Schedule — duration, dependencies, staffing
+
+**Duration is not effort.** Duration = effort ÷ (people × working days × utilisation), which is
+why the same 240 days can be a six-month engagement or an eighteen-month one. A cost base with no
+schedule cannot answer the two questions a buyer asks next: when does it land, and who is on it in
+week 9.
+
+Two kinds of activity, because conflating them is the classic error:
+
+- **Discrete** — duration falls out of effort and staffing. Leave `Span` blank.
+- **Level of effort** — governance, QA, review cycles: the span is given (usually the whole term)
+  and the *staffing* falls out of it instead. Put the span in, in weeks.
+
+One row per `S-ID` from §3a — the schedule and the cost are built from the same effort rows, so a
+day count moves both. `Predecessor` is finish-to-start; a blank or zero lag means the following
+week. Leave `Predecessor` empty and the `Start / lag` cell is the start week.
+
+<!--table:schedule-->
+
+| S-ID | People | Util % | Predecessor | Start / lag | Span (LOE only) |
+|---|---|---|---|---|---|
+| S-01 | 1 | 60 | | 2 | 11 |
+| S-02 | 2 | 50 | S-01 | 1 | |
+
+The workbook's `Schedule` sheet then derives duration, start/end weeks, calendar dates and a text
+bar; `Gantt` draws the week grid, the gates and the **weekly FTE demand curve**. Three checks run
+on every recalculation, and each says what a failure means:
+
+1. **Every estimated day is scheduled** — schedule total vs the PERT mean. A mismatch means the
+   plan prices work it does not contain.
+2. **Schedule fits the term** — a plan ending after the contract is a commitment nobody can make.
+3. **Peak staffing is deliverable** — peak weekly FTE vs the P50 average. Averaging a 26-week
+   engagement hides the week nobody is available; the named team has to cover the peak.
+
+### Milestones / gates
+
+<!--table:milestones-->
+
+| Gate | Week | What it decides | Deliverable |
+|---|---|---|---|
+| G1 | 12 | current-state baseline accepted | D1 |
+
 ## 3d. By grade
 
 Rates come from the **rate card** — one table, one place. The workbook's `Grades` sheet looks
