@@ -318,7 +318,7 @@ def rule_response_form_matches_rft(root, r):
 
 
 def rule_buyer_forms_filled(root, r):
-    """A `buyer-form` section must produce a FILLED working copy of the buyer's form.
+    """A `buyer-form` or `buyer-structure` section must produce a FILLED copy of the buyer's own.
 
     Declaring the mode was not enough: the render builds from markdown, so a buyer-form section
     rendered as our prose ABOUT their form while the form itself stayed empty in `1_received/`.
@@ -335,7 +335,12 @@ def rule_buyer_forms_filled(root, r):
     for p in secs:
         meta, _body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         m = sc.RESPONSE_FORM_RE.match((meta.get("response_form") or "").strip())
-        if not m or m.group(1) != "buyer-form":
+        # `buyer-structure` is the same obligation as `buyer-form`: where the buyer's own document
+        # carries the answer structure — their tables, their question numbering, their Yes/No
+        # boxes — the deliverable is THAT structure filled. Re-drawing it as our own markdown
+        # tables produced a Volume 1 whose rows and columns did not match the form the evaluator
+        # marks against (their incident table is 12 rows x 8 columns; ours was 5 x 4).
+        if not m or m.group(1) not in ("buyer-form", "buyer-structure"):
             continue
         eng = p.parents[3] if p.parent.name.startswith("v") else p.parents[2]
         forms = eng / "3_drafting/forms"
@@ -346,9 +351,9 @@ def rule_buyer_forms_filled(root, r):
         if not filled:
             (r.error if frozen else r.warn)(
                 "buyer-form-not-filled", where,
-                f"declares buyer-form '{m.group(2)[:60]}' but 3_drafting/forms/ holds no filled "
-                "copy — the answer IS their form; copy it there and fill it with the xlsx / docx "
-                "skill, and never edit the received original")
+                f"declares {m.group(1)} '{m.group(2)[:50]}' but 3_drafting/forms/ holds no filled "
+                "copy — the answer IS their structure, filled; extract it there with the docx / "
+                "xlsx skill and never edit the received original")
 
 
 def rule_internal_ids_in_prose(root, r):

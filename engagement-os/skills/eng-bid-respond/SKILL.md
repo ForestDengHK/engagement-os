@@ -65,12 +65,19 @@ Bid Response Progress:
                                     document, identified in that box
         Inventing a structure where the buyer supplied one is a format non-compliance, and
         format non-compliance is a common auto-reject: the content never gets read.
-- [ ] 2c. FILL THE BUYER'S FORMS — for every `buyer-form` section, put a working copy in
+- [ ] 2c. FILL THE BUYER'S OWN DOCUMENT — for every `buyer-form` **and every `buyer-structure`**
+        section, put a working copy in
         `3_drafting/forms/` and fill it there with `Skill(xlsx)` / `Skill(docx)`. A form is often
         **a table inside their RFT** rather than a separate file (a reference data sheet, a CV
         sheet): extract that table into a working copy with `Skill(docx)` and fill it in their
         field order — the labels and the row order are the format they are checking against.
         **Never edit `1_received/`**: that is what they sent, and it is the evidence of what was issued.
+        **`buyer-structure` is the same obligation.** Where their document carries the answer
+        structure — their headings, their question numbering, their Yes / No / N-A boxes, their
+        tables — copy that range out of their file and fill it. Re-drawing it as markdown tables
+        looks close and is not: on the worked example the buyer's incident table is 12 rows x 8
+        columns (incident type x five years) and the re-drawn one was 5 x 4, so the evaluator
+        would have been marking a form we had redesigned.
         The section itself becomes the cover note — what was filled, what is owed, who signs —
         not a prose restatement of the form. On the pack's worked example the entire price
         response was two cells in the buyer's workbook (tenderer name, lump sum) and the first
