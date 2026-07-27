@@ -655,20 +655,24 @@ def scan(root):
     directory listing can decide. Two kinds of "not dealt with", because the two kinds of
     material have different destinations:
 
-      INGEST — sourced material (given to us or found by us, plus the tender pack). Un-ingested
+      INGEST  — sourced material (given to us or found by us, plus the tender pack). Un-ingested
         when nothing named after it exists under the matching `_md/`. Needs no manifest.
-      INDEX  — our OWN reusable assets under `01_pursuit/_shared/<kind>/`. These are never
-        converted and never bucketed; they belong in `firm_assets.md`, and one that has no row
-        there is invisible to the bid — which is how the only sector-matching case study in a
-        pack turns out to be undated on submission week.
+      CONVERT — our OWN reusable assets under `01_pursuit/_shared/<kind>/` with no markdown
+        under `_shared/_md/`. Assets get the SAME md-first treatment as sources: analysing
+        binaries ad-hoc is what the pack forbids everywhere else ("analysing from the raw PDF
+        is how citations get invented" — it is also how a €250k reference value gets misread
+        on submission week).
+      INDEX   — assets with no row in `firm_assets.md`. An asset with no row is invisible to
+        the bid.
 
-    Returns (to_ingest, to_index), each [(area_label, path)].
+    Returns (to_ingest, to_index, to_convert), each [(area_label, path)].
     """
     to_ingest = []
     areas = [(p, p / "_md") for p in root.glob("_sources/*") if p.is_dir()]
     areas += [(p, p / "_md") for p in root.glob("01_pursuit/*/1_received") if p.is_dir()]
     for area, md_dir in areas:
-        converted = {p.stem.lower() for p in md_dir.rglob("*.md")} if md_dir.exists() else set()
+        converted = {p.stem.lower() for p in md_dir.rglob("*.md") if p.name != "README.md"} \
+            if md_dir.exists() else set()
         for src in sorted(area.rglob("*")):
             if not src.is_file() or src.suffix.lower() not in DISPATCH:
                 continue
@@ -677,7 +681,7 @@ def scan(root):
             if src.stem.lower() not in converted:
                 to_ingest.append((str(area.relative_to(root)), src))
 
-    to_index = []
+    to_index, to_convert = [], []
     for shared in root.glob("01_pursuit/_shared"):
         index_file = shared / "firm_assets.md"
         index_text = (index_file.read_text(encoding="utf-8", errors="replace")
@@ -702,6 +706,9 @@ def scan(root):
         # Walk ALL of _shared/, not a whitelist of kinds. The scaffold plants six, and the
         # folder's own README tells the user to add a new one rather than force a bad fit —
         # so a whitelist makes exactly the assets someone thought about hardest invisible.
+        md_dir = shared / "_md"
+        converted = {p.stem.lower() for p in md_dir.rglob("*.md")
+                     if p.name not in ("README.md",)} if md_dir.exists() else set()
         for asset in sorted(shared.rglob("*")):
             if not asset.is_file() or asset.name.startswith("."):
                 continue
@@ -714,7 +721,10 @@ def scan(root):
             if rel not in indexed:
                 where = asset.parent.relative_to(root)
                 to_index.append((str(where), asset))
-    return to_ingest, to_index
+            if asset.suffix.lower() in DISPATCH and asset.stem.lower() not in converted:
+                where = asset.parent.relative_to(root)
+                to_convert.append((str(where), asset))
+    return to_ingest, to_index, to_convert
 
 
 def update_manifest(out_path, src):
@@ -769,9 +779,10 @@ def main():
 
     if args.scan is not None:
         root = pathlib.Path(args.scan).resolve()
-        to_ingest, to_index = scan(root)
-        if not to_ingest and not to_index:
-            print("  nothing waiting — every source file has markdown, every asset has a row")
+        to_ingest, to_index, to_convert = scan(root)
+        if not to_ingest and not to_index and not to_convert:
+            print("  nothing waiting — every source file has markdown, every asset has a row "
+                  "and a conversion")
             return 0
 
         def show(items, heading, follow_up):
@@ -787,6 +798,9 @@ def main():
 
         show(to_ingest, "document(s) waiting to be INGESTED",
              "convert each, then update that bucket's canonical pair (eng-update-canonical).")
+        show(to_convert, "asset(s) of OURS waiting to be CONVERTED to `_shared/_md/`",
+             "eng-index-assets step 0 converts before indexing — the md layer is what analysis "
+             "and page-level citation read; the binary is the evidence, not the working text.")
         show(to_index, "asset(s) of OURS waiting to be INDEXED",
              "eng-index-assets — what each proves, its date, whether it is in-window. "
              "An asset with no row is invisible to the bid.")
