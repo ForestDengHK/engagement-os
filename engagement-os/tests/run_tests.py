@@ -63,9 +63,15 @@ def clean_tree():
             "| BR-002 | R-002 | Referee permission pending | int | A-001 | internal | M | open — needs sign-off |\n"),
         "01_pursuit/27-010/3_drafting/bid_response_outline.md": (
             "# Bid response outline\n\n"
-            "| § | Section | Answers Req IDs | Owner | Status |\n"
+            "## Submission format (machine-checked)\n\n"
+            "| Key | Value |\n|---|---|\n"
+            "| volumes | 1 |\n"
+            "| file formats accepted | docx, pdf |\n"
+            "| paper | A4 |\n\n"
+            "## Volume / section map\n\n"
+            "| § | Response section | Answers Req IDs | Owner | Status |\n"
             "|---|---|---|---|---|\n"
-            "| V2 1.1 | Experience | R-001 | Bid Manager | draft |\n\n"
+            "| §1.1 | Experience | R-001 | Bid Manager | draft |\n\n"
             "## Rows that are NOT written sections\n\n"
             "| Control | Rows it owns |\n|---|---|\n"
             "| Submission control sheet | R-002 |\n"),
@@ -73,7 +79,7 @@ def clean_tree():
             "# Firm assets\n\n"
             "| ID | Asset | Date |\n|---|---|---|\n"
             "| A-001 | ACME data platform discovery | 2024-07 |\n"),
-        "01_pursuit/27-010/3_drafting/sections/s1.md": (
+        "01_pursuit/27-010/3_drafting/sections/v1/1.1_experience.md": (
             "---\n"
             'section: "1.1 Experience"\n'
             'rft_clause: "§5.1.1"\n'
@@ -87,7 +93,7 @@ def clean_tree():
             "---\n\n"
             "# 1.1 Experience\n\n"
             "We did the thing. [RFP §5.1.1] Benchmarked at 12 weeks per BR-001.\n\n"
-            "![coverage](../figures/F-01_x.png)\n"
+            "![coverage](../../figures/F-01_x.png)\n"
             "*Figure 1 — coverage.*\n\n"
             "## Review log\n\n"
             "| Round | Reviewer / lens | Date | Verdict | What changed |\n"
@@ -100,7 +106,7 @@ def clean_tree():
     }
 
 
-SEC = "01_pursuit/27-010/3_drafting/sections/s1.md"
+SEC = "01_pursuit/27-010/3_drafting/sections/v1/1.1_experience.md"
 LOG = "01_pursuit/27-010/2_analysis/bid_research_log.md"
 OUTLINE = "01_pursuit/27-010/3_drafting/bid_response_outline.md"
 MATRIX = "01_pursuit/27-010/2_analysis/compliance_matrix.md"
@@ -197,8 +203,8 @@ CASES = [
      lambda t: _sub(t, OUTLINE, "| Submission control sheet | R-002 |", ""),
      {"outline-row-unmapped"}, set(), set()),
     ("outline-phantom-requirement",
-     lambda t: _sub(t, OUTLINE, "| V2 1.1 | Experience | R-001 |",
-                    "| V2 1.1 | Experience | R-001, R-404 |"),
+     lambda t: _sub(t, OUTLINE, "| §1.1 | Experience | R-001 |",
+                    "| §1.1 | Experience | R-001, R-404 |"),
      {"outline-row-phantom"}, set(), set()),
     ("no-outline-yet-is-not-a-failure",
      lambda t: t.pop(OUTLINE),
@@ -215,6 +221,29 @@ CASES = [
      lambda t: _sub(t, SEC, "*Figure 1 — coverage.*",
                     "*Figure 1 — coverage.*\n\n**Figure source.** `F-01_x.html` is the master."),
      set(), set(), {"figure-source-in-caption"}),
+
+    # ── a volume nobody started, and a format the buyer does not accept ───────
+    ("outline-row-drafted-but-no-section-file",
+     lambda t: _sub(t, OUTLINE, "| §1.1 | Experience | R-001 | Bid Manager | draft |",
+                    "| §1.1 | Experience | R-001 | Bid Manager | draft |\n"
+                    "| §2.1 | Price | R-002 | Commercial | draft |"),
+     {"outline-section-missing"}, set(), set()),
+    ("outline-row-still-at-outline-status-is-only-counted",
+     lambda t: _sub(t, OUTLINE, "| §1.1 | Experience | R-001 | Bid Manager | draft |",
+                    "| §1.1 | Experience | R-001 | Bid Manager | draft |\n"
+                    "| §2.1 | Price | R-002 | Commercial | outline |"),
+     set(), {"outline-sections-undrafted"}, {"outline-section-missing"}),
+    ("built-artefact-in-a-format-the-buyer-does-not-accept",
+     lambda t: (_approve_section(t),
+                t.__setitem__("01_pursuit/27-010/4_final/volume1.pptx", "PK-deck")),
+     {"submission-format-mismatch"}, set(), set()),
+    ("built-artefact-in-an-accepted-format",
+     lambda t: (_approve_section(t),
+                t.__setitem__("01_pursuit/27-010/4_final/volume1.docx", "PK-docx")),
+     set(), set(), {"submission-format-mismatch"}),
+    ("no-format-block-is-flagged",
+     lambda t: _sub(t, OUTLINE, "| file formats accepted | docx, pdf |", ""),
+     set(), set(), {"submission-format-mismatch"}),
 
     # ── a per-ITEM budget is not a section budget ────────────────────────────
     # "3 A4 per CV Reference Data Sheet" bounds each sheet; the linter cannot know how many
@@ -496,7 +525,7 @@ CASES = [
      lambda t: (_sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
                      'page_budget: "5 A4 shared across Q1-Q2"'),
                 _sub(t, SEC, "We did the thing. [RFP §5.1.1]", WORDS_1600),
-                t.__setitem__("01_pursuit/27-010/3_drafting/sections/s2.md",
+                t.__setitem__("01_pursuit/27-010/3_drafting/sections/v1/s2.md",
                               t[SEC].replace("5 A4 shared across Q1-Q2",
                                              "5 A4 Shared across Q1–Q2"))),
      {"section-overlength"}, set(), set()),
@@ -540,8 +569,8 @@ CASES = [
     # ── figures on disk ──────────────────────────────────────────────────────
     ("figure-missing",
      lambda t: (_sub(t, SEC, "figures: [F-01]", "figures: [F-01, F-02]"),
-                _sub(t, SEC, "![coverage](../figures/F-01_x.png)",
-                     "![coverage](../figures/F-01_x.png)\n![team](../figures/F-02_y.png)")),
+                _sub(t, SEC, "![coverage](../../figures/F-01_x.png)",
+                     "![coverage](../../figures/F-01_x.png)\n![team](../../figures/F-02_y.png)")),
      {"figure-missing", "section-figure-unknown"}, set(), set()),
     ("figure-not-editable",
      lambda t: (t.pop("01_pursuit/27-010/3_drafting/figures/F-01_x.html"),

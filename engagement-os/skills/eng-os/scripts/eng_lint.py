@@ -311,6 +311,87 @@ def rule_outline_covers_matrix(root, r):
                     f"{req} is mapped here but no compliance-matrix row defines it")
 
 
+def rule_outline_sections_exist(root, r):
+    """An outline row past `outline` status must have a section file — and undrafted rows are counted.
+
+    Nothing used to notice that a whole VOLUME had no sections: the outline listed them, the
+    section directory held only the scored volume, and every gate passed. A response is not
+    "checked" while two thirds of it does not exist.
+    """
+    outlines = outline_paths(root)
+    if not outlines:
+        return
+    r.ran()
+    have = []
+    for p in section_files(root):
+        meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        # the filename is a fallback identity: a section whose frontmatter is broken is a
+        # separate finding, and must not ALSO read as a section that was never written
+        have.append((f"{meta.get('section', '')} {p.stem}", str(p.relative_to(root))))
+    for o in outlines:
+        where = str(o.relative_to(root))
+        rows = outline_rows(o)
+        if not rows:
+            continue
+        undrafted = []
+        for label, status in rows:
+            key = label.split()[-1] if label else ""      # "V2 §5.1.1" → "§5.1.1"
+            key = key.lstrip("§")
+            matched = any(key and key in sec for sec, _f in have)
+            if status.startswith("outline") or not status:
+                if not matched:
+                    undrafted.append(label)
+            elif not matched:
+                r.error("outline-section-missing", where,
+                        f"row '{label}' is marked '{status}' but no section file answers it")
+        if undrafted:
+            r.warn("outline-sections-undrafted", where,
+                   f"{len(undrafted)} of {len(rows)} response sections not drafted yet: "
+                   + ", ".join(undrafted[:8]) + (" …" if len(undrafted) > 8 else ""))
+
+
+def rule_submission_format(root, r):
+    """A built artefact must be in a format the buyer accepts, and every volume must exist.
+
+    The mandated format is a FACT from the RFT, recorded in the outline. It used to reach the
+    build only through whatever the agent typed on the command line — nothing objected if a
+    tender that demands Word got a deck.
+    """
+    outlines = outline_paths(root)
+    if not outlines:
+        return
+    r.ran()
+    for o in outlines:
+        fmt = format_table(o)
+        if not fmt:
+            r.warn("submission-format-undeclared", str(o.relative_to(root)),
+                   "no machine-checked submission-format block — the required file format, paper "
+                   "and volume count reach the build only by hand")
+            continue
+        accepted = {x.strip().lower().lstrip(".")
+                    for x in re.split(r"[,/]| or ", fmt.get("file formats accepted", ""))
+                    if x.strip()}
+        eng = o.parent.parent
+        for base, sev in ((eng / "4_final", r.error), (eng / "3_drafting/_render", r.warn)):
+            if not base.exists():
+                continue
+            for f in sorted(base.rglob("*")):
+                ext = f.suffix.lower().lstrip(".")
+                if not f.is_file() or f.name.startswith(".") or ext in ("md", "json"):
+                    continue                       # markdown is the intermediate, not the artefact
+                if accepted and ext not in accepted:
+                    sev("submission-format-mismatch", str(f.relative_to(root)),
+                        f"built as .{ext}; this RFT accepts {sorted(accepted)}")
+        declared = re.search(r"\d+", fmt.get("volumes", ""))
+        if declared:
+            vols = {p.parent.name for p in section_files(root)
+                    if p.parent.name != "sections"}
+            if vols and len(vols) < int(declared.group(0)):
+                r.warn("submission-volumes-incomplete", str(o.relative_to(root)),
+                       f"{len(vols)} of {declared.group(0)} volumes have sections written "
+                       f"({', '.join(sorted(vols))})")
+
+
 def rule_mandatory_met(root, r):
     """Every Mandatory compliance-matrix row must reach `met` before a response is frozen."""
     mats = matrix_paths(root)
@@ -690,10 +771,76 @@ def rule_asset_refs_resolve(root, r):
 
 
 def section_files(root):
+    """Every response section, including a per-volume layout (`sections/v1/…`).
+
+    A flat glob is why a three-volume tender could pass every gate with only the scored
+    volume written: the buyer's mandated volume split had no representation in the repo,
+    so nothing could notice a volume with zero sections in it.
+    """
     base = root / "01_pursuit"
     if not base.exists():
         return []
-    return sorted(base.glob("*/3_drafting/sections/*.md"))
+    return sorted(base.glob("*/3_drafting/sections/**/*.md"))
+
+
+def figures_dir(section_path):
+    """The `figures/` directory serving a section, found by walking up.
+
+    Sections may sit one directory per volume (`sections/v1/…`), so a fixed
+    `parent.parent / "figures"` looked inside `sections/` and reported every figure as missing.
+    """
+    for base in section_path.parents:
+        candidate = base / "figures"
+        if candidate.is_dir():
+            return candidate
+        if base.name == "3_drafting":
+            break
+    return section_path.parent.parent / "figures"
+
+
+def outline_paths(root):
+    return sorted(root.glob("01_pursuit/*/3_drafting/bid_response_outline.md"))
+
+
+def outline_rows(path):
+    """(§ label, status) per row of the outline's volume/section map — that table only.
+
+    The outline also carries a control table for rows that are NOT written sections. Reading the
+    whole file as one table turned every named control into a "missing section".
+    """
+    text = path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^##\s+Volume\s*/\s*section map[^\n]*\n(.*?)(?=^##\s|\Z)",
+                  text, re.M | re.S | re.I)
+    if not m:
+        return []
+    rows, seen_header = [], False
+    for line in m.group(1).splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip().strip("*") for c in line.strip().strip("|").split("|")]
+        if not seen_header:
+            seen_header = True                     # first pipe row of this table is its header
+            continue
+        if len(cells) < 3 or set(cells[0]) <= set("-: ") or "<" in cells[0]:
+            continue
+        rows.append((cells[0], cells[-1].lower()))
+    return rows
+
+
+def format_table(path):
+    """The machine-checked submission-format block, as {key: value}."""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^##\s+Submission format[^\n]*\n(.*?)(?=^##\s|\Z)", text, re.M | re.S)
+    if not m:
+        return {}
+    out = {}
+    for line in m.group(1).splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip().strip("*`") for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 2 and cells[0] and not set(cells[0]) <= set("-: "):
+            out[cells[0].lower()] = cells[1]
+    return out
 
 
 def rule_section_frontmatter(root, r):
@@ -722,7 +869,7 @@ def rule_section_frontmatter(root, r):
                 r.error("section-asset-unknown", where,
                         f"evidence names {a} — no such row in firm_assets.md")
         declared = sc.fm_list(meta, "figures", sc.FIG_ID_RE)
-        fdir = p.parent.parent / "figures"
+        fdir = figures_dir(p)
         on_disk = {m.group(1) for f in (fdir.glob("F-*") if fdir.exists() else [])
                    for m in [sc.FIG_FILE_RE.match(f.name)] if m}
         in_body = {m.group(1) for ref in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", body)
@@ -903,6 +1050,7 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
          rule_research_rows_closed, rule_outline_covers_matrix,
+         rule_outline_sections_exist, rule_submission_format,
          rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
          rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,

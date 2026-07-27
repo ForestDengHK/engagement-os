@@ -1,6 +1,9 @@
 # The section-file contract
 
-One section = one markdown file in `3_drafting/sections/`. This document is the ONLY
+One section = one markdown file in `3_drafting/sections/` — or in a per-volume subdirectory
+(`sections/v1/`, `v2/`, …) when the buyer mandates a volume split, in which case a figure is
+referenced `../../figures/F-nn_x.png` and `figures/` stays shared at the `3_drafting/` level.
+This document is the ONLY
 definition of what that file carries and what the words in it mean. The template
 (`templates/bid_section.md.tmpl`) plants it, `eng_lint.py` enforces it, and
 `render_document.py` gates and strips by it — all three import the machine-readable

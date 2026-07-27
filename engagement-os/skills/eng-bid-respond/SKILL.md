@@ -42,8 +42,15 @@ Bid Response Progress:
         accepted terms are not prose questions; inventing a section for them makes the matrix lie.
         A requirement the RFT scores in two places names its primary section and its second one.
         Lint errors if a row appears nowhere at all
-- [ ] 2. One MD per section in 3_drafting/sections/, from bid_section.md.tmpl — frontmatter carries
-        marks, scoring basis, page budget, reqs answered, figures, evidence
+- [ ] 2. One MD per section, **one directory per volume** — `3_drafting/sections/v1/`, `v2/`, `v3/`
+        — from bid_section.md.tmpl; frontmatter carries marks, scoring basis, page budget, reqs
+        answered, figures, evidence. Each volume renders into its own file, which is how the
+        buyer's mandated volume split survives into the artefact, and it is what makes a volume
+        nobody has started visible. A figure reference from a volume directory is
+        `../../figures/F-nn_x.png`. **Draft every volume, not only the scored one:** the pass/fail
+        questionnaires (H&S, data protection, information security) are prose answers that must
+        exist before the evidence arrives, and lint errors on an outline row marked drafted with
+        no file behind it
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:
@@ -100,7 +107,13 @@ matrix; when every row is `met` and every mandatory satisfied, it's complete. Th
 fact base; the response adds the persuasion.
 
 **Match the buyer's format exactly** — volume split, page/word limits, mandated forms. Format
-non-compliance is a common auto-reject; don't impose our own structure.
+non-compliance is a common auto-reject; don't impose our own structure. The mandated format is a
+**fact from the RFT**, so record it in the outline's `## Submission format (machine-checked)` table
+(volumes · accepted file formats · paper · minimum font · separator pages). `eng_lint.py` reads it:
+an artefact built in a format the buyer does not accept is an error under `4_final/`, and a
+declared volume with no sections is reported. Otherwise the required format reaches the build only
+through whatever someone types on the command line — a tender that demands Word would accept a deck
+without a word of protest.
 
 ## Review rounds (not one gate)
 A section is finished when the rounds stop producing changes, not when it is written. Each section
