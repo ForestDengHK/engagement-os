@@ -221,7 +221,10 @@ def parse_tables(md):
                     found["schedule"].append((sid, people, (util or 60) / 100 if (util or 0) > 1
                                               else (util or 0.6),
                                               clean(r[3]) if len(r) > 3 else "",
-                                              _num(r[4]) if len(r) > 4 else 0))
+                                              _num(r[4]) if len(r) > 4 else 0,
+                                              # the Span was parsed-then-dropped for months:
+                                              # build() reads index 5, this appended five
+                                              _num(r[5]) if len(r) > 5 else None))
             elif kind == "milestones" and len(r) >= 3:
                 gate, wk = clean(r[0]), _num(r[1])
                 if gate and wk:
@@ -229,7 +232,9 @@ def parse_tables(md):
                                                 clean(r[3]) if len(r) > 3 else ""))
             elif kind == "certain" and len(r) >= 2:
                 n, v = clean(r[0]), _num(r[1])
-                if n and not n.upper().startswith("TOTAL") and v:
+                # €0 is a real answer (the template's own first row is 'Financing | 0');
+                # `and v` treated it as absent and understated non-labour cost silently
+                if n and not n.upper().startswith("TOTAL") and v is not None:
                     found["certain"].append((n, v, clean(r[2]) if len(r) > 2 else ""))
     return found
 

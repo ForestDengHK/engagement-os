@@ -1138,7 +1138,7 @@ def rule_review_status(root, r):
                 kind("status-contradicts-review", where,
                      f"status '{st}' does not match the latest verdict "
                      f"({latest_round}: '{latest}')")
-        elif st == "approved" and not verdicts:
+        elif st == "approved" and not found:
             r.warn("status-unreviewed", where, "approved with no review-log verdicts")
 
     if frozen_finals(root / "01_pursuit"):
