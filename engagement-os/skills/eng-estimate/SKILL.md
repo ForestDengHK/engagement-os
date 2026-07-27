@@ -110,6 +110,12 @@ Estimation Progress:
 - [ ] 2b. Outside view — reference class; if no dataset exists, label it judgement
 - [ ] 3. Effort model: S-ID × activity × role/grade × days, three-point where uncertain
 - [ ] 3b. OVERLAP AUDIT — which items re-use another item's fieldwork (+ what you kept)
+- [ ] 3c. SCHEDULE — duration, dependencies, staffing, from the SAME S-IDs the cost uses.
+        Duration = effort ÷ (people × working days × utilisation), so a discrete activity's
+        duration is derived and a level-of-effort line (governance, QA, review cycles) takes its
+        span from the term with the staffing derived instead. Three checks: every estimated day
+        is scheduled · the schedule fits the term · **peak** weekly FTE (not the average) is
+        staffable. A cost base with no schedule cannot say when anything lands or who is free
 - [ ] 4. Client-side effort — their hours, by group, by week
 - [ ] 5. Range: P50/P80 with a STATED correlation assumption, kept apart from scope scenarios
 - [ ] 6. Calibration: overlap · outside view · implied FTE · phase shape · pyramid · days/deliverable
@@ -118,7 +124,11 @@ Estimation Progress:
 - [ ] 9. Price-vs-marks DECISION TABLE — no recommended price
 - [ ] 10. Map onto the buyer's pricing document, obeying its format exactly
 - [ ] 11. Cone-of-uncertainty stage + re-baseline triggers
-- [ ] 12. Create/update the workbook, recalculate through `xlsx`, refresh the snapshot, and check row counts
+- [ ] 12. Create/update the workbook, recalculate through `xlsx`, refresh the snapshot, and check row counts.
+         An EXISTING workbook gains sheets a newer builder knows about through the upgrade path —
+         never by re-seeding, which discards the model. And never seed from `estimation.md`: it is
+         the generated snapshot, has no table markers, and seeding from it yields a workbook of
+         placeholder rows (the builder now refuses)
 ```
 
 **Step 2 — independence is a property of the process.** Two techniques run by the same person in

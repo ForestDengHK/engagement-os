@@ -10,6 +10,7 @@ bottom-up, cited, cross-checked, and honest about its own error bar.
 - Step 2 — pick two techniques, and make them actually independent
 - Step 3 — the effort model (role × grade × days, per S-ID)
 - Step 3b — the overlap audit (the step that decides whether the number is inflated)
+- Step 3c — the schedule: duration, dependencies, staffing (effort is not duration)
 - Step 4 — client-side effort (theirs, not just ours)
 - Step 5 — the range: two uncertainties, kept apart
 - Step 6 — calibration, including the outside view
@@ -186,6 +187,53 @@ a discount exercise, not an audit.
 
 The counterpart check is Step 3's completeness sweep (mobilisation, governance, QA, review cycles).
 Run both: bottom-up estimates fail in both directions, and the same read catches each.
+
+## Step 3c — the schedule: duration, dependencies, staffing
+
+**Effort is not duration, and a cost base without a schedule is half an estimate.** 240 days is a
+six-month engagement at two sustained FTE and an eighteen-month one at 0.7 — the buyer is buying
+the calendar as much as the days, and the two questions that follow every price are *when does it
+land* and *who is on it in week 9*. So the schedule is derived from the same `S-ID` effort rows the
+cost is derived from: one number, two models, no second place to keep in step.
+
+    duration (weeks) = effort ÷ (people × working days per week × utilisation)
+
+Utilisation is the honest part. Nobody bills five days a week to one activity for eleven weeks
+straight; 50–60% on a discrete analysis task is the normal range, and writing 100% is how a plan
+becomes fiction before it is signed.
+
+**Two kinds of activity.** Conflating them is the classic schedule error:
+
+| Kind | Duration | Staffing | Example |
+|---|---|---|---|
+| **Discrete** | derived from effort ÷ capacity | an input | "profile the 18 data loads" |
+| **Level of effort** | given (usually the term) | derived from effort ÷ span | governance, QA, review cycles |
+
+A governance line of 36 days does not take 7 weeks at two people — it runs for all 26, thinly. Put
+the span in and let the staffing fall out.
+
+**Dependencies, lightly.** Finish-to-start with an optional lag is enough at bid stage; a critical
+path with float and resource levelling is a delivery-phase artefact, and pretending to one in a
+tender invites questions the estimate cannot answer. Where a phase genuinely overlaps another —
+options work starting while the baseline closes — say so with dates rather than inventing a
+dependency that forbids it.
+
+**The weekly FTE curve is the point.** A cost model reports the *average* (implied FTE at P50),
+which is exactly the number that hides the problem: a 1.9-FTE average engagement can need 4.4
+people in week 11. Peak, not average, is what the named team has to cover, and it is what a
+delivery lead will be held to. The workbook draws the curve per week and shades every week above
+the average.
+
+Three checks run on each recalculation, each stating what a failure *means*:
+
+1. **Every estimated day is scheduled** — schedule total vs the PERT mean. A mismatch means the
+   plan prices work it does not contain (or schedules work nobody costed).
+2. **Schedule fits the term** — a plan that ends after the contract is a commitment nobody can make.
+3. **Peak staffing is deliverable** — peak weekly FTE against the P50 average, named out loud.
+
+The response's own plan section quotes this sheet rather than keeping its own week numbers. Two
+schedules in one bid disagree eventually, and the one in front of the evaluator is the one that
+will be read back to you.
 
 ## Step 4 — client-side effort
 
