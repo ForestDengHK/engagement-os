@@ -199,7 +199,10 @@ def parse_tables(md):
                     found["overlap"].append((item, a, b, clean(r[3]) if len(r) > 3 else ""))
             elif kind == "grades" and len(r) >= 3:
                 g, rate, days = clean(r[0]), _num(r[1]), _num(r[2])
-                if g and "blended" not in g.lower() and rate and days:
+                # a 0 rate is the skill's own doctrine for unsourced rates ("a visible zero is
+                # a better wrong answer") — truthiness dropped the whole grade, and the
+                # Allocated-days check then read a four-grade mix as one placeholder row
+                if g and "blended" not in g.lower() and rate is not None and days:
                     found["grades"].append((g, rate, days, clean(r[-1])))
             elif kind == "client" and len(r) >= 5:
                 who, people, sess, hrs = clean(r[0]), _num(r[2]), _num(r[3]), _num(r[4])

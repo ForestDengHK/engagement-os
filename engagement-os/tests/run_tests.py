@@ -1271,6 +1271,13 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
          sum(c[2] * c[3] * c[4] for c in d["client"]) == 30),
         ("rate card parsed separately from grades",
          len(d["ratecard"]) == 2 and len(d["grades"]) == 2),
+        # the skill's own doctrine: unsourced rates go in as 0 ("a visible zero is a better
+        # wrong answer"). Truthiness used to drop the whole grade row for it — the exact
+        # zero the doctrine tells the author to write.
+        ("zero-rate grade rows are kept",
+         any(g == "Analyst" and r == 0.0 for g, r, _d, _s in
+             bw.parse_tables(GOOD_MD.replace("| Manager | 780 | 30 | 23400 | PLACEHOLDER |",
+                                             "| Analyst | 0 | 30 | 0 | PLACEHOLDER |"))["grades"])),
         ("scope-variance rows parsed", d["scope"] == [("A1", "Estate 2x", 26.0)]),
         ("certain-cost rows parsed", d["certain"][0][1] == 5000.0),
         # GOOD_MD carried no schedule/milestones markers at all for months, which is how the
