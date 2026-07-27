@@ -40,6 +40,8 @@ expiring credential is visible before it fails a mandatory row.
 ```
 RFP Analysis Progress:
 - [ ] 1. Extract EVERY requirement → Req ID + clause cite + mandatory/desirable flag
+- [ ] 1b. Date sanity (any deadline already past → red flag + first clarification Q) and the
+        marking rubric itself (per-band definitions → into the score map)
 - [ ] 2. Build compliance_matrix.md (one row per requirement)
 - [ ] 2b. Decompose SCOPE → S-IDs + volumetric baseline + out-of-scope + unbounded language
 - [ ] 2c. Our understanding & our solution — per challenge, incl. what we do NOT solve
@@ -59,6 +61,20 @@ Fill `rfp_analysis.md` (steps 2b–8) and `compliance_matrix.md` (step 2) from t
 **Step 1 — completeness.** Read the whole RFP and every appendix/schedule. Extract *all*
 obligations (scope, qualifications, submission mechanics, format rules, deadlines, weights,
 contract terms), not just the obvious ones. Cite each: `[RFP §x]`.
+
+**Step 1b — two extractions the checklist used to miss, both found by dogfooding the pack:**
+- **Date sanity.** Compare every extracted date against TODAY. A deadline already past is not
+  a scheduling detail — it is risk #1 and the first clarification question (is the competition
+  closed, extended, or re-issued?). On the worked example the baseline analysis treated two
+  past deadlines as live for the entire engagement; the fresh run caught them only because the
+  method was followed by hand. Make it mechanical: no analysis is complete while an unflagged
+  past deadline sits in it.
+- **The marking rubric itself.** Find the per-band scoring definitions (e.g. "90–100% =
+  exceptional evidence of capability · 0–10% = failed to address the question") and write them
+  into the score map. The rubric is not a weight — it is *what evidence density each band
+  demands*, and it changes how every scored section is written. It often sits as an unnumbered
+  table beside the evaluation section, not with the weights table; the baseline read the
+  weights and never saw it.
 
 **Step 2b — scope, or there is no estimate.** The matrix answers "did we address everything?",
 not "how big is it": one row saying "conduct a comprehensive assessment of the Data Warehouse and

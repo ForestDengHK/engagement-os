@@ -555,6 +555,48 @@ CASES = [
      lambda t: t.__setitem__("archived/old/2_analysis/estimation.xlsx", "PK-old"),
      set(), set(), {"estimate-snapshot-missing", "estimate-snapshot-stale"}),
 
+    # ── a client name whose permission is owed must not print ───────────────
+    # The index's machine-checked block is the record; 'owed' + the name in any submission
+    # text (section prose OR a filled form's XML) is a breach in progress. '[⚠VERIFY]
+    # permission owed' beside the printed name is not anonymisation — seen on the real pack.
+    ("anonymised-name-in-section-prose",
+     lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
+                     "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
+                     "## Anonymised until permission (machine-checked)\n\n"
+                     "| Client name | Asset | State |\n|---|---|---|\n"
+                     "| Sibelga | A-001 | owed |\n"),
+                _sub(t, SEC, "We did the thing.",
+                     "We did the thing for Sibelga, a network operator.")),
+     set(), {"anonymised-name-in-prose"}, set()),
+    ("anonymised-name-not-printed-is-quiet",
+     lambda t: _sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
+                    "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
+                    "## Anonymised until permission (machine-checked)\n\n"
+                    "| Client name | Asset | State |\n|---|---|---|\n"
+                    "| Sibelga | A-001 | owed |\n"),
+     set(), set(), {"anonymised-name-in-prose", "anonymised-name-in-form"}),
+    ("granted-permission-lets-the-name-print",
+     lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
+                     "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
+                     "## Anonymised until permission (machine-checked)\n\n"
+                     "| Client name | Asset | State |\n|---|---|---|\n"
+                     "| Sibelga | A-001 | granted |\n"),
+                _sub(t, SEC, "We did the thing.",
+                     "We did the thing for Sibelga, a network operator.")),
+     set(), set(), {"anonymised-name-in-prose"}),
+    ("anonymised-name-inside-a-filled-form",
+     lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
+                     "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
+                     "## Anonymised until permission (machine-checked)\n\n"
+                     "| Client name | Asset | State |\n|---|---|---|\n"
+                     "| Sibelga | A-001 | owed |\n"),
+                _sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/appendix3.docx",
+                              _zip_bytes({"word/document.xml":
+                                          "<w>delivered for Sibelga in 2024</w>"}))),
+     set(), {"anonymised-name-in-form"}, set()),
+
     # ── citations ────────────────────────────────────────────────────────────
     ("dangling-citation",
      lambda t: _sub(t, FINDING, "Evidence:", "See `gone.md §Page 3`.\n\nEvidence:"),
@@ -1260,6 +1302,14 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
 
     d = bw.parse_tables(GOOD_MD)
     drift = bw.parse_tables(DRIFTED_MD)
+    zero_md = (GOOD_MD
+               .replace("| Manager | 780 | 30 | 23400 | PLACEHOLDER |",
+                        "| Analyst | 0 | 30 | 0 | PLACEHOLDER |")
+               .replace("| G1 | 4 | Baseline accepted | D1 |",
+                        "| G1 | 4 | Baseline accepted | D1 |\n| G0 | 0 | Contract award | — |")
+               .replace("| A1 | Estate 2x | +26 |",
+                        "| A1 | Estate 2x | +26 |\n| A2 | No day impact | 0 |"))
+    z = bw.parse_tables(zero_md)
     wb_checks = [
         ("effort rows parsed", len(d["effort"]) == 2),
         ("effort O/M/P read", d["effort"][0][2:5] == (15.0, 20.0, 28.0)),
@@ -1271,13 +1321,6 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
          sum(c[2] * c[3] * c[4] for c in d["client"]) == 30),
         ("rate card parsed separately from grades",
          len(d["ratecard"]) == 2 and len(d["grades"]) == 2),
-        # the skill's own doctrine: unsourced rates go in as 0 ("a visible zero is a better
-        # wrong answer"). Truthiness used to drop the whole grade row for it — the exact
-        # zero the doctrine tells the author to write.
-        ("zero-rate grade rows are kept",
-         any(g == "Analyst" and r == 0.0 for g, r, _d, _s in
-             bw.parse_tables(GOOD_MD.replace("| Manager | 780 | 30 | 23400 | PLACEHOLDER |",
-                                             "| Analyst | 0 | 30 | 0 | PLACEHOLDER |"))["grades"])),
         ("scope-variance rows parsed", d["scope"] == [("A1", "Estate 2x", 26.0)]),
         ("certain-cost rows parsed", d["certain"][0][1] == 5000.0),
         # GOOD_MD carried no schedule/milestones markers at all for months, which is how the
@@ -1292,12 +1335,22 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
         # `and v` used to drop the row and understate non-labour cost, silently.
         ("zero-euro certain-cost rows are kept",
          any(r[0] == "Travel" and r[1] == 0.0 for r in d["certain"])),
+        # the truthiness-eats-zero family: several branches dropped a legitimate zero
+        # (€0 certain cost, 0-rate grade, week-0 gate, 0-day variance) before each was pinned.
+        # One sweep fixture now guards the family, not the point.
+        ("legal zeros survive every table kind",
+         any(r[0] == "Travel" and r[1] == 0.0 for r in z["certain"])
+         and any(g == "Analyst" and r == 0.0 for g, r, _d, _s in z["grades"])
+         and any(g == "G0" and w == 0.0 for g, w, _w, _d in z["milestones"])
+         and any(a == "A2" and d == 0.0 for a, _i, d in z["scope"])),
         ("total rows excluded from every table",
          all(not r[0].upper().startswith("TOTAL")
              for k in ("overlap", "client", "certain") for r in d[k])),
         # A marker that has drifted off its table must yield nothing, loudly — not the wrong table.
         ("marker drifted from its table yields nothing", drift["grades"] == []),
     ]
+
+    out = pathlib.Path(tempfile.mkdtemp(prefix="engos-wb-")) / "est.xlsx"
 
     out = pathlib.Path(tempfile.mkdtemp(prefix="engos-wb-")) / "est.xlsx"
     bw.build(d, 0.5, str(out))

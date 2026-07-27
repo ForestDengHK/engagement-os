@@ -211,7 +211,9 @@ def parse_tables(md):
                                             clean(r[6]) if len(r) > 6 else ""))
             elif kind == "scope" and len(r) >= 3:
                 a, d = clean(r[0]), _num(r[2])
-                if re.match(r"^A\d+$", a) and d:
+                # 0 is a legitimate answer here too ('no day impact') — the truthiness-eats-
+                # zero family: every _num() consumer must decide zero vs absent explicitly
+                if re.match(r"^A\d+$", a) and d is not None:
                     found["scope"].append((a, clean(r[1]), d))
             elif kind == "ratecard" and len(r) >= 2:
                 g, cost = clean(r[0]), _num(r[1])
@@ -230,7 +232,8 @@ def parse_tables(md):
                                               _num(r[5]) if len(r) > 5 else None))
             elif kind == "milestones" and len(r) >= 3:
                 gate, wk = clean(r[0]), _num(r[1])
-                if gate and wk:
+                # week 0 is a real gate (mobilisation at award); truthiness dropped it
+                if gate and wk is not None:
                     found["milestones"].append((gate, wk, clean(r[2]),
                                                 clean(r[3]) if len(r) > 3 else ""))
             elif kind == "certain" and len(r) >= 2:
