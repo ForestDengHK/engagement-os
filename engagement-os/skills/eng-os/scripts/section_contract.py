@@ -80,6 +80,35 @@ def revise_status_for(status, delivery=False):
     }.get(status)
 
 
+def latest_verdict(text):
+    """(round label, verdict, date) of the LAST review-log row that records a real pass.
+
+    One parser, used by lint's status check and by the change-impact gate — the review log is
+    part of the contract, so reading it belongs here rather than in each consumer. Rows planted
+    for rounds that have not run (empty date and verdict) are not history and are skipped.
+    The verdict column is located by header name, never by position.
+    """
+    vcol = None
+    out = None
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.split("|")]
+        if vcol is None:
+            lowered = [c.lower().strip("*") for c in cells]
+            if "verdict" in lowered:
+                vcol = lowered.index("verdict")
+            continue
+        if len(cells) <= vcol or len(cells) < 2:
+            continue
+        if not ROUND_LABEL_RE.match(cells[1]):
+            continue
+        verdict = cells[vcol].strip("*").lower()
+        if verdict not in VERDICT_STATUS:
+            continue
+        date = cells[vcol - 1].strip() if vcol >= 2 else ""
+        out = (cells[1], verdict, date)
+    return out
+
+
 def round_of(status):
     """The review round a status belongs to, for labelling an appended log row."""
     m = re.search(r"r(\d+)$", status or "")

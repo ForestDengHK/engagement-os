@@ -833,23 +833,10 @@ def rule_review_status(root, r):
             r.warn("status-unknown", where,
                    f"status '{st}' is not one of {sorted(sc.ALL_STATUSES)}")
 
-        # latest verdict from the review-log table, verdict column located by header
-        verdicts = []   # (round, verdict)
-        lines = body.splitlines()
-        vcol = None
-        for line in lines:
-            cells = [c.strip() for c in line.split("|")]
-            if vcol is None:
-                lowered = [c.lower().strip("*") for c in cells]
-                if "verdict" in lowered:
-                    vcol = lowered.index("verdict")
-                continue
-            if len(cells) > vcol and sc.ROUND_LABEL_RE.match(cells[1] if len(cells) > 1 else ""):
-                v = cells[vcol].strip("*").lower()
-                if v in sc.VERDICT_STATUS:
-                    verdicts.append((cells[1], v))
-        if st and verdicts:
-            latest_round, latest = verdicts[-1]
+        # the review log is part of the contract, so the contract module reads it
+        found = sc.latest_verdict(body)
+        if st and found:
+            latest_round, latest, _date = found
             if st == "draft":
                 r.warn("status-stale", where,
                        f"{latest_round} recorded '{latest}' but status is still 'draft'")

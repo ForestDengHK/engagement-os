@@ -50,9 +50,12 @@ stop producing changes.
 
 | Round | Reviewer / lens | Date | Verdict | What changed |
 |---|---|---|---|---|
-| R1 | panel red-team (evaluator / legal / finance / delivery) | | | |
-| R2 | <named human — the one who has done this before> | | | |
-| R3 | <final read> | | | |
+| R1 | panel red-team (evaluator / legal / finance / delivery) | <date> | <pass/revise/blocked> | <what it caught> |
+
+**Append, never overwrite, and only for rounds that ran.** A round that sends the section back and
+is then re-run is two rows — `R1` then `R1 (2nd pass)`. Do not plant rows for R2 and R3 before they
+happen: an empty row is not history, it puts later entries out of order, and the rounds still owed
+are named below.
 
 **Rounds are not a formality.** R1 catches whether it scores; R2 catches what only experience
 sees — a claim that will not survive a client conversation, a promise the delivery team cannot
