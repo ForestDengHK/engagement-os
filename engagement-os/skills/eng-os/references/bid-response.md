@@ -151,6 +151,21 @@ Follow the RFP's mandated response structure, volume split, page/word limits, an
 — non-compliance with format is a common auto-reject. If the RFP gives a response template, use it;
 don't impose our own structure (the pursuit-side version of the "match the host-deck template" rule).
 
+### What the reader may never see
+
+The response is written in an internal shorthand and **delivered in the buyer's language.** An
+evaluator who reads `A-014`, `[App5 cl.6; Sch.4]` or `[⚠VERIFY — the referee is unconfirmed]` in a
+submitted volume is not reading a draft; they are reading a document that was never finished, and
+they price that impression into every judgement that follows. `eng-render` performs the conversion
+(clause refs into the buyer's vocabulary, unresolved facts into a neutral `[TBD]`, internal ids
+deleted) — but the conversion is a safety net, not a licence: a sentence whose evidence is an id
+loses its evidence on delivery, so name the thing in words and keep the id on the traceability line.
+
+**And `[TBD]` is a real answer, used sparingly.** On a pass/fail questionnaire it is honest — the
+attestation is owed, and inventing "None" would be worse. On a scored answer it costs marks, so a
+`[TBD]` still in a scored section at submission is a decision to score zero on that point, taken
+deliberately or not at all.
+
 ### Assembling
 
 **Hand off to the `eng-render` skill** with `--profile bid`. Rendering is a separate,

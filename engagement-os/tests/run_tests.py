@@ -210,6 +210,15 @@ CASES = [
      lambda t: t.pop(OUTLINE),
      set(), set(), {"outline-row-unmapped", "outline-row-phantom"}),
 
+    # ── an internal register id in body prose has no client-facing form ──────
+    ("internal-id-in-body-prose",
+     lambda t: _sub(t, SEC, "We did the thing.", "We did the thing, evidenced by A-001."),
+     set(), {"internal-id-in-prose"}, set()),
+    ("internal-id-in-the-traceability-line-is-fine",
+     lambda t: _sub(t, SEC, "We did the thing.",
+                    "We did the thing.\n\n**Traceability.** Evidence → A-001."),
+     set(), set(), {"internal-id-in-prose"}),
+
     # ── a figure caption must not carry our internal filenames ───────────────
     # Found for real: the template's own caption shipped `F-01_x.html` / `.pptx` into a
     # rendered tender page, because the render strip never touches a caption.
@@ -839,6 +848,32 @@ def converter_tests():
          "F-01_x.html" not in stripped and "Figure 1 — coverage" in stripped),
         ("--force reports what it overrides rather than silently passing",
          not forced_blocking and any("FORCED past" in a for a in forced_adv)),
+    ]
+
+    # ── delivery normalisation: nothing internal reaches the reader ────────────
+    # Found by reading a rendered tender: it printed our own asset-register ids (A-006, A-007),
+    # review markers with their internal reasoning, and citation shorthand in our abbreviations.
+    raw = ("Assessed the estate [RFP §3.1, §3.3] against the pillars `[App7 pp.8–11]`,\n"
+           "the term [App5 cl.6; Sch.4] and the layers `[§3.3, §3.4]`.\n"
+           "**Client:** [⚠VERIFY — client name and permission to cite; the performing\n"
+           "member firm must also be confirmed] · **Dates:** July 2024\n"
+           "One CV is in Appendix 4 format (A-006), derived from the model via BR-009.\n"
+           "![f](../../figures/F-01_x.png)\n")
+    delivered = render.client_text(raw)
+    contract_checks += [
+        ("an unresolved marker becomes a neutral TBD, reasoning left behind",
+         "**[TBD]**" in delivered and "permission to cite" not in delivered),
+        # the marker WRAPS across source lines; a per-line substitution missed six of nine
+        ("a marker that wraps across lines is still caught", "⚠VERIFY" not in delivered),
+        ("citation shorthand speaks the buyer's vocabulary",
+         "(RFT §3.1, §3.3)" in delivered and "(Appendix 7, pp. 8–11)" in delivered
+         and "(Appendix 5, cl. 6; Schedule 4)" in delivered and "(§3.3, §3.4)" in delivered),
+        ("no internal register id survives delivery",
+         not re.search(r"\b(?:BR|A|R|S)-\d{2,3}\b", delivered)),
+        ("a figure's link target is not treated as prose",
+         "../../figures/F-01_x.png" in delivered),
+        ("the internal review copy keeps the apparatus a reviewer needs",
+         "[⚠VERIFY" in render.strip_internal(raw, False)[0]),
     ]
 
     for name, ok in contract_checks:

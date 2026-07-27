@@ -117,6 +117,67 @@ def discover(sec_dir, order=None):
 
 # ---------------------------------------------------------------- strip
 
+# ── client-facing normalisation ────────────────────────────────────────────────
+# Sections are AUTHORED in an internal shorthand — `[RFP §3.3]`, `A-014`, `BR-005`,
+# `[⚠VERIFY — the referee is unconfirmed]` — because that is what makes traceability checkable.
+# None of it may reach the reader. A rendered tender carrying our own asset-register ids and
+# review markers is not a draft, it is unprofessional: the evaluator sees the machinery instead
+# of the answer. So delivery normalises the shorthand into the BUYER's vocabulary, and anything
+# unresolved becomes a short, neutral `[TBD]` with its internal explanation left behind in the
+# markdown where it belongs.
+#: Forms that may WRAP across source lines, so they are substituted over the whole body.
+CLIENT_SPANNING = [
+    # unresolved facts: a neutral placeholder, never our reasoning about them
+    (re.compile(r"`?\[⚠VERIFY[^\]]*\]`?"), "**[TBD]**"),
+    # citation shorthand → the buyer's own words. The optional backticks matter: a citation set in
+    # monospace renders as a code span in the delivered document, which reads like a system
+    # artefact rather than a reference.
+    (re.compile(r"`?\[RFP\s+([^\]]+)\]`?"), lambda m: "(RFT " + " ".join(m.group(1).split()) + ")"),
+    (re.compile(r"`?\[App(\d+)\s+([^\]]+)\]`?"),
+     lambda m: f"(Appendix {m.group(1)}, " + " ".join(m.group(2).split()) + ")"),
+    (re.compile(r"`?\[App(\d+)\]`?"), r"(Appendix \1)"),
+    # a bare clause reference, which is how a table cell usually carries one
+    (re.compile(r"`?\[(§[^\]]+)\]`?"), lambda m: "(" + " ".join(m.group(1).split()) + ")"),
+]
+
+CLIENT_SUBS = [
+    (re.compile(r"\bcl\.(\d)"), r"cl. \1"),
+    (re.compile(r"\bSch\.(\d)"), r"Schedule \1"),
+    (re.compile(r"\bpp\.(\d)"), r"pp. \1"),
+    (re.compile(r"\bp\.(\d)"), r"p. \1"),
+    # internal register ids have no client-facing form at all
+    (re.compile(r"\s*\((?:via\s+)?(?:[ABRSF]-\d{2,3}(?:\s*,\s*)?)+\)"), ""),
+    (re.compile(r"\s*(?:—\s*)?\bvia\s+(?:BR|A|R|S)-\d{2,3}\b"), ""),
+    (re.compile(r"\s*\b(?:BR|A|R|S)-\d{2,3}\b(?=[\s,;.)]|$)"), ""),
+]
+
+
+def client_text(body: str) -> str:
+    """Normalise authoring shorthand into what the recipient should read.
+
+    Applied ONLY under the strict profiles, and ONLY when writing the document — the gate counts
+    markers on the raw text first, or turning `[⚠VERIFY]` into `[TBD]` would hide the very thing
+    the gate exists to refuse.
+    """
+    # The bracketed forms WRAP: a `[⚠VERIFY — …]` marker routinely runs across two or three
+    # lines of source. Substituting line by line never sees the closing bracket, so six of nine
+    # markers survived into a rendered tender — do these over the whole text first.
+    for pattern, repl in CLIENT_SPANNING:
+        body = pattern.sub(repl, body)
+    out = []
+    for line in body.splitlines():
+        if line.lstrip().startswith("!["):
+            out.append(line)                    # image link: the path is not prose
+            continue
+        for pattern, repl in CLIENT_SUBS:
+            line = pattern.sub(repl, line)
+        line = re.sub(r"\s+([,.;:])", r"\1", line)
+        line = re.sub(r"\(\s*\)|\[\s*\]", "", line)
+        line = re.sub(r"[ \t]{2,}", " ", line)
+        out.append(line.rstrip())
+    return "\n".join(out)
+
+
 def strip_internal(body: str, scaffolding: bool = True):
     """Remove everything that exists to make the draft checkable, not to be read.
 
@@ -406,6 +467,8 @@ def main() -> int:
     parts, stripped_notes = [], []
     for s in sections:
         text, n_quotes = strip_internal(s["body"], pol["strip"])
+        if pol["strip"]:
+            text = client_text(text)              # authoring shorthand → the reader's vocabulary
         if n_quotes:
             # visible, not silent: under a strict profile a blockquote is BY CONTRACT a
             # scaffolding note, but a legitimate quotation would be deleted here too
@@ -418,10 +481,17 @@ def main() -> int:
         # A forced strict-profile build is a legitimate artefact — a reviewer needs to see the
         # real thing, page counts and all, before every gate closes. What it must never be is
         # indistinguishable from the submission: the only difference used to be the filename.
+        tbds = sum(text.count("**[TBD]**") for text in parts)
         banner = ["**DRAFT — NOT FOR SUBMISSION.** Built "
                   f"{dt.date.today().isoformat()} with `--force`, past "
-                  f"{len(blocking_overridden)} unresolved gate finding(s):", ""]
-        banner += [f"- {b}" for b in blocking_overridden]
+                  f"{len(blocking_overridden)} unresolved gate finding(s)"
+                  + (f"; the text carries {tbds} **[TBD]** item(s)" if tbds else "") + ":", ""]
+        # the banner is read by whoever picks the draft up, so it speaks their language too:
+        # the gate's own wording names the internal marker, which is right in the analyse
+        # report and wrong on a page that goes in front of a reviewer
+        gate_wording = re.compile(r"(\d+)x unresolved \[⚠VERIFY\] in body text")
+        banner += [f"- {gate_wording.sub(r'\1 unresolved item(s), shown as [TBD]', b)}"
+                   for b in blocking_overridden]
         banner += ["", "Re-run without `--force` once they are closed; that build carries no "
                    "banner and is the one that may be submitted.", ""]
         parts.insert(0, "\n".join(banner))

@@ -103,6 +103,37 @@ write. A `plain` build measures a different document (it keeps the scaffolding).
 `[⚠VERIFY — what would close it]` that real sections carry. Matching only the bare literal let
 eight markers through onto a rendered tender page.
 
+## Authoring shorthand in, the reader's language out
+
+A section is **authored** in an internal shorthand, because that is what makes traceability
+checkable: `[RFP §3.3]`, `[App5 cl.6; Sch.4]`, `A-014`, `BR-005`, and
+`[⚠VERIFY — the referee is unconfirmed]`. **None of it may reach the recipient.** A rendered tender
+that prints our own asset-register ids and review markers does not read as a draft; it reads as
+unprofessional — the evaluator sees the machinery instead of the answer.
+
+So the strict profiles normalise on the way out:
+
+| Authored | Delivered |
+|---|---|
+| `[⚠VERIFY — client permission owed]` | **`[TBD]`** — neutral, short; the reasoning stays in the markdown |
+| `[RFP §3.1, §3.3]` | `(RFT §3.1, §3.3)` |
+| `` `[§3.3, §3.4]` `` | `(§3.3, §3.4)` — backticks too: a citation set in monospace reads as a system artefact |
+| `[App5 cl.6; Sch.4]` | `(Appendix 5, cl. 6; Schedule 4)` |
+| `[App7 pp.8–11]` | `(Appendix 7, pp. 8–11)` |
+| `A-014` · `BR-005` · `R-032` · `S-01` | deleted — an internal id has no client-facing form |
+
+Two things worth knowing. The substitutions run over the **whole body**, not line by line: a
+`[⚠VERIFY — …]` marker routinely wraps across two source lines, and a per-line pass missed six of
+nine on a real volume. And the gate counts markers on the **raw** text first — normalising before
+gating would hide the very thing the gate exists to refuse.
+
+Because an id can only be deleted, `eng_lint` warns when body prose names one
+(`internal-id-in-prose`): cite the asset on the `**Traceability.**` line and name the evidence in
+words, or the sentence loses its evidence on the way out.
+
+`--profile plain` normalises nothing — an internal review copy should show the reviewer every
+marker and every citation.
+
 ## What gets stripped
 
 Sections are written to be *checkable*; that scaffolding must not reach a reader — scoring notes
