@@ -715,11 +715,16 @@ def pursuit_has_reviewed_sections(eng):
 def rule_citations_resolve(root, r):
     """Every `file.md §Page N` citation must point at a file that exists — outside the archive."""
     r.ran()
-    pat = re.compile(r"`?([\w./-]+\.md)\s*§\s*(?:Page|Slide|Section|Sheet)\s*\S*")
+    # the pack's citation form is backticked — `file.md §Page 3` — and the filename may
+    # carry spaces (real received packs do: '26-002 - DataWarehouse ….md'). A \w-class
+    # capture read only the last word of a spaced name and checked the wrong basename.
+    pat = re.compile(r"`([^`|]+?\.md)\s*§\s*(?:Page|Slide|Section|Sheet)\s*\S*"
+                     r"|(?<![\w./-])([\w./-]+\.md)\s*§\s*(?:Page|Slide|Section|Sheet)\s*\S*")
     for rel in ("00_research", "02_delivery", "01_pursuit"):
         for p in text_files(root, rel):
             for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-                for cited in pat.findall(line):
+                for m in pat.finditer(line):
+                    cited = m.group(1) or m.group(2)
                     if "<" in cited:
                         continue          # template placeholder
                     if not resolve_in_repo(root, cited):
@@ -845,7 +850,12 @@ def rule_conditional_analysis_artefacts(root, r):
                 continue                       # unworked section — not yet a claim
             r.ran()
             body = m.group(1)
-            if re.search(r"not created|none found|no prior bid|n/?a\b", body, re.I):
+            # the negative answer must LEAD the section — it IS the answer. A stray 'n/a'
+            # anywhere in the prose used to exempt the whole section: 'The tender is
+            # priced. Travel is n/a.' let a priced tender skip the estimate entirely.
+            first = re.split(r"(?<=[.!?])\s|\n", " ".join(body.split()), 1)[0]
+            if re.search(r"not created|none found|no prior bid|\bno estimate\b|not priced|"
+                         r"nothing to estimate|n/?a\b", first, re.I):
                 continue                       # the negative was recorded — that IS the result
             missing = [artefact for artefact in artefacts if not (f.parent / artefact).exists()]
             if missing:
@@ -864,6 +874,8 @@ def rule_estimate_snapshot_fresh(root, r):
     from stale numbers that look authoritative.
     """
     for xlsx in sorted(root.glob("**/estimation.xlsx")):
+        if "archived" in xlsx.parts:
+            continue                   # the archive is out of scope everywhere else too
         md = xlsx.with_suffix(".md")
         r.ran()
         if not md.exists():
@@ -1305,9 +1317,12 @@ def rule_review_status(root, r):
     if frozen_finals(root / "01_pursuit"):
         unfinished = []
         for p in secs:
-            m = re.search(r"^status:\s*approved\s*$",
-                          p.read_text(encoding="utf-8", errors="replace"), re.M)
-            if not m:       # no status line at all = never entered review = unfinished
+            # through the contract parser, not a raw regex — the template plants
+            # `status: draft   # draft → reviewed-r1 …`, and an author flipping the word in
+            # place keeps the comment; the regex read that as NOT approved and blocked the
+            # freeze on a section that was
+            meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+            if (meta.get("status") or "").strip() != "approved":
                 unfinished.append(str(p.name))
         if unfinished:
             r.error("frozen-unapproved", "01_pursuit/*/4_final/",

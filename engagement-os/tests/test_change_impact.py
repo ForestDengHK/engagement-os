@@ -69,7 +69,7 @@ def tree():
             "# Analysis\n\n## 3. Scope\n\n"
             "| S-ID | Scope | Driver |\n|---|---|---|\n"
             "| S-01 | Assess | 5 systems |\n\n"
-            "## 10. Estimate\n\nP50 €100.\n"),
+            "## 11. Estimate & price posture\n\nP50 €100.\n"),
         "01_pursuit/27-010/2_analysis/estimation.xlsx": b"PK-estimate-v1",
         "01_pursuit/27-010/2_analysis/estimation.md": "# generated estimate v1\n",
         "01_pursuit/27-010/2_analysis/bid_research_log.md": (
@@ -90,6 +90,10 @@ def tree():
         "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx": b"PK-pptx-v1",
         "01_pursuit/27-010/3_drafting/bid.docx": b"PK-docx-v1",
         "01_pursuit/27-010/3_drafting/forms/appendix3.docx": b"PK-form-v1",
+        "01_pursuit/27-010/3_drafting/bid_response_outline.md": (
+            "# Outline\n\n## Submission format (machine-checked)\n\n"
+            "| Key | Value |\n|---|---|\n"
+            "| volumes | 1 |\n"),
         "01_pursuit/27-010/4_final/submission.pdf": b"pdf-final-v1",
         "02_delivery/DELIVERABLES.md": (
             "| D | Name | Live file |\n|---|---|---|\n"
@@ -154,7 +158,7 @@ def case_estimate_propagates_only_pricing():
     assert "01_pursuit/27-010/3_drafting/sections/s2.md" not in a
     assert a["01_pursuit/27-010/3_drafting/sections/s1.md"]["required_status"] == "revise-r2"
     assert has_action(report, "refresh snapshot")
-    assert has_action(report, "§10")
+    assert has_action(report, "§estimate")
     assert has_action(report, "new version")
     final_before = (root / "01_pursuit/27-010/4_final/submission.pdf").read_bytes()
     changed = ci.apply_invalidations(root, report)
@@ -177,7 +181,7 @@ def case_refreshed_estimate_does_not_claim_stale_derivatives():
     report = ci.scan(root)
     assert not any(i["artifact"].endswith("estimation.md") and "refresh snapshot" in i["action"]
                    for i in report["impacts"])
-    assert not any(i["artifact"].endswith("§10") for i in report["impacts"])
+    assert not any(i["artifact"].endswith("§estimate") for i in report["impacts"])
     assert "01_pursuit/27-010/3_drafting/sections/s1.md" in affected(report)
 
 
@@ -483,6 +487,43 @@ def case_filled_buyer_forms_are_maintained_not_rendered():
     assert not has_action(report, "re-render")
 
 
+def case_change_row_lands_above_template_placeholder_rows():
+    """The current template plants `<date>` / `<pass/revise/blocked>` placeholder cells,
+    not empty ones. Treating them as real history dated the change-impact row AFTER rounds
+    that never ran — the exact disorder the guard exists to prevent."""
+    items = tree()
+    rel = "01_pursuit/27-010/3_drafting/sections/s1.md"
+    items[rel] = (items[rel]
+                  .replace("status: approved", "status: reviewed-r1")
+                  .replace("| R2 | experienced human | 2026-07-26 | pass | approved |\n",
+                           "| R1 | panel red-team | 2026-07-26 | pass | scores |\n"
+                           "| R2 | <named human> | <date> | <pass/revise/blocked> | <what> |\n"
+                           "\n**Rounds are not a formality.**\n"))
+    root = build(items)
+    ci.checkpoint(root)
+    mutate_text(root, rel, "Our P50 is €100", "Our P50 is €120")
+    report = ci.scan(root)
+    ci.apply_invalidations(root, report)
+    text = (root / rel).read_text(encoding="utf-8")
+    assert text.index("change-impact gate") < text.index("<pass/revise/blocked>")
+
+
+def case_rerender_after_outline_edit_is_the_normal_sequence():
+    """The outline drives the render (its format table). Untracked, a re-render after an
+    outline edit read as a hand-edited output — an error that refused the checkpoint on
+    exactly the normal sequence (found live: adding the buyer-document-label row)."""
+    root = build()
+    ci.checkpoint(root)
+    mutate_text(root, "01_pursuit/27-010/3_drafting/bid_response_outline.md",
+                "| volumes | 1 |", "| volumes | 1 |\n| buyer document label | RFT |")
+    (root / "01_pursuit/27-010/3_drafting/bid.docx").write_bytes(b"PK-docx-v2")
+    report = ci.scan(root)
+    assert has_action(report, "verify this regenerated output")
+    assert not has_action(report, "reconcile the edit")
+    assert not any(i["severity"] == "error" for i in report["impacts"])
+    assert ci.checkpoint(root)["status"] == "checkpointed"
+
+
 CASES = [
     ("baseline, clean scan, untracked file ignored, hashes only", case_baseline_and_untracked),
     ("estimate change routes pricing only and preserves final", case_estimate_propagates_only_pricing),
@@ -502,6 +543,8 @@ CASES = [
     ("a recorded re-review stops the repeat demand", case_recorded_re_review_stops_the_repeat_demand),
     ("deletions read as deletions, not edits", case_deletions_are_not_edits),
     ("filled buyer forms are maintained, not rendered", case_filled_buyer_forms_are_maintained_not_rendered),
+    ("change row lands above template <date> placeholders", case_change_row_lands_above_template_placeholder_rows),
+    ("re-render after outline edit is the normal sequence", case_rerender_after_outline_edit_is_the_normal_sequence),
 ]
 
 

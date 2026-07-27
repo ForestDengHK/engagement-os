@@ -511,6 +511,50 @@ CASES = [
                 _sub(t, SEC, "We did the thing.", "We did the thing. " + WORDS_600)),
      {"section-overlength"}, set(), set()),
 
+    # ── the template's own inline comment must not defeat the freeze gate ────
+    # bid_section.md.tmpl plants `status: draft   # draft → reviewed-r1 …`; an author
+    # flipping the word in place keeps the comment, and the raw `^status: approved$`
+    # regex read that as NOT approved — a false freeze-blocker at the worst moment.
+    ("frozen-with-template-comment-on-the-status-line",
+     lambda t: (_approve_section(t),
+                _sub(t, SEC, "status: approved",
+                     "status: approved            # draft → reviewed-r1 → reviewed-r2 → approved"),
+                t.__setitem__("01_pursuit/27-010/4_final/v.docx", "x")),
+     set(), set(), {"frozen-unapproved"}),
+
+    # ── citations may name files with spaces ─────────────────────────────────
+    ("citation-to-a-spaced-filename-resolves",
+     lambda t: (_sub(t, SEC, "We did the thing.",
+                     "We did the thing. See `26-002 - DataWarehouse RFP.md §Page 3`."),
+                t.__setitem__("01_pursuit/27-010/1_received/_md/26-002 - DataWarehouse RFP.md",
+                              "# R\n\n## §9.9 Other\n\nText.\n"),
+                _sub(t, "01_pursuit/27-010/1_received/_md/README.md",
+                     "- `rft.md` — converted from `rft.docx`",
+                     "- `rft.md` — converted from `rft.docx`\n"
+                     "- `26-002 - DataWarehouse RFP.md` — converted from `26-002 ….docx`")),
+     set(), set(), {"dangling-citation"}),
+    ("citation-to-a-missing-spaced-file-still-warns",
+     lambda t: _sub(t, SEC, "We did the thing.",
+                    "We did the thing. See `No Such File.md §Page 3`."),
+     set(), {"dangling-citation"}, set()),
+
+    # ── the negative answer must BE the section's answer ─────────────────────
+    ("stray-na-does-not-exempt-the-estimate",
+     lambda t: t.__setitem__("01_pursuit/27-010/2_analysis/rfp_analysis.md",
+                             "# Analysis\n\n## 10. Estimate & price posture\n\n"
+                             "The tender is priced. Travel is n/a for this team.\n"),
+     {"analysis-artefact-missing"}, set(), set()),
+    ("a-recorded-negative-is-the-result",
+     lambda t: t.__setitem__("01_pursuit/27-010/2_analysis/rfp_analysis.md",
+                             "# Analysis\n\n## 10. Estimate & price posture\n\n"
+                             "No estimate was created — this tender is not priced.\n"),
+     set(), set(), {"analysis-artefact-missing"}),
+
+    # ── the archive is out of scope ──────────────────────────────────────────
+    ("archived-workbook-is-not-a-live-artefact",
+     lambda t: t.__setitem__("archived/old/2_analysis/estimation.xlsx", "PK-old"),
+     set(), set(), {"estimate-snapshot-missing", "estimate-snapshot-stale"}),
+
     # ── citations ────────────────────────────────────────────────────────────
     ("dangling-citation",
      lambda t: _sub(t, FINDING, "Evidence:", "See `gone.md §Page 3`.\n\nEvidence:"),
