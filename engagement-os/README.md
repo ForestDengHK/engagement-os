@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 16 skills + 8 commands + 27 templates + 9 deterministic
+Packaged as 16 skills + 8 commands + 28 templates + 9 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 

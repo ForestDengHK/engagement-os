@@ -1,0 +1,18 @@
+# `_shared/_md/` — converted markdown of our own assets, when page-level citation needs it
+
+This directory is empty in a normal pursuit **by design, not by failure**: `eng-index-assets`
+indexes the originals directly (its skill prescribes reading the document, not a conversion),
+and sections cite assets by `A-nnn` id, which needs no markdown.
+
+Convert an asset only when a section must cite a specific page/slide/sheet of it
+(`file.md §Page N` — the form `eng_lint.py` resolves). The `_sources/` ingest skill does not
+cover `_shared`; run the converter directly:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py \
+  "01_pursuit/_shared/case_studies/<file>.pdf" \
+  --out "01_pursuit/_shared/_md/<slug>.md"
+```
+
+If nothing ever converts, delete this directory rather than leave it empty — an empty `_md/`
+reads as "conversions live here" and teaches the next reader a wrong lesson about the project.
