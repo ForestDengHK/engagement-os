@@ -1367,6 +1367,20 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
         ("export carries workbook content into the snapshot", "S-01" in snap),
     ]
 
+    import subprocess as _sp
+    no_cached = out.with_name("nocache.xlsx")
+    bw.build(d, 0.5, str(no_cached))               # openpyxl build: formulas, no cached values
+    md_target = no_cached.with_suffix(".md")
+    rr = _sp.run([sys.executable,
+                  str(PLUGIN / "skills/eng-os/scripts/build_estimate_workbook.py"),
+                  "--to-md", "--no-recalc", "--out", str(no_cached)],
+                 capture_output=True, text=True)
+    wb_checks += [
+        ("export with no cached values and no recalc is refused",
+         rr.returncode == 3 and "page of blanks" in rr.stderr),
+        ("a refused export did not touch the markdown", not md_target.exists()),
+    ]
+
     # User-facing estimate surfaces are natural-language facades. The implementation script
     # remains bundled and agent-operated, but a reviewer must never be told to invoke it.
     user_surfaces = [
