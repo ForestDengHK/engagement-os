@@ -317,6 +317,40 @@ def rule_response_form_matches_rft(root, r):
                    "evaluator has to hunt for each answer")
 
 
+def rule_buyer_forms_filled(root, r):
+    """A `buyer-form` section must produce a FILLED working copy of the buyer's form.
+
+    Declaring the mode was not enough: the render builds from markdown, so a buyer-form section
+    rendered as our prose ABOUT their form while the form itself stayed empty in `1_received/`.
+    On the pack's worked example the entire price response was two cells in the buyer's workbook —
+    a tenderer name and a lump sum — and the draft answered it with 565 words instead.
+
+    The working copy lives in `3_drafting/forms/`; `1_received/` is what they sent and stays
+    untouched, or the repo loses the evidence of what was actually issued.
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    r.ran()
+    for p in secs:
+        meta, _body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        m = sc.RESPONSE_FORM_RE.match((meta.get("response_form") or "").strip())
+        if not m or m.group(1) != "buyer-form":
+            continue
+        eng = p.parents[3] if p.parent.name.startswith("v") else p.parents[2]
+        forms = eng / "3_drafting/forms"
+        filled = sorted(forms.glob("*")) if forms.exists() else []
+        filled = [f for f in filled if f.is_file() and not f.name.startswith(("~$", "."))]
+        where = str(p.relative_to(root))
+        frozen = bool(frozen_finals(eng))
+        if not filled:
+            (r.error if frozen else r.warn)(
+                "buyer-form-not-filled", where,
+                f"declares buyer-form '{m.group(2)[:60]}' but 3_drafting/forms/ holds no filled "
+                "copy — the answer IS their form; copy it there and fill it with the xlsx / docx "
+                "skill, and never edit the received original")
+
+
 def rule_internal_ids_in_prose(root, r):
     """An internal register id in a section's BODY prose has no client-facing form.
 
@@ -1149,7 +1183,8 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
          rule_research_rows_closed, rule_internal_ids_in_prose,
-         rule_response_form_matches_rft, rule_outline_covers_matrix,
+         rule_response_form_matches_rft, rule_buyer_forms_filled,
+         rule_outline_covers_matrix,
          rule_outline_sections_exist, rule_submission_format,
          rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
