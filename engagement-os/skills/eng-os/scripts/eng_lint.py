@@ -249,6 +249,74 @@ def research_row_id(cell):
     return f"BR-{int(m.group(1)):03d}" if m else None
 
 
+def rft_clause_text(root):
+    """Clause label → its text in the ingested RFT markdown, for the sections' own tender.
+
+    The buyer's response scaffolding is already in the repo — `eng-ingest-source` converted it —
+    so nothing here re-parses the .docx. This only slices the converted markdown by its clause
+    anchors so a section can be compared with the clause it answers.
+    """
+    out = {}
+    for md in sorted(root.glob("01_pursuit/*/1_received/_md/*.md")):
+        if md.name.startswith(("0", "README")) and "Appendix" in md.name:
+            continue
+        text = md.read_text(encoding="utf-8", errors="replace")
+        anchors = [(m.start(), m.group(1))
+                   for m in re.finditer(r"^##+\s*§?([\d.]+[\d])\b", text, re.M)]
+        for i, (pos, label) in enumerate(anchors):
+            end = anchors[i + 1][0] if i + 1 < len(anchors) else len(text)
+            out.setdefault(label.rstrip("."), text[pos:end])
+    return out
+
+
+def rule_response_form_matches_rft(root, r):
+    """Where the buyer supplied the answer structure, the section must use it.
+
+    A tender nearly always supplies its own scaffolding — numbered questions with Yes / No / N-A
+    options, a "TENDERER'S RESPONSE" box, an appendix form to fill. Re-organising a pass/fail
+    questionnaire into a tidier table of our own makes the evaluator hunt for each answer, and
+    format non-compliance is a common auto-reject. Found by reading the RFT after drafting: it
+    carries 51 answer checkboxes and five buyer forms, and the draft had reproduced none of them.
+    """
+    secs = section_files(root)
+    if not secs:
+        return
+    r.ran()
+    clauses = rft_clause_text(root)
+    for p in secs:
+        meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        where = str(p.relative_to(root))
+        declared = (meta.get("response_form") or "").strip()
+        if not declared:
+            r.warn("response-form-undeclared", where,
+                   "no `response_form` — state whether the buyer supplied the form (buyer-form), "
+                   "the question structure (buyer-structure), or only a response box (prose)")
+            continue
+        m = sc.RESPONSE_FORM_RE.match(declared)
+        if not m:
+            r.error("response-form-unknown", where,
+                    f"response_form '{declared}' is not one of {sorted(sc.RESPONSE_FORMS)}")
+            continue
+        kind, arg = m.group(1), m.group(2).strip()
+        if kind == "buyer-form" and not arg:
+            r.error("response-form-nameless", where,
+                    "buyer-form must name the buyer's file — that file IS the answer")
+        # A buyer form is often a SECTION of the RFT (Appendix 3, Appendix 4) rather than a
+        # separate file; only a named file is expected to resolve on disk.
+        if kind == "buyer-form" and re.search(r"\.\w{2,5}\b", arg) and not resolve_in_repo(root, arg):
+            r.warn("response-form-missing-file", where,
+                   f"buyer-form names the file '{arg}', which is not in the repo — obtain it and "
+                   "fill it; do not re-typeset it")
+        # the buyer numbered the questions and gave answer options: did we reproduce them?
+        clause = (meta.get("rft_clause") or "").strip("§ ")
+        source = clauses.get(clause.split(";")[0].strip().lstrip("§"))
+        if source and "☐" in source and kind == "prose":
+            r.warn("response-structure-invented", where,
+                   f"RFT {clause} supplies its own answer options (Yes / No / N-A boxes) but this "
+                   "section is written as free prose — mirror their numbering and wording, or the "
+                   "evaluator has to hunt for each answer")
+
+
 def rule_internal_ids_in_prose(root, r):
     """An internal register id in a section's BODY prose has no client-facing form.
 
@@ -1080,7 +1148,8 @@ def rule_figures_exist(root, r):
 RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
-         rule_research_rows_closed, rule_internal_ids_in_prose, rule_outline_covers_matrix,
+         rule_research_rows_closed, rule_internal_ids_in_prose,
+         rule_response_form_matches_rft, rule_outline_covers_matrix,
          rule_outline_sections_exist, rule_submission_format,
          rule_mandatory_met, rule_citations_resolve,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,

@@ -35,6 +35,7 @@ FIELDS = {
     "page_budget":  "lint (per-file and shared-pool checks)",
     "figures":      "lint (ids must exist in figures/ and be referenced in the body)",
     "evidence":     "lint (ids must exist in firm_assets.md)",
+    "response_form": "lint (the buyer's own answer structure must be used where they gave one)",
     "depends_on":   "eng-propagate-change (additional load-bearing dependencies)",
     "status":       "lint + render gate",
 }
@@ -59,6 +60,23 @@ VERIFY_RE = re.compile(r"\[⚠VERIFY[^\]]*\]")
 #: (`R1 (2nd pass)`, `R1b`, `R1 · re-check`). An exact `R\d+` match ignored those rows and
 #: read a stale verdict as the latest one.
 ROUND_LABEL_RE = re.compile(r"^R\d+\b")
+
+
+#: How the buyer expects THIS answer to arrive. A tender usually supplies its own response
+#: scaffolding, and inventing our own where they gave one is a format non-compliance — the
+#: cheapest way there is to lose marks that the content would have won.
+RESPONSE_FORMS = {
+    # the answer IS the buyer's file, filled in and returned — never re-typeset by us
+    "buyer-form",
+    # the answer is written into the buyer's own question structure inside the RFT
+    # (numbered questions, Yes / No / N-A options, their wording)
+    "buyer-structure",
+    # the buyer gave a response box and a page limit; the answer is our document, identified there
+    "prose",
+}
+
+#: A buyer-form declaration names the file: `buyer-form: Appendix 3 …docx`
+RESPONSE_FORM_RE = re.compile(r"^(buyer-form|buyer-structure|prose)\b\s*:?\s*(.*)$")
 
 
 def revise_status_for(status, delivery=False):

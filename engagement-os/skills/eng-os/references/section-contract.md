@@ -23,6 +23,7 @@ in the same commit; a contract defined in two places is already two contracts.
 | `page_budget` | The limit AND its scope (see below) | lint — per-file and shared-pool checks |
 | `figures` | `[F-nn, …]` this section uses | lint — every id must exist in `figures/` and be referenced in the body |
 | `evidence` | `[A-nnn, …]` firm assets relied on | lint — every id must exist in `firm_assets.md` |
+| `response_form` | `buyer-form: <their file>` · `buyer-structure` · `prose` — how the buyer expects THIS answer to arrive | lint — a clause with answer boxes may not be answered as free prose; a buyer-form must name its file |
 | `depends_on` | Additional load-bearing inputs such as `estimation.xlsx`, `S-nn`, or a named analysis file | `eng-propagate-change` — a changed dependency invalidates this section's review |
 | `status` | Lifecycle state (below) | lint + the render gate |
 

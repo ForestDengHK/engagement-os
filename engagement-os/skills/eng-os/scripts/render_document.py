@@ -152,6 +152,52 @@ CLIENT_SUBS = [
 ]
 
 
+def balance_tables(body: str) -> str:
+    """Give pandoc sane column widths by padding each pipe table's separator row.
+
+    A markdown pipe table carries no widths; pandoc derives them from the DASH COUNT in the
+    separator row, so `|---|---|---|` renders every column equal — which squeezed a questionnaire's
+    question text into a 15-character column while `Yes` and `No` got a third of the page each.
+    Widths are set here from the longest cell actually in each column, so a table looks like what
+    it contains without anyone hand-tuning dashes.
+    """
+    lines = body.splitlines()
+    out, i = [], 0
+    sep_re = re.compile(r"^\s*\|(?:\s*:?-{2,}:?\s*\|)+\s*$")
+    while i < len(lines):
+        if (i + 1 < len(lines) and lines[i].lstrip().startswith("|")
+                and sep_re.match(lines[i + 1])):
+            start = i
+            end = i + 2
+            while end < len(lines) and lines[end].lstrip().startswith("|"):
+                end += 1
+            rows = [[c.strip() for c in ln.strip().strip("|").split("|")]
+                    for ln in lines[start:end] if not sep_re.match(ln)]
+            ncols = max(len(r) for r in rows)
+            # Clamp before scaling. Raw ratios are just as wrong the other way: a 120-character
+            # question against a 3-character "Yes" starves the answer column until it wraps one
+            # letter per line. A column needs room for its widest cell, and a prose column does
+            # not need more than about 60 characters of share.
+            widths = [min(60, max(6, max((len(r[c]) for r in rows if c < len(r)), default=6)))
+                      for c in range(ncols)]
+            total = sum(widths) or 1
+            # only the RATIO matters to pandoc; keep the separator itself a sane length
+            scaled = [max(4, round(w / total * 90)) for w in widths]
+            alignment = [c.strip() for c in lines[start + 1].strip().strip("|").split("|")]
+            sep = "|" + "|".join(
+                (":" if a.startswith(":") else "") + "-" * scaled[k]
+                + (":" if a.endswith(":") else "")
+                for k, a in enumerate(alignment[:ncols])) + "|"
+            out.extend(lines[start:start + 1])
+            out.append(sep)
+            out.extend(lines[start + 2:end])
+            i = end
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
 def client_text(body: str) -> str:
     """Normalise authoring shorthand into what the recipient should read.
 
@@ -469,6 +515,7 @@ def main() -> int:
         text, n_quotes = strip_internal(s["body"], pol["strip"])
         if pol["strip"]:
             text = client_text(text)              # authoring shorthand → the reader's vocabulary
+        text = balance_tables(text)               # column widths from content, in every profile
         if n_quotes:
             # visible, not silent: under a strict profile a blockquote is BY CONTRACT a
             # scaffolding note, but a legitimate quotation would be deleted here too
