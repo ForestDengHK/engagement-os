@@ -88,6 +88,24 @@ def matrix_paths(root):
     return sorted(root.glob("01_pursuit/*/2_analysis/compliance_matrix.md"))
 
 
+def pursuit_of(path):
+    """The `01_pursuit/<eng>/` directory an artefact belongs to.
+
+    Found by walking up rather than by assuming a fixed depth or a `vN` volume name —
+    volumes may be named ('Technical', 'Commercial'), and a fixed parents[N] reads the
+    wrong pursuit as soon as the layout shifts.
+    """
+    for base in path.parents:
+        if base.parent.name == "01_pursuit":
+            return base
+    return path.parent
+
+
+def matrix_req_ids_for(mat):
+    """Every R-nnn id present in ONE pursuit's compliance matrix."""
+    return set(sc.REQ_ID_RE.findall(mat.read_text(encoding="utf-8", errors="replace")))
+
+
 def matrix_req_ids(root):
     """Every R-nnn id present in any compliance matrix (None if there is no matrix)."""
     mats = matrix_paths(root)
@@ -95,7 +113,7 @@ def matrix_req_ids(root):
         return None
     ids = set()
     for m in mats:
-        ids |= set(sc.REQ_ID_RE.findall(m.read_text(encoding="utf-8", errors="replace")))
+        ids |= matrix_req_ids_for(m)
     return ids
 
 
@@ -212,30 +230,77 @@ def rule_verify_open_in_draft(root, r):
                    "before this section can ship")
 
 
-def research_log_rows(root):
-    """Parse every bid research log into {BR-nnn: status-word}. None when no log exists.
+def research_log_rows_for(log):
+    """Parse ONE pursuit's bid research log into {BR-nnn: status-word}.
 
     Row ids are written either as a bare number (the template's own `| 1 |`) or as the
     id the rest of the pack uses (`BR-001`) — both are accepted here and in
     change_impact.py, because a register whose ids the tooling cannot read is a register
     the tooling silently ignores.
     """
+    rows = {}
+    for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.lstrip().startswith("|") or re.match(r"^\s*\|?[\s:|-]+\|", line):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        key = research_row_id(cells[0])
+        if not key or "<" in cells[-1]:
+            continue                          # planted template row
+        rows[key] = cells[-1].lower()
+    return rows
+
+
+def research_log_rows(root):
+    """Every pursuit's log merged (None when no log exists). Cross-pursuit callers only —
+    a section must be checked against its OWN pursuit's log, or one pursuit's 'closed'
+    silently overwrites another's 'open' in the merge."""
     logs = sorted(root.glob("01_pursuit/*/2_analysis/bid_research_log.md"))
     if not logs:
         return None
     rows = {}
     for log in logs:
-        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
-            if not line.lstrip().startswith("|") or re.match(r"^\s*\|?[\s:|-]+\|", line):
-                continue
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if len(cells) < 2:
-                continue
-            key = research_row_id(cells[0])
-            if not key or "<" in cells[-1]:
-                continue                          # planted template row
-            rows[key] = cells[-1].lower()
+        rows.update(research_log_rows_for(log))
     return rows
+
+
+#: A status that STARTS with 'closed' but carries an open caveat is not closed — the
+#: caveat IS the work ('closed — primary confirmation owed before submission' sat behind
+#: a green count on the real pack while the claim it backed was unconfirmed).
+OPEN_CAVEAT_RE = re.compile(
+    r"owed|pending|conditional|confirm|verify|re-?check|before submission", re.I)
+
+
+def research_row_open(status):
+    return not status.startswith("closed") or bool(OPEN_CAVEAT_RE.search(status))
+
+
+def _sha256(path):
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def form_fill_state(path):
+    """(unresolved [TBD] count, bare-currency-placeholder count) inside a filled buyer form.
+
+    Read straight from the zip XML with the stdlib — the lint cannot take an openpyxl /
+    python-docx dependency, and it does not need one to count markers. A bare '€' / '$' / '£'
+    as a cell's entire content is the buyer's own placeholder, never an answer (the real
+    pack's pricing form shipped its lump-sum cell holding exactly that).
+    """
+    import zipfile
+    xml = ""
+    try:
+        with zipfile.ZipFile(path) as z:
+            for n in z.namelist():
+                if n == "word/document.xml" or (n.startswith("xl/") and n.endswith(".xml")):
+                    xml += z.read(n).decode("utf-8", errors="replace")
+    except (zipfile.BadZipFile, OSError):
+        return 0, 0                      # not a zip (e.g. a markdown working copy) — nothing to count
+    tbd = len(re.findall(r"\[TBD\]", xml))
+    placeholder = len(re.findall(r"<t[^>]*>\s*[€$£]\s*</t>", xml))
+    return tbd, placeholder
 
 
 def research_row_id(cell):
@@ -249,15 +314,16 @@ def research_row_id(cell):
     return f"BR-{int(m.group(1)):03d}" if m else None
 
 
-def rft_clause_text(root):
-    """Clause label → its text in the ingested RFT markdown, for the sections' own tender.
+def rft_clause_text(eng):
+    """Clause label → its text in THIS pursuit's ingested RFT markdown.
 
     The buyer's response scaffolding is already in the repo — `eng-ingest-source` converted it —
     so nothing here re-parses the .docx. This only slices the converted markdown by its clause
-    anchors so a section can be compared with the clause it answers.
+    anchors so a section can be compared with the clause it answers. Scoped to one pursuit:
+    two tenders both have a §2.1, and they are not the same §2.1.
     """
     out = {}
-    for md in sorted(root.glob("01_pursuit/*/1_received/_md/*.md")):
+    for md in sorted((eng / "1_received/_md").glob("*.md")) if (eng / "1_received/_md").exists() else []:
         if md.name.startswith(("0", "README")) and "Appendix" in md.name:
             continue
         text = md.read_text(encoding="utf-8", errors="replace")
@@ -282,8 +348,12 @@ def rule_response_form_matches_rft(root, r):
     if not secs:
         return
     r.ran()
-    clauses = rft_clause_text(root)
+    clause_cache = {}
     for p in secs:
+        eng = pursuit_of(p)
+        if eng not in clause_cache:
+            clause_cache[eng] = rft_clause_text(eng)
+        clauses = clause_cache[eng]
         meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         where = str(p.relative_to(root))
         declared = (meta.get("response_form") or "").strip()
@@ -332,6 +402,7 @@ def rule_buyer_forms_filled(root, r):
     if not secs:
         return
     r.ran()
+    reported, received_cache = set(), {}
     for p in secs:
         meta, _body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         m = sc.RESPONSE_FORM_RE.match((meta.get("response_form") or "").strip())
@@ -342,7 +413,7 @@ def rule_buyer_forms_filled(root, r):
         # marks against (their incident table is 12 rows x 8 columns; ours was 5 x 4).
         if not m or m.group(1) not in ("buyer-form", "buyer-structure"):
             continue
-        eng = p.parents[3] if p.parent.name.startswith("v") else p.parents[2]
+        eng = pursuit_of(p)
         forms = eng / "3_drafting/forms"
         filled = sorted(forms.glob("*")) if forms.exists() else []
         filled = [f for f in filled if f.is_file() and not f.name.startswith(("~$", "."))]
@@ -354,6 +425,39 @@ def rule_buyer_forms_filled(root, r):
                 f"declares {m.group(1)} '{m.group(2)[:50]}' but 3_drafting/forms/ holds no filled "
                 "copy — the answer IS their structure, filled; extract it there with the docx / "
                 "xlsx skill and never edit the received original")
+            continue
+        # Presence is not fill state. A working copy can sit in forms/ byte-identical to the
+        # received original, or carry a hundred unresolved [TBD] markers, while the cover note
+        # claims 'filled' — all three happened on the real pack, and nothing here saw them.
+        if eng not in received_cache:
+            received_cache[eng] = {}
+            recv = eng / "1_received"
+            if recv.exists():
+                for rf in recv.rglob("*"):
+                    if rf.is_file() and not rf.name.startswith(("~$", ".")):
+                        received_cache[eng][_sha256(rf)] = rf.name
+        received_hashes = received_cache[eng]
+        for f in filled:
+            if f in reported:
+                continue
+            reported.add(f)
+            received = received_hashes.get(_sha256(f))
+            if received:
+                (r.error if frozen else r.warn)(
+                    "buyer-form-unfilled-copy", str(f.relative_to(root)),
+                    f"byte-identical to received '{received}' — nothing was filled")
+                continue
+            tbd, placeholder = form_fill_state(f)
+            if tbd:
+                (r.error if frozen else r.warn)(
+                    "buyer-form-tbd-open", str(f.relative_to(root)),
+                    f"{tbd} unresolved [TBD] marker(s) — the form is a working copy, not an "
+                    "answer; the cover note must say what is owed, not claim 'filled'")
+            if placeholder:
+                (r.error if frozen else r.warn)(
+                    "buyer-form-placeholder-cell", str(f.relative_to(root)),
+                    f"{placeholder} cell(s) still hold the buyer's bare placeholder (a lone "
+                    "currency symbol) — an unfilled mandatory field, not a price")
 
 
 def rule_internal_ids_in_prose(root, r):
@@ -393,18 +497,29 @@ def rule_research_rows_closed(root, r):
     The pack's central promise — "no number, credential or outcome enters the response
     without a closed row + citation" — was prose only. A section citing an `open` row, or
     citing a BR id no log knows, now says so here instead of at submission.
+
+    Scoped to the section's OWN pursuit: the merged register let one pursuit's `closed`
+    overwrite another's `open` under the same BR id, in both directions.
     """
     secs = section_files(root)
     if not secs:
         return
-    rows = research_log_rows(root)
     r.ran()
-    if rows is None:
-        r.warn("research-log-missing", "01_pursuit/<eng>/2_analysis/bid_research_log.md",
-               "sections are being drafted with no research log — every sourced claim in them "
-               "is uncheckable; run eng-bid-research")
-        return
+    logs, missing_warned = {}, set()
     for p in secs:
+        eng = pursuit_of(p)
+        if eng not in logs:
+            log = eng / "2_analysis/bid_research_log.md"
+            logs[eng] = research_log_rows_for(log) if log.exists() else None
+        rows = logs[eng]
+        if rows is None:
+            if eng not in missing_warned:
+                missing_warned.add(eng)
+                r.warn("research-log-missing",
+                       str((eng / "2_analysis/bid_research_log.md").relative_to(root)),
+                       "sections are being drafted with no research log — every sourced claim "
+                       "in them is uncheckable; run eng-bid-research")
+            continue
         _, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         where = str(p.relative_to(root))
         cited = set(sc.RESEARCH_ID_RE.findall(body))
@@ -413,7 +528,7 @@ def rule_research_rows_closed(root, r):
             if br not in rows:
                 r.error("research-row-unknown", where,
                         f"cites {br} — no such row in bid_research_log.md")
-            elif not rows[br].startswith("closed"):
+            elif research_row_open(rows[br]):
                 r.warn("research-row-open", where,
                        f"rests on {br}, whose log row is '{rows[br][:40]}' — close it or cut "
                        "the claim before this section ships")
@@ -431,11 +546,16 @@ def rule_outline_covers_matrix(root, r):
     outlines = sorted(root.glob("01_pursuit/*/3_drafting/bid_response_outline.md"))
     if not outlines:
         return
-    req_ids = matrix_req_ids(root)
-    if not req_ids:
-        return
     r.ran()
     for o in outlines:
+        # the outline answers ITS OWN pursuit's matrix — pooled across 01_pursuit/*/, two
+        # live pursuits reported each other's requirements as unmapped, in both directions
+        mat = o.parent.parent / "2_analysis/compliance_matrix.md"
+        if not mat.exists():
+            continue
+        req_ids = matrix_req_ids_for(mat)
+        if not req_ids:
+            continue
         text = o.read_text(encoding="utf-8", errors="replace")
         if "{{" in text or "<section title from RFP>" in text:
             continue                              # still the planted template
@@ -460,22 +580,28 @@ def rule_outline_sections_exist(root, r):
     if not outlines:
         return
     r.ran()
-    have = []
-    for p in section_files(root):
-        meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
-        # the filename is a fallback identity: a section whose frontmatter is broken is a
-        # separate finding, and must not ALSO read as a section that was never written
-        have.append((f"{meta.get('section', '')} {p.stem}", str(p.relative_to(root))))
     for o in outlines:
         where = str(o.relative_to(root))
         rows = outline_rows(o)
         if not rows:
             continue
+        # sections of THIS pursuit only — pooled, one pursuit's sections silently
+        # satisfied another's outline rows, and a whole missing volume went invisible
+        have = []
+        sec_dir = o.parent.parent / "3_drafting/sections"
+        for p in sorted(sec_dir.rglob("*.md")) if sec_dir.exists() else []:
+            meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+            # the filename is a fallback identity: a section whose frontmatter is broken is a
+            # separate finding, and must not ALSO read as a section that was never written
+            have.append(f"{meta.get('section', '')} {p.stem}")
         undrafted = []
         for label, status in rows:
             key = label.split()[-1] if label else ""      # "V2 §5.1.1" → "§5.1.1"
             key = key.lstrip("§")
-            matched = any(key and key in sec for sec, _f in have)
+            # token-boundary match: '1.1' must not match '11.1 Other' — the substring
+            # form read a real section as the answer to a row it never addressed
+            key_re = re.compile(r"(?<![\d.])" + re.escape(key) + r"(?![\d.])")
+            matched = any(key and key_re.search(sec) for sec in have)
             if status.startswith("outline") or not status:
                 if not matched:
                     undrafted.append(label)
@@ -506,9 +632,12 @@ def rule_submission_format(root, r):
                    "no machine-checked submission-format block — the required file format, paper "
                    "and volume count reach the build only by hand")
             continue
-        accepted = {x.strip().lower().lstrip(".")
-                    for x in re.split(r"[,/]| or ", fmt.get("file formats accepted", ""))
-                    if x.strip()}
+        # extensions by pattern, not by tidy-list splitting: RFT facts are recorded as
+        # prose — 'Word (.docx) or PDF' — and the splitter read that as one unknown token,
+        # then reported the correctly-built .docx as non-compliant
+        accepted = {e.lstrip(".").lower() for e in (m.group(0) for m in re.finditer(
+            r"\.\w{2,5}\b|\b(?:docx?|xlsx?|pptx?|pdf)\b",
+            fmt.get("file formats accepted", ""), re.I))}
         eng = o.parent.parent
         for base, sev in ((eng / "4_final", r.error), (eng / "3_drafting/_render", r.warn)):
             if not base.exists():
@@ -522,8 +651,9 @@ def rule_submission_format(root, r):
                         f"built as .{ext}; this RFT accepts {sorted(accepted)}")
         declared = re.search(r"\d+", fmt.get("volumes", ""))
         if declared:
-            vols = {p.parent.name for p in section_files(root)
-                    if p.parent.name != "sections"}
+            sec_dir = eng / "3_drafting/sections"
+            vols = ({p.parent.name for p in sec_dir.rglob("*.md")
+                     if p.parent.name != "sections"} if sec_dir.exists() else set())
             if vols and len(vols) < int(declared.group(0)):
                 r.warn("submission-volumes-incomplete", str(o.relative_to(root)),
                        f"{len(vols)} of {declared.group(0)} volumes have sections written "
@@ -531,21 +661,28 @@ def rule_submission_format(root, r):
 
 
 def rule_mandatory_met(root, r):
-    """Every Mandatory compliance-matrix row must reach `met` before a response is frozen."""
+    """Every Mandatory compliance-matrix row must reach `met` — as an ERROR from the moment
+    any section of that pursuit enters review, not only at freeze.
+
+    A pass/fail item that stays a warning until the package is frozen is discovered exactly
+    when there is no time to close it: on the real pack, 46 open mandatories reported as
+    '0 errors' for days. Freeze stays the hard gate; review-entry is the early one.
+    """
     mats = matrix_paths(root)
     if not mats:
         return
     r.ran()
     for m in mats:
-        frozen = bool(frozen_finals(m.parent.parent))
+        eng = m.parent.parent
+        frozen = bool(frozen_finals(eng))
+        gate = r.error if (frozen or pursuit_has_reviewed_sections(eng)) else r.warn
         hmap, rows = matrix_table(root, m)
         if not rows:
             # not-started is normal early (a fresh scaffold plants only the template
             # row) — but a frozen response over an empty matrix is a vacuous pass
-            (r.error if frozen else r.warn)(
-                "matrix-empty", str(m.relative_to(root)),
-                "no real requirement rows — an empty matrix passes every check vacuously"
-                + (" — and a response is already frozen" if frozen else ""))
+            gate("matrix-empty", str(m.relative_to(root)),
+                 "no real requirement rows — an empty matrix passes every check vacuously"
+                 + (" — and a response is already frozen" if frozen else ""))
             continue
         mi, si = hmap.get("mandatory", 4), hmap.get("status", 9)
         for i, cells in rows:
@@ -555,8 +692,24 @@ def rule_mandatory_met(root, r):
             if mandatory.upper().startswith("M") and status.lower() != "met":
                 where = f"{m.relative_to(root)}:{i}"
                 msg = f"mandatory requirement {req.group(0) if req else '?'} is '{status}', not 'met'"
-                (r.error if frozen else r.warn)("mandatory-open", where,
-                                                msg + (" — and a response is already frozen" if frozen else ""))
+                gate("mandatory-open", where,
+                     msg + (" — and a response is already frozen" if frozen else ""))
+
+
+#: Statuses in which a section has been through at least one review round. Mandatory items
+#: escalate from warning to error once ANY section of the pursuit reaches one of these.
+REVIEW_ATTAINED = {"reviewed-r1", "revise-r1", "reviewed-r2", "revise-r2", "approved"}
+
+
+def pursuit_has_reviewed_sections(eng):
+    sec_dir = eng / "3_drafting/sections"
+    if not sec_dir.exists():
+        return False
+    for p in sec_dir.rglob("*.md"):
+        meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        if (meta.get("status") or "").strip() in REVIEW_ATTAINED:
+            return True
+    return False
 
 
 def rule_citations_resolve(root, r):
@@ -992,12 +1145,20 @@ def rule_section_frontmatter(root, r):
     if not secs:
         return
     r.ran()
-    req_ids, asset_ids = matrix_req_ids(root), firm_asset_ids(root)
+    asset_ids = firm_asset_ids(root)
+    matrix_cache = {}
     for p in secs:
         meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         if not meta:
             continue                        # rule_section_budget already reports missing frontmatter
         where = str(p.relative_to(root))
+        # a section's R-nnn must exist in ITS OWN pursuit's matrix — pooled across
+        # 01_pursuit/*/, one pursuit's register silently validated another's citations
+        eng = pursuit_of(p)
+        if eng not in matrix_cache:
+            mat = eng / "2_analysis/compliance_matrix.md"
+            matrix_cache[eng] = matrix_req_ids_for(mat) if mat.exists() else None
+        req_ids = matrix_cache[eng]
         if req_ids is not None:
             for req in sorted(sc.fm_list(meta, "answers_reqs", sc.REQ_ID_RE) - req_ids):
                 r.error("section-req-unknown", where,

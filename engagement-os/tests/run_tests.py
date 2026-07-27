@@ -127,11 +127,73 @@ def _sub(t, path, old, new):
     t[path] = t[path].replace(old, new)
 
 
+def _zip_bytes(entries):
+    """A minimal .docx/.xlsx in memory — filled buyer forms are zips, so the fixture
+    that tests their fill state must be one too."""
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name, content in entries.items():
+            z.writestr(name, content)
+    return buf.getvalue()
+
+
 def _approve_section(t):
     """status approved + a matching pass verdict (avoids unrelated status warns)."""
     _sub(t, SEC, "status: draft", "status: approved")
     _sub(t, SEC, "|---|---|---|---|---|\n",
          "|---|---|---|---|---|\n| R2 | experienced human | 2026-01-01 | pass | none |\n")
+
+
+def _add_second_pursuit(t):
+    """A second live pursuit (27-011) beside the clean tree's 27-010.
+
+    The whole suite was single-pursuit for months, which is exactly how the pooling
+    defects survived: registers were built across `01_pursuit/*/`, so two pursuits
+    cross-reported each other's requirements, overwrote each other's research rows,
+    and lent each other sections ('1.1' matched as a substring of '11.1 Other').
+    """
+    t["01_pursuit/27-011/2_analysis/compliance_matrix.md"] = (
+        "# Compliance matrix\n\n"
+        "| Req ID | Requirement | Mandatory | Evidence | Status |\n"
+        "|---|---|---|---|---|\n"
+        "| R-501 | The bidder must do z | M | A-001 | met |\n")
+    t["01_pursuit/27-011/2_analysis/bid_research_log.md"] = (
+        "# Bid research log\n\n"
+        "| # | Serves | Claim | Stream | Source | Tag | Confidence | Status |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| BR-001 | R-501 | A claim still open | ext | example.org/y | `[T3:OWN]` | M | "
+        "open — needs sign-off |\n")
+    t["01_pursuit/27-011/3_drafting/bid_response_outline.md"] = (
+        "# Bid response outline\n\n"
+        "## Submission format (machine-checked)\n\n"
+        "| Key | Value |\n|---|---|\n"
+        "| volumes | 1 |\n"
+        "| file formats accepted | docx, pdf |\n"
+        "| paper | A4 |\n\n"
+        "## Volume / section map\n\n"
+        "| § | Response section | Answers Req IDs | Owner | Status |\n"
+        "|---|---|---|---|---|\n"
+        "| §1.1 | Overview | R-501 | Bid Manager | outline |\n")
+    t["01_pursuit/27-011/3_drafting/sections/v1/11.1_other.md"] = (
+        "---\n"
+        'section: "11.1 Other"\n'
+        'rft_clause: "§11.1"\n'
+        "marks: 5\n"
+        'scoring: "scored as a whole"\n'
+        "answers_reqs: [R-501]\n"
+        'page_budget: "4 A4, Arial 10 (per section)"\n'
+        "figures: []\n"
+        "evidence: []\n"
+        "response_form: prose\n"
+        "status: draft\n"
+        "---\n\n"
+        "# 11.1 Other\n\n"
+        "Other content.\n\n"
+        "## Review log\n\n"
+        "| Round | Reviewer / lens | Date | Verdict | What changed |\n"
+        "|---|---|---|---|---|\n")
 
 
 CASES = [
@@ -375,6 +437,65 @@ CASES = [
      lambda t: (_sub(t, MATRIX, "The bidder must do x", "Keep each limit < 10 pages"),
                 _sub(t, MATRIX, "| met |", "| open |")),
      set(), {"mandatory-open"}, set()),
+
+    # ── mandatory items are pass/fail from the moment a section enters review ──
+    # They used to stay warnings until a package was FROZEN — the last mechanical gate,
+    # exactly when there is no time left. On the real pack: 46 open mandatories, 0 errors.
+    ("mandatory-open-escalates-once-a-section-is-reviewed",
+     lambda t: (_approve_section(t), _sub(t, MATRIX, "| met |", "| open |")),
+     {"mandatory-open"}, set(), set()),
+    ("mandatory-met-approved-stays-quiet",
+     lambda t: _approve_section(t),
+     set(), set(), {"mandatory-open"}),
+
+    # ── a filled buyer form must be FILLED, not just present ─────────────────
+    # The rule checked that forms/ held a file — nothing checked the content. On the real
+    # pack that let a transmittal claim 'filled' over 119 unresolved [TBD] markers, an
+    # untouched buyer formula, and a pricing cell still holding the buyer's placeholder.
+    ("buyer-form-identical-to-the-received-original",
+     lambda t: (_sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/rft.docx", b"PK-rft")),
+     set(), {"buyer-form-unfilled-copy"}, set()),
+    ("buyer-form-tbd-markers-are-counted-out-loud",
+     lambda t: (_sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/appendix3.docx",
+                              _zip_bytes({"word/document.xml":
+                                          "<w>answer [TBD] more [TBD] text [TBD]</w>"}))),
+     set(), {"buyer-form-tbd-open"}, set()),
+    ("buyer-form-bare-currency-placeholder-is-not-an-answer",
+     lambda t: (_sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 6 Pricing (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/appendix6.xlsx",
+                              _zip_bytes({"xl/worksheets/sheet1.xml":
+                                          '<c r="D8" t="inlineStr"><is><t>€</t></is></c>'}))),
+     set(), {"buyer-form-placeholder-cell"}, set()),
+    ("buyer-form-genuinely-filled-stays-quiet",
+     lambda t: (_sub(t, SEC, "response_form: prose",
+                     "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
+                t.__setitem__("01_pursuit/27-010/3_drafting/forms/appendix3.docx",
+                              _zip_bytes({"word/document.xml": "<w>the actual answer</w>"}))),
+     set(), set(), {"buyer-form-unfilled-copy", "buyer-form-tbd-open",
+                    "buyer-form-placeholder-cell", "buyer-form-not-filled"}),
+
+    # ── two pursuits must not cross-report ────────────────────────────────────
+    ("two-pursuits-do-not-cross-report",
+     lambda t: _add_second_pursuit(t),
+     set(), {"outline-sections-undrafted"},
+     {"outline-row-unmapped", "outline-row-phantom", "research-row-open"}),
+
+    # ── 'closed' with an open caveat is not closed ────────────────────────────
+    # startswith('closed') accepted 'closed — primary confirmation owed before submission'
+    # as done; the caveat IS the work. On the real pack two such rows sat behind a green
+    # count while carrying unconfirmed claims into §5.1.1.
+    ("research-closed-with-an-open-caveat-is-open",
+     lambda t: _sub(t, LOG, "| closed |",
+                    "| closed — primary confirmation owed before submission |"),
+     set(), {"research-row-open"}, set()),
+    ("research-closed-for-use-as-attributed-stays-closed",
+     lambda t: _sub(t, LOG, "| closed |", "| closed for use as attributed |"),
+     set(), set(), {"research-row-open"}),
 
     # ── citations ────────────────────────────────────────────────────────────
     ("dangling-citation",
@@ -659,7 +780,8 @@ def build(root, files):
 
     A path may carry a trailing `\n@mtime+N` marker to age it N seconds into the future —
     needed for rules that compare timestamps between two files (a generated snapshot against
-    its source), which a same-instant write cannot exercise.
+    its source), which a same-instant write cannot exercise. Bytes content is written
+    as-is (filled buyer forms are real .docx/.xlsx zips).
     """
     import os
     import time
@@ -667,6 +789,9 @@ def build(root, files):
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         bump = 0
+        if isinstance(content, bytes):
+            p.write_bytes(content)
+            continue
         m = re.search(r"\n@mtime\+(\d+)$", content)
         if m:
             content, bump = content[:m.start()], int(m.group(1))
