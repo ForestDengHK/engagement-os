@@ -497,6 +497,20 @@ CASES = [
      lambda t: _sub(t, LOG, "| closed |", "| closed for use as attributed |"),
      set(), set(), {"research-row-open"}),
 
+    # ── page budgets come in the buyer's units, not only A4 ─────────────────
+    # The budget regex matched `(\d+)\s*A4` only, so 'max 5 pages' / '5 Seiten' / Letter
+    # silently disabled both length checks — on a US or German tender, every budget.
+    ("page-budget-in-plain-pages-is-enforced",
+     lambda t: (_sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
+                     'page_budget: "1 page (per section)"'),
+                _sub(t, SEC, "We did the thing.", "We did the thing. " + WORDS_600)),
+     {"section-overlength"}, set(), set()),
+    ("page-budget-in-letter-is-enforced",
+     lambda t: (_sub(t, SEC, 'page_budget: "4 A4, Arial 10 (per section)"',
+                     'page_budget: "1 Letter (per section)"'),
+                _sub(t, SEC, "We did the thing.", "We did the thing. " + WORDS_600)),
+     {"section-overlength"}, set(), set()),
+
     # ── citations ────────────────────────────────────────────────────────────
     ("dangling-citation",
      lambda t: _sub(t, FINDING, "Evidence:", "See `gone.md §Page 3`.\n\nEvidence:"),
@@ -843,7 +857,44 @@ def main():
         print(f"✗ FAILING: {fails}")
         return 1
     print("✓ all fixture cases pass")
-    return converter_tests()
+    return converter_tests() or render_tests()
+
+
+def render_tests():
+    """render_document's strip/normalise layer, called directly.
+
+    No suite touched the renderer at all, which is how 'every blockquote is scaffolding'
+    and a hardcoded RFT label lived as long as they did.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "render_document", PLUGIN / "skills/eng-os/scripts/render_document.py")
+    rd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rd)
+
+    checks = []
+    body = ("> **Scoring note.** ours\n> more notes\n\nSome text.\n\n"
+            "> FAR 52.204-21 applies to this contract.\n")
+    text, n_strip, n_kept = rd.strip_internal(body)
+    checks.append(("labeled scaffolding strips", "Scoring note" not in text and n_strip == 2))
+    checks.append(("unlabeled quote is kept as content",
+                   "FAR 52.204-21" in text and n_kept == 1))
+    out = rd.client_text("See [RFP §L.3] for instructions.")
+    checks.append(("default buyer label is RFP", "(RFP §L.3)" in out))
+    out = rd.client_text("See [RFP §2.1] for instructions.", "ITT")
+    checks.append(("buyer label parameterises", "(ITT §2.1)" in out and "RFT" not in out))
+    out = rd.client_text("Per [Att2 cl.5] and [Exh3].")
+    checks.append(("attachment/exhibit shorthand normalises",
+                   "(Attachment 2, cl. 5)" in out and "(Exhibit 3)" in out))
+    checks.append(("explicit label wins", rd.buyer_label_for("/nonexistent", "RFQ") == "RFQ"))
+    checks.append(("fallback label is RFP", rd.buyer_label_for("/nonexistent") == "RFP"))
+
+    for name, ok in checks:
+        print(f"  {'✓' if ok else '✗'} render:{name}")
+    ok_all = all(ok for _, ok in checks)
+    print("✓ render strip/normalise tests pass" if ok_all
+          else "✗ render strip/normalise tests FAILING")
+    return 0 if ok_all else 1
 
 
 def converter_tests():
@@ -1033,7 +1084,7 @@ def converter_tests():
         (figs / f"F-01_x.{ext}").write_text("x", encoding="utf-8")
     gated = render.discover(str(gate_dir))
     blocking, _adv = render.gate(gated, "bid", False)
-    stripped, _n = render.strip_internal(gated[0]["body"], True)
+    stripped, _n, _k = render.strip_internal(gated[0]["body"], True)
     forced_blocking, forced_adv = render.gate(gated, "bid", True)
     contract_checks += [
         # matching the bare literal let the explanatory form — the one every real pack
@@ -1055,7 +1106,7 @@ def converter_tests():
            "member firm must also be confirmed] · **Dates:** July 2024\n"
            "One CV is in Appendix 4 format (A-006), derived from the model via BR-009.\n"
            "![f](../../figures/F-01_x.png)\n")
-    delivered = render.client_text(raw)
+    delivered = render.client_text(raw, "RFT")   # the sample tender's own label for its document
     contract_checks += [
         ("an unresolved marker becomes a neutral TBD, reasoning left behind",
          "**[TBD]**" in delivered and "permission to cite" not in delivered),
@@ -1064,6 +1115,9 @@ def converter_tests():
         ("citation shorthand speaks the buyer's vocabulary",
          "(RFT §3.1, §3.3)" in delivered and "(Appendix 7, pp. 8–11)" in delivered
          and "(Appendix 5, cl. 6; Schedule 4)" in delivered and "(§3.3, §3.4)" in delivered),
+        ("the label is a parameter, not a hardcoded RFT",
+         "(RFP §3.1, §3.3)" in render.client_text(raw)
+         and "(ITT §3.1, §3.3)" in render.client_text(raw, "ITT")),
         ("no internal register id survives delivery",
          not re.search(r"\b(?:BR|A|R|S)-\d{2,3}\b", delivered)),
         ("a figure's link target is not treated as prose",

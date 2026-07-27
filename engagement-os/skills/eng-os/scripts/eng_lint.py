@@ -378,7 +378,7 @@ def rule_response_form_matches_rft(root, r):
                    f"buyer-form names the file '{arg}', which is not in the repo — obtain it and "
                    "fill it; do not re-typeset it")
         # the buyer numbered the questions and gave answer options: did we reproduce them?
-        clause = (meta.get("rft_clause") or "").strip("§ ")
+        clause = (meta.get("rft_clause") or meta.get("buyer_clause") or "").strip("§ ")
         source = clauses.get(clause.split(";")[0].strip().lstrip("§"))
         if source and "☐" in source and kind == "prose":
             r.warn("response-structure-invented", where,
@@ -1222,7 +1222,7 @@ def rule_section_budget(root, r):
         budget = meta.get("page_budget", "")
         if meta.get("marks", "").strip().isdigit():
             marks[p] = int(meta["marks"])
-        m = re.search(r"(\d+)\s*A4", budget)
+        m = re.search(r"(\d+)\s*(?:A4|Letter|pages?|Seiten|pp\.?)\b", budget, re.I)
         if not m:
             continue
         limit = int(m.group(1))

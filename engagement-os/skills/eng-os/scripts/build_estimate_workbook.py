@@ -303,9 +303,11 @@ def _named(wb, name, sheet, ref):
     wb.defined_names.add(DefinedName(name, attr_text=f"'{sheet}'!{ref}"))
 
 
-def build(data, rho, out_path, zero_rates=False, narrative=None):
+def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€"):
     from openpyxl import Workbook
 
+    eur = f"{currency}#,##0"     # the number format follows the engagement's currency,
+                                 # not the tender this builder was first tested on
     wb = Workbook()
     narrative = narrative or {}
     eff = data["effort"] or [(f"S-{i:02d}", "<activity>", 0, 0, 0, "") for i in range(1, 4)]
@@ -368,9 +370,10 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
          "(professional-services default) · 1 = fully correlated", "rho"),
         ("Confidence level for the commitment number", 0.80,
          "0.80 = P80. Change to 0.70 or 0.90 to re-cut the range.", "conf"),
-        ("Assumed lowest competitor bid — low", 225000, "An assumption. Say so in the narrative.", "low_a"),
-        ("Assumed lowest competitor bid — mid", 240000, "", "low_b"),
-        ("Assumed lowest competitor bid — high", 270000, "", "low_c"),
+        ("Assumed lowest competitor bid — low", None,
+         "YOUR assumption — left empty so a sample number can never ship as a real one.", "low_a"),
+        ("Assumed lowest competitor bid — mid", None, "", "low_b"),
+        ("Assumed lowest competitor bid — high", None, "", "low_c"),
         ("Cost marks available", 300, "From the buyer's evaluation table.", "max_marks"),
         ("Term (weeks)", 26, "Contract duration. The schedule may not end after it.", "term_weeks"),
         ("Working days per week", 5, "Duration = effort / (people x this x utilisation).", "days_per_week"),
@@ -395,7 +398,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     ws.cell(row=row, column=1, value="Non-labour and certain costs").font = \
         __import__("openpyxl").styles.Font(bold=True)
     row += 1
-    for c, h in enumerate(("Line", "€", "Basis"), 1):
+    for c, h in enumerate(("Line", currency, "Basis"), 1):
         ws.cell(row=row, column=c, value=h)
     _style(ws, row, 3, header=True)
     cert_first = row + 1
@@ -410,7 +413,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     ws.cell(row=row, column=1, value="Total non-labour + certain")
     ws.cell(row=row, column=2, value=f"=SUM(B{cert_first}:B{cert_last})")
     _style(ws, row, 2, fill=DERIVED_FILL, bold=True)
-    ws.cell(row=row, column=2).number_format = EUR
+    ws.cell(row=row, column=2).number_format = eur
     _named(wb, "nonlabour", "Inputs", f"$B${row}")
 
     # ── RateCard ──────────────────────────────────────────────────────────────
@@ -441,8 +444,8 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
         ws.cell(row=i, column=4, value=None)
         ws.cell(row=i, column=5, value=src)
         _style(ws, i, 4, fill=INPUT_FILL)
-        ws.cell(row=i, column=2).number_format = EUR
-        ws.cell(row=i, column=3).number_format = EUR
+        ws.cell(row=i, column=2).number_format = eur
+        ws.cell(row=i, column=3).number_format = eur
     rc_last = rc_first + len(ratecard) - 1
     _named(wb, "ratecard", "RateCard", f"$A${rc_first}:$C${rc_last}")
     _named(wb, "ratecard_grades", "RateCard", f"$A${rc_first}:$A${rc_last}")
@@ -667,7 +670,9 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     from openpyxl.formatting.rule import CellIsRule
     from openpyxl.utils import get_column_letter
     ws = wb.create_sheet("Gantt")
-    weeks = 26
+    # the horizon is the term this build wrote into the Inputs sheet — one source, or a
+    # longer engagement silently loses its last weeks off the right edge of the picture
+    weeks = int(next(v for l, v, n, nm in inputs if nm == "term_weeks"))
     _widths(ws, [34] + [3.2] * weeks)
     ws.cell(row=1, column=1, value="Week →")
     for w in range(1, weeks + 1):
@@ -734,7 +739,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
         for c in ("B", "D", "E"):
             ws[f"{c}{i}"].fill = __import__("openpyxl").styles.PatternFill("solid", fgColor=DERIVED_FILL)
         ws[f"B{i}"].number_format = '#,##0'
-        ws[f"D{i}"].number_format = EUR
+        ws[f"D{i}"].number_format = eur
     glast = len(grades) + 1
     tot = glast + 1
     ws.cell(row=tot, column=1, value="BLENDED / TOTAL")
@@ -744,8 +749,8 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     ws.cell(row=tot, column=3, value=f"=SUM(C2:C{glast})")
     ws.cell(row=tot, column=4, value=f"=SUM(D2:D{glast})")
     _style(ws, tot, 5, fill=DERIVED_FILL, bold=True)
-    ws[f"B{tot}"].number_format = EUR
-    ws[f"D{tot}"].number_format = EUR
+    ws[f"B{tot}"].number_format = eur
+    ws[f"D{tot}"].number_format = eur
     _named(wb, "blended_rate", "Grades", f"$B${tot}")
     _named(wb, "grade_days", "Grades", f"$C${tot}")
     ws.cell(row=tot + 2, column=1, value="Allocated days must equal P50")
@@ -780,13 +785,13 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     # ── ScopeVariance ─────────────────────────────────────────────────────────
     ws = wb.create_sheet("ScopeVariance")
     _widths(ws, [12, 62, 12, 16, 40])
-    ws.append(["Assumption", "If wrong", "Days", "€", "Disposition"])
+    ws.append(["Assumption", "If wrong", "Days", currency, "Disposition"])
     _style(ws, 1, 5, header=True)
     for i, (a, why, d) in enumerate(scope, 2):
         ws.append([a, why, d, f"=C{i}*blended_rate", "excluded by assumption / accepted"])
         _style(ws, i, 3, fill=INPUT_FILL)
         ws[f"D{i}"].fill = __import__("openpyxl").styles.PatternFill("solid", fgColor=DERIVED_FILL)
-        ws[f"D{i}"].number_format = EUR
+        ws[f"D{i}"].number_format = eur
     slast = len(scope) + 1
     ws.append(["TOTAL", "Upside exposure — carried by ASSUMPTIONS, not by days",
                f"=SUM(C2:C{slast})", f"=SUM(D2:D{slast})", ""])
@@ -810,7 +815,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
     for rr in (2, 3, 4):
         _style(ws, rr, 3, fill=DERIVED_FILL)
         for c in ("B", "C"):
-            ws[f"{c}{rr}"].number_format = EUR
+            ws[f"{c}{rr}"].number_format = eur
     _style(ws, 4, 4, bold=True)
     _named(wb, "costbase_P50", "Cost", "$B$4")
     _named(wb, "costbase_P80", "Cost", "$C$4")
@@ -842,7 +847,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
         for c in ("B", "C", "D"):
             ws[f"{c}{i}"].number_format = "0.0"
         ws[f"E{i}"].number_format = PCT
-        ws[f"F{i}"].number_format = EUR
+        ws[f"F{i}"].number_format = eur
     ws.append([])
     for k, line in enumerate([
         "Type candidate prices into column A. Everything else is a formula.",
@@ -1136,8 +1141,9 @@ def export_markdown(xlsx_path, md_path):
         f = number_format or ""
         if "%" in f:
             return f"{value:.1%}"
-        if "€" in f:
-            return f"€{value:,.0f}"
+        m = re.match(r"^([^#0,\s])#,##0", f)         # any currency symbol, not just €
+        if m:
+            return f"{m.group(1)}{value:,.0f}"
         if '"x"' in f:
             return f"{value:.1f}x"
         if "." in f:
@@ -1284,6 +1290,8 @@ def main():
     ap.add_argument("--blank", action="store_true", help="starter workbook, no markdown needed")
     ap.add_argument("--rho", type=float, default=0.5,
                     help="correlation assumption, 0–1 (default 0.5, the professional-services default)")
+    ap.add_argument("--currency", default="€",
+                    help="currency symbol for cost cells (default €; e.g. $, £)")
     ap.add_argument("--zero-rates", action="store_true",
                     help="emit the rate card with every rate at 0 — use when no rate card exists "
                          "and a fabricated placeholder would be worse than a visible zero")
@@ -1369,7 +1377,7 @@ def main():
               f"  · or discard workbook edits on purpose:  --reseed", file=sys.stderr)
         return 5
     try:
-        counts = build(data, args.rho, out, args.zero_rates)
+        counts = build(data, args.rho, out, args.zero_rates, currency=args.currency)
     except ImportError:
         print("ERROR: openpyxl not installed — run: pip install openpyxl "
               "(PEP-668: add --user --break-system-packages)", file=sys.stderr)

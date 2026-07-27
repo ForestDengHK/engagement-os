@@ -126,19 +126,27 @@ def discover(sec_dir, order=None):
 # unresolved becomes a short, neutral `[TBD]` with its internal explanation left behind in the
 # markdown where it belongs.
 #: Forms that may WRAP across source lines, so they are substituted over the whole body.
-CLIENT_SPANNING = [
-    # unresolved facts: a neutral placeholder, never our reasoning about them
-    (re.compile(r"`?\[⚠VERIFY[^\]]*\]`?"), "**[TBD]**"),
-    # citation shorthand → the buyer's own words. The optional backticks matter: a citation set in
-    # monospace renders as a code span in the delivered document, which reads like a system
-    # artefact rather than a reference.
-    (re.compile(r"`?\[RFP\s+([^\]]+)\]`?"), lambda m: "(RFT " + " ".join(m.group(1).split()) + ")"),
-    (re.compile(r"`?\[App(\d+)\s+([^\]]+)\]`?"),
-     lambda m: f"(Appendix {m.group(1)}, " + " ".join(m.group(2).split()) + ")"),
-    (re.compile(r"`?\[App(\d+)\]`?"), r"(Appendix \1)"),
-    # a bare clause reference, which is how a table cell usually carries one
-    (re.compile(r"`?\[(§[^\]]+)\]`?"), lambda m: "(" + " ".join(m.group(1).split()) + ")"),
-]
+#: The buyer's document label is a parameter — 'RFT' was hardcoded once, and a US RFP
+#: would have shipped '(RFT §L.3)' to the evaluator.
+def client_spanning(buyer_label):
+    return [
+        # unresolved facts: a neutral placeholder, never our reasoning about them
+        (re.compile(r"`?\[⚠VERIFY[^\]]*\]`?"), "**[TBD]**"),
+        # citation shorthand → the buyer's own words. The optional backticks matter: a
+        # citation set in monospace renders as a code span in the delivered document, which
+        # reads like a system artefact rather than a reference.
+        (re.compile(r"`?\[RFP\s+([^\]]+)\]`?"),
+         lambda m: f"({buyer_label} " + " ".join(m.group(1).split()) + ")"),
+        (re.compile(r"`?\[App(\d+)\s+([^\]]+)\]`?"),
+         lambda m: f"(Appendix {m.group(1)}, " + " ".join(m.group(2).split()) + ")"),
+        (re.compile(r"`?\[App(\d+)\]`?"), r"(Appendix \1)"),
+        (re.compile(r"`?\[Att(\d+)\s*([^\]]*)\]`?"),
+         lambda m: f"(Attachment {m.group(1)}" + (", " + " ".join(m.group(2).split()) if m.group(2).strip() else "") + ")"),
+        (re.compile(r"`?\[Exh(\d+)\s*([^\]]*)\]`?"),
+         lambda m: f"(Exhibit {m.group(1)}" + (", " + " ".join(m.group(2).split()) if m.group(2).strip() else "") + ")"),
+        # a bare clause reference, which is how a table cell usually carries one
+        (re.compile(r"`?\[(§[^\]]+)\]`?"), lambda m: "(" + " ".join(m.group(1).split()) + ")"),
+    ]
 
 CLIENT_SUBS = [
     (re.compile(r"\bcl\.(\d)"), r"cl. \1"),
@@ -198,7 +206,28 @@ def balance_tables(body: str) -> str:
     return "\n".join(out)
 
 
-def client_text(body: str) -> str:
+def buyer_label_for(sections_dir, explicit=None):
+    """The buyer's own document label (RFP / RFT / ITT / RFQ …), for citation normalisation.
+
+    --buyer-label wins; otherwise the outline's submission-format block is consulted
+    (`buyer document label`), found by walking up from the sections directory; the generic
+    'RFP' is the fallback. Hardcoding 'RFT' shipped the wrong label to non-RFT tenders.
+    """
+    if explicit:
+        return explicit
+    import pathlib as _pl
+    for base in _pl.Path(sections_dir).resolve().parents:
+        outline = base / "bid_response_outline.md"
+        if outline.exists():
+            m = re.search(r"buyer document label\s*\|\s*([^|\n]+)",
+                          outline.read_text(encoding="utf-8", errors="replace"), re.I)
+            if m:
+                return m.group(1).strip().strip("*`")
+            break
+    return "RFP"
+
+
+def client_text(body: str, buyer_label="RFP") -> str:
     """Normalise authoring shorthand into what the recipient should read.
 
     Applied ONLY under the strict profiles, and ONLY when writing the document — the gate counts
@@ -208,7 +237,7 @@ def client_text(body: str) -> str:
     # The bracketed forms WRAP: a `[⚠VERIFY — …]` marker routinely runs across two or three
     # lines of source. Substituting line by line never sees the closing bracket, so six of nine
     # markers survived into a rendered tender — do these over the whole text first.
-    for pattern, repl in CLIENT_SPANNING:
+    for pattern, repl in client_spanning(buyer_label):
         body = pattern.sub(repl, body)
     out = []
     for line in body.splitlines():
@@ -224,21 +253,30 @@ def client_text(body: str) -> str:
     return "\n".join(out)
 
 
+#: A scaffolding blockquote opens with a short bold label ending in a period —
+#: `> **Scoring note.** …`, `> **Minimum requirement.** …`. Anything else quoted is content.
+SCAFFOLDING_QUOTE_RE = re.compile(r"^>\s*\*\*[^*]{3,60}\.\*\*")
+
+
 def strip_internal(body: str, scaffolding: bool = True):
     """Remove everything that exists to make the draft checkable, not to be read.
 
-    Returns (text, n_blockquote_lines_removed). With scaffolding=False nothing is
-    removed — the plain profile renders what is there, because the blockquote =
-    scoring-note convention only holds for sections written under the contract.
+    Returns (text, n_scaffolding_quote_lines, n_content_quote_lines_kept). With
+    scaffolding=False nothing is removed — the plain profile renders what is there,
+    because the blockquote = scoring-note convention only holds for sections written
+    under the contract.
     """
     if not scaffolding:
-        return body, 0
+        return body, 0, 0
     lines = body.splitlines()
-    out, i, n_quotes = [], 0, 0
+    out, i, n_quotes, n_kept = [], 0, 0, 0
     while i < len(lines):
         line = lines[i]
 
-        if line.lstrip().startswith(">"):                      # scoring / reuse notes
+        # Scaffolding blockquotes carry a bold label (`> **Scoring note.** …`); only those are
+        # stripped. An UNLABELED blockquote is content — a quoted regulation, the buyer's own
+        # requirement restated — and stripping it silently deletes words from the submission.
+        if line.lstrip().startswith(">") and SCAFFOLDING_QUOTE_RE.match(line.lstrip()):
             while i < len(lines) and (lines[i].lstrip().startswith(">") or not lines[i].strip()):
                 if not lines[i].strip() and i + 1 < len(lines) \
                         and not lines[i + 1].lstrip().startswith(">"):
@@ -247,6 +285,8 @@ def strip_internal(body: str, scaffolding: bool = True):
                     n_quotes += 1
                 i += 1
             continue
+        if line.lstrip().startswith(">"):
+            n_kept += 1                   # content quote — kept, and counted below
 
         if re.match(r"^##\s+Review log\b", line, re.I):        # review log
             i += 1
@@ -273,7 +313,7 @@ def strip_internal(body: str, scaffolding: bool = True):
         out.append(line)
         i += 1
 
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n", n_quotes
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n", n_quotes, n_kept
 
 
 # ---------------------------------------------------------------- gate
@@ -431,6 +471,13 @@ def main() -> int:
     ap.add_argument("--paper", choices=["a4", "letter"], default="a4",
                     help="paper size for generated reference.docx (default: a4); ignored when "
                          "--reference-doc supplies the buyer's own template")
+    ap.add_argument("--buyer-label",
+                    help="the buyer's own document label (RFP / RFT / ITT / RFQ …) for "
+                         "citation normalisation (default: the outline's "
+                         "'buyer document label', else RFP)")
+    ap.add_argument("--lang",
+                    help="BCP-47 language tag passed to pandoc (e.g. de, fr) — hyphenation "
+                         "and lang metadata for non-English deliverables")
     ap.add_argument("--reference-doc",
                     help="a mandated .docx template — overrides --font/--size and is the "
                          "only typography mechanism that reaches the docx writer")
@@ -510,17 +557,22 @@ def main() -> int:
 
     # ---- route: document.
     md_path = os.path.join(out_dir, args.name + ".md")
+    buyer_label = buyer_label_for(args.sections, args.buyer_label)
     parts, stripped_notes = [], []
     for s in sections:
-        text, n_quotes = strip_internal(s["body"], pol["strip"])
+        text, n_quotes, n_kept = strip_internal(s["body"], pol["strip"])
         if pol["strip"]:
-            text = client_text(text)              # authoring shorthand → the reader's vocabulary
+            text = client_text(text, buyer_label)  # authoring shorthand → the reader's vocabulary
         text = balance_tables(text)               # column widths from content, in every profile
         if n_quotes:
-            # visible, not silent: under a strict profile a blockquote is BY CONTRACT a
-            # scaffolding note, but a legitimate quotation would be deleted here too
-            stripped_notes.append(f"{s['file']}: stripped {n_quotes} blockquote line(s) "
-                                  "as drafting scaffolding")
+            # visible, not silent: under a strict profile a LABELED blockquote is BY CONTRACT
+            # a scaffolding note; unlabeled quotes are content and stay in
+            stripped_notes.append(f"{s['file']}: stripped {n_quotes} labeled scaffolding "
+                                  "blockquote line(s)")
+        if n_kept and pol["strip"]:
+            stripped_notes.append(f"{s['file']}: kept {n_kept} unlabeled blockquote line(s) "
+                                  "as content — if these are drafting notes, give them a "
+                                  "`> **Label.**` marker so they strip")
         parts.append(text)
     for note in stripped_notes:
         print(f"  note: {note}", file=sys.stderr)
@@ -555,12 +607,21 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         ref = args.reference_doc or reference_docx(args.font, args.size, args.paper, td)
         docx_path = os.path.join(out_dir, args.name + ".docx")
-        subprocess.run(["pandoc", md_path, "-o", docx_path,
-                        f"--resource-path={sec_dir}:{os.path.dirname(sec_dir)}",
-                        "--reference-doc", ref], check=True)
+        cmd = ["pandoc", md_path, "-o", docx_path,
+               f"--resource-path={sec_dir}:{os.path.dirname(sec_dir)}",
+               "--reference-doc", ref]
+        if args.lang:
+            cmd += ["--metadata", f"lang={args.lang}"]
+        subprocess.run(cmd, check=True)
     print(f"wrote {docx_path}")
 
-    if args.to in ("pdf", "both") and (_soffice_wrapper() or shutil.which("soffice")):
+    if args.to in ("pdf", "both"):
+        if not (_soffice_wrapper() or shutil.which("soffice")):
+            # a requested artefact that silently never appears is a submission-day surprise;
+            # say so, and fail distinctly
+            print("warn: --to pdf requested but no LibreOffice converter found — "
+                  "the .docx is built; the PDF is NOT", file=sys.stderr)
+            return 5
         with tempfile.TemporaryDirectory() as td:
             w = _soffice_wrapper()
             cmd = [sys.executable, str(w)] if w else ["soffice"]
