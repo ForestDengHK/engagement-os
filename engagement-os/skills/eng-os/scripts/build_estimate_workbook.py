@@ -90,6 +90,11 @@ TABLE_KINDS = ("effort", "overlap", "grades", "ratecard", "client", "scope", "ce
 # is the single source now, so these have to live in it too.
 _MARKER = re.compile(r"^\s*<!--\s*table:(\w+)\s*-->\s*$")
 
+#: The judgement topics. They used to be eight separate worksheets, which meant a workbook where
+#: 8 of 21 tabs held four words each — and, worse, a tab called `BasisOfEstimate` existing made a
+#: missing basis of estimate look present. One sheet, one row per topic, emptiness visible in the
+#: row: the reader opens one tab and sees exactly which judgement is still owed.
+JUDGEMENT_SHEET = "Judgement"
 NARRATIVE_SHEETS = [
     ("BasisOfEstimate", ["1. Basis of estimate"]),
     ("Techniques", ["2. Techniques"]),
@@ -109,8 +114,11 @@ def parse_narrative(md):
     out = {}
     for sheet, prefixes in NARRATIVE_SHEETS:
         body = []
+        # the template writes "## 1. Basis of estimate"; the workbook's own export writes
+        # "## BasisOfEstimate". Accept both, or round-tripping quietly drops the judgement.
+        accept = tuple(prefixes) + (sheet,)
         for n, (i, title) in enumerate(heads):
-            if not any(title.startswith(pref) for pref in prefixes):
+            if not any(title.startswith(pref) for pref in accept):
                 continue
             end = heads[n + 1][0] if n + 1 < len(heads) else len(lines)
             for raw in lines[i + 1:end]:
@@ -326,6 +334,9 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
         "Gantt            The picture of Schedule: week grid, gates, and the weekly FTE demand curve.",
         "Cost             Cost base at P50 and at P80. Stops before margin — pricing is a human decision.",
         "Decision         Candidate prices -> marks and margin. Deliberately recommends nothing.",
+        "Judgement        The reasoning the numbers rest on — basis of estimate, techniques and their",
+        "                 reconciliation, outside view, phasing, calibration, contingency, the pricing-",
+        "                 document mapping, re-baseline triggers. One row per topic; blank rows say OWED.",
         "",
         "TWO UNCERTAINTIES, KEPT APART:",
         "  Range         = execution variance  (how long the work takes)   -> handled with contingency days",
@@ -839,28 +850,37 @@ def build(data, rho, out_path, zero_rates=False, narrative=None):
         ws.cell(row=9 + k, column=1, value=line)
     ws.cell(row=12, column=1).font = __import__("openpyxl").styles.Font(bold=True)
 
-    # ── narrative sheets ──────────────────────────────────────────────────────
-    # Prose and judgement, in the same file as the numbers. Markdown table rows are re-emitted
-    # as real cells so the export round-trips; everything else stays a paragraph per row.
+    # ── Judgement ─────────────────────────────────────────────────────────────
+    # The judgement the numbers rest on, in the same file as the numbers — one row per topic.
+    # As eight separate tabs this was 8 of 21 worksheets holding four words each, and an empty
+    # tab named `BasisOfEstimate` reads as "there is one" rather than "this is owed".
+    ws = wb.create_sheet(JUDGEMENT_SHEET)
+    _widths(ws, [26, 10, 120])
+    ws.append(["Topic", "State", "What it says"])
+    _style(ws, 1, 3, header=True)
+    from openpyxl.styles import Alignment as _Al
+    r = 1
     for sheet, _prefixes in NARRATIVE_SHEETS:
-        ws = wb.create_sheet(sheet)
-        _widths(ws, [30, 34, 34, 30, 30, 24])
-        ws.cell(row=1, column=1, value=sheet)
-        ws.cell(row=1, column=1).font = __import__("openpyxl").styles.Font(
-            name=FONT, bold=True, size=12)
-        r = 2
-        for line in narrative.get(sheet, []) or ["<not yet written>"]:
-            s = line.strip()
-            if s.startswith("|") and set(s) <= set("|-: "):
-                continue                              # markdown separator row
-            if s.startswith("|"):
-                for c, cell in enumerate(_cells(s), 1):
-                    ws.cell(row=r, column=c, value=re.sub(r"[*`]", "", cell) or None)
-            else:
-                ws.cell(row=r, column=1, value=line or None)
-                ws.cell(row=r, column=1).alignment = __import__("openpyxl").styles.Alignment(
-                    wrap_text=True, vertical="top")
-            r += 1
+        body = [ln for ln in (narrative.get(sheet) or [])
+                if ln.strip() and not (ln.strip().startswith("|") and set(ln.strip()) <= set("|-: "))]
+        text = "\n".join(re.sub(r"[*`]", "", ln).strip() for ln in body).strip()
+        r += 1
+        ws.cell(row=r, column=1, value=sheet)
+        ws.cell(row=r, column=2, value=f'=IF(LEN(C{r})<20,"OWED","written")')
+        ws.cell(row=r, column=3, value=text or "<not yet written>")
+        ws.cell(row=r, column=3).alignment = _Al(wrap_text=True, vertical="top")
+        ws.cell(row=r, column=1).alignment = _Al(vertical="top")
+        ws.row_dimensions[r].height = 58 if text else 15
+    last = r
+    ws.append([])
+    ws.append(["JUDGEMENT OWED",
+               f'=COUNTIF(B2:B{last},"OWED")&" of {len(NARRATIVE_SHEETS)} topics unwritten"',
+               "A cost base whose basis, calibration and contingency rationale are blank is a "
+               "number without an argument. Write the row, not a separate document."])
+    _style(ws, last + 2, 2, fill=DERIVED_FILL, bold=True)
+
+    # Tab order follows the model's flow, so a reviewer reads it in the order it computes.
+    order_sheets(wb)
 
     enforce_conventions(wb)
     present_schedule(wb)
@@ -923,6 +943,67 @@ def present_schedule(wb, weeks=26):
     return
 
 
+SHEET_ORDER = ["README", "Inputs", "RateCard", "Effort", "OverlapAudit", "Range", "Schedule",
+               "Gantt", "Grades", "ClientEffort", "ScopeVariance", "Cost", "Decision",
+               "Judgement"]
+
+
+def order_sheets(wb):
+    """Tabs in the order the model computes, so a reviewer reads it in that order.
+
+    Appending new sheets put Schedule and Gantt after the judgement tab; and the early-return
+    path of `upgrade()` skipped the reorder entirely, so whether the tabs were in a sensible
+    order depended on which branch ran. One function, called from every exit.
+    """
+    wb._sheets = ([wb[n] for n in SHEET_ORDER if n in wb.sheetnames]
+                  + [x for x in wb._sheets if x.title not in SHEET_ORDER])
+
+
+def consolidate_judgement(wb):
+    """Fold the legacy one-tab-per-topic judgement sheets into a single `Judgement` sheet.
+
+    An existing workbook cannot be re-seeded (that discards the model), so the migration has to
+    happen in place: carry whatever text each old tab held, then remove the tab. Idempotent.
+    """
+    from openpyxl.styles import Alignment as _Al
+    legacy = [name for name, _p in NARRATIVE_SHEETS if name in wb.sheetnames]
+    if not legacy:
+        return []
+    carried = {}
+    for name in legacy:
+        old = wb[name]
+        lines = []
+        for row in old.iter_rows(min_row=2, values_only=True):
+            cells = [str(v).strip() for v in row if v is not None and str(v).strip()]
+            if cells:
+                lines.append(" | ".join(cells) if len(cells) > 1 else cells[0])
+        text = "\n".join(lines).strip()
+        carried[name] = "" if text.startswith("<not yet written>") else text
+        del wb[name]
+    if JUDGEMENT_SHEET in wb.sheetnames:
+        del wb[JUDGEMENT_SHEET]
+    ws = wb.create_sheet(JUDGEMENT_SHEET)
+    _widths(ws, [26, 10, 120])
+    ws.append(["Topic", "State", "What it says"])
+    _style(ws, 1, 3, header=True)
+    r = 1
+    for name, _p in NARRATIVE_SHEETS:
+        r += 1
+        text = carried.get(name, "")
+        ws.cell(row=r, column=1, value=name)
+        ws.cell(row=r, column=2, value=f'=IF(LEN(C{r})<20,"OWED","written")')
+        ws.cell(row=r, column=3, value=text or "<not yet written>")
+        ws.cell(row=r, column=3).alignment = _Al(wrap_text=True, vertical="top")
+        ws.row_dimensions[r].height = 58 if text else 15
+    ws.append([])
+    ws.append(["JUDGEMENT OWED",
+               f'=COUNTIF(B2:B{r},"OWED")&" of {len(NARRATIVE_SHEETS)} topics unwritten"',
+               "A cost base whose basis, calibration and contingency rationale are blank is a "
+               "number without an argument."])
+    _style(ws, r + 2, 2, fill=DERIVED_FILL, bold=True)
+    return legacy
+
+
 def upgrade(xlsx_path):
     """Add sheets a newer builder knows about to an EXISTING workbook, in place.
 
@@ -932,11 +1013,13 @@ def upgrade(xlsx_path):
     """
     import openpyxl
     live = openpyxl.load_workbook(xlsx_path)          # formulas, not values
+    consolidate_judgement(live)
     missing = [name for name in ("Schedule", "Gantt") if name not in live.sheetnames]
     if not missing:
         # nothing to add, but presentation and print setup are still worth re-applying: they are
         # idempotent and a workbook built by an older version has neither
         present_schedule(live)
+        order_sheets(live)
         live.save(xlsx_path)
         return []
     eff_ws = live["Effort"]
@@ -997,6 +1080,7 @@ def upgrade(xlsx_path):
         if target in missing and name not in live.defined_names:
             live.defined_names.add(defn)
     present_schedule(live)
+    order_sheets(live)
     live.save(xlsx_path)
     os.remove(fresh_path)
     return missing

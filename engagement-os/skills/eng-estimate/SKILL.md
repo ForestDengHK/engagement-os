@@ -27,6 +27,12 @@ sanity check available) and `01_pursuit/_shared/firm_assets.md` for the rate car
 calibration, contingency, the pricing-document mapping, re-baseline triggers — each on its own
 sheet. `estimation.md` is a **generated snapshot**, never edited by hand.
 
+**Fourteen sheets, none of them filler.** The judgement — basis of estimate, techniques, outside
+view, phasing, calibration, contingency, pricing-document mapping, re-baseline triggers — is one
+row per topic on the `Judgement` sheet, with a state column that says `OWED` and a footer that
+counts what is unwritten. As eight separate tabs this was a third of the workbook holding four
+words each, and an empty tab named `BasisOfEstimate` made a missing basis of estimate look present.
+
 ```
 workbook (source of truth)  ──  eng-estimate refresh  ─►  markdown snapshot (generated, read-only)
 ```
