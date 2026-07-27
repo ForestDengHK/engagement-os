@@ -408,9 +408,21 @@ most want to do: move an input and see the consequence.
 
 But shipping a spreadsheet *and* a hand-written narrative is worse: two things to keep in step,
 and nothing keeping them there. **The workbook is the single maintained artefact.** It carries the
-numbers as formulas and the judgement on its own sheets — basis of estimate, techniques and their
-reconciliation, the outside view, calibration, contingency, the pricing-document mapping,
-re-baseline triggers. Prose belongs in a wrapped cell, not in a second file.
+numbers as formulas and the judgement on **one `Judgement` sheet, one row per topic** — basis of
+estimate, techniques and their reconciliation, the outside view, phasing, calibration, contingency,
+the pricing-document mapping, re-baseline triggers. Prose belongs in a wrapped cell, not in a second
+file.
+
+**One row per topic, not one tab.** These were eight separate worksheets, and on a real estimate that
+meant **8 of 21 tabs holding four words each** — plus the worse failure: a tab named
+`BasisOfEstimate` existing made a missing basis of estimate look present. On one sheet the state
+column says `OWED` and the footer says "7 of 8 topics unwritten", which is the true state of most
+estimates mid-bid and is worth seeing.
+
+**No sheet exists that has nothing to say.** A workbook a reviewer opens is judged in three seconds
+by its tab bar; a third of it reading as filler teaches them the model is filler too. Tabs are also
+ordered the way the model computes — inputs, effort, overlap, range, schedule, staffing, cost,
+decision, judgement — so it can be read front to back.
 
 ```
 workbook (maintained)  ──  export  ─►  markdown snapshot (generated, read-only)
