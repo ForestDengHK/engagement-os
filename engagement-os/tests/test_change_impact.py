@@ -89,6 +89,7 @@ def tree():
         "01_pursuit/27-010/3_drafting/figures/F-01_x.png": b"png-v1",
         "01_pursuit/27-010/3_drafting/figures/F-01_x.pptx": b"PK-pptx-v1",
         "01_pursuit/27-010/3_drafting/bid.docx": b"PK-docx-v1",
+        "01_pursuit/27-010/3_drafting/forms/appendix3.docx": b"PK-form-v1",
         "01_pursuit/27-010/4_final/submission.pdf": b"pdf-final-v1",
         "02_delivery/DELIVERABLES.md": (
             "| D | Name | Live file |\n|---|---|---|\n"
@@ -455,6 +456,33 @@ def case_regenerated_exports_are_not_renagged():
     assert has_action(report, "confirm the regenerated PNG and PPTX")
 
 
+def case_filled_buyer_forms_are_maintained_not_rendered():
+    """The lint REQUIRES filled buyer forms to live in 3_drafting/forms/
+    (rule_buyer_forms_filled), but the engine classed everything there as
+    'rendered-output': editing one produced an error-severity 'reconcile the edit
+    into its maintained source, then re-render' — there IS no maintained source,
+    the form IS one — and the checkpoint was refused. Two gates deadlocked the
+    exact workflow one of them mandates (found on the real GNI pack)."""
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/3_drafting/forms/appendix3.docx").write_bytes(b"PK-form-v2")
+    report = ci.scan(root)
+    assert not any(i["severity"] == "error" for i in report["impacts"]), report["impacts"]
+    assert not has_action(report, "reconcile the edit")
+    # a form edit is not a source change: no re-render nag on built outputs, no frozen nag
+    assert not has_action(report, "verify this regenerated output")
+    assert not has_action(report, "new version")
+    result = ci.checkpoint(root)
+    assert result["status"] == "checkpointed", result
+
+    root = build()
+    ci.checkpoint(root)
+    (root / "01_pursuit/27-010/3_drafting/forms/appendix3.docx").unlink()
+    report = ci.scan(root)
+    assert has_action(report, "restore it")
+    assert not has_action(report, "re-render")
+
+
 CASES = [
     ("baseline, clean scan, untracked file ignored, hashes only", case_baseline_and_untracked),
     ("estimate change routes pricing only and preserves final", case_estimate_propagates_only_pricing),
@@ -473,6 +501,7 @@ CASES = [
     ("change row lands above rounds that never ran", case_change_row_lands_above_unrun_rounds),
     ("a recorded re-review stops the repeat demand", case_recorded_re_review_stops_the_repeat_demand),
     ("deletions read as deletions, not edits", case_deletions_are_not_edits),
+    ("filled buyer forms are maintained, not rendered", case_filled_buyer_forms_are_maintained_not_rendered),
 ]
 
 

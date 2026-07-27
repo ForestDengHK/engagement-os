@@ -189,6 +189,16 @@ CASES = [
                      "| R2 (re-check) | experienced human | 2026-01-02 | blocked | referee owed |\n")),
      {"status-contradicts-review"}, set(), set()),
 
+    # ── approved with no verdicts must warn, not kill the gate ───────────────
+    # The branch referenced a name that was never defined (`verdicts`; the variable is
+    # `found`), so an approved section with an empty review log crashed the lint with a
+    # NameError — and rule_review_status runs 5th of 27, so outline coverage, mandatory
+    # items and change-impact never executed. 95 fixtures were green because none of
+    # them was this section.
+    ("approved-without-verdicts-warns-not-crashes",
+     lambda t: _sub(t, SEC, "status: draft", "status: approved"),
+     set(), {"status-unreviewed"}, set()),
+
     # ── the research log is the claim's backing, and it is now checked ────────
     ("research-row-open-is-a-warning",
      lambda t: _sub(t, SEC, "Benchmark → BR-001.", "Benchmark → BR-001; referee → BR-002."),
@@ -668,6 +678,13 @@ def build(root, files):
 def run_lint(root):
     proc = subprocess.run([sys.executable, str(LINT), str(root)],
                           capture_output=True, text=True)
+    # rc is the findings signal (1 = errors present), NOT a crash signal — a crashed
+    # gate exits 1 too, but with an incomplete report. A crash must never parse as
+    # "zero findings": that is the worst possible false confidence.
+    if "rule(s) applicable" not in proc.stdout:
+        raise AssertionError(
+            f"eng_lint crashed or did not finish (rc={proc.returncode}):\n"
+            f"{proc.stderr[-2000:]}")
     errors, warns = set(), set()
     for line in proc.stdout.splitlines():
         m = KIND_RE.match(line)
@@ -1001,6 +1018,17 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
 | Line | € | Basis |
 |---|---|---|
 | Financing | 5000 | back-loaded |
+| Travel | 0 | remote delivery |
+
+<!--table:schedule-->
+| S-ID | People | Util % | Pred | Lag wk | Span wk |
+|---|---|---|---|---|---|
+| S-01 | 2 | 60 | | 1 | 11 |
+
+<!--table:milestones-->
+| Gate | Week | What it decides | Deliverable |
+|---|---|---|---|
+| G1 | 4 | Baseline accepted | D1 |
 """
     # The exact shape that broke in the field: a marker separated from its table by prose.
     DRIFTED_MD = GOOD_MD.replace("<!--table:grades-->\n| Grade | Cost rate/day | Days |",
@@ -1022,6 +1050,18 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
          len(d["ratecard"]) == 2 and len(d["grades"]) == 2),
         ("scope-variance rows parsed", d["scope"] == [("A1", "Estate 2x", 26.0)]),
         ("certain-cost rows parsed", d["certain"][0][1] == 5000.0),
+        # GOOD_MD carried no schedule/milestones markers at all for months, which is how the
+        # two defects below stayed structurally untestable. They live in the fixture now.
+        # The Span column was parsed-then-dropped (parse appended 5 items, build read index
+        # 5): LOE activities silently seeded as discrete. Assert the VALUE arrives, not just
+        # the formula's shape.
+        ("schedule span travels from markdown to the model",
+         d["schedule"] and d["schedule"][0][5] == 11.0),
+        ("milestones parsed", d["milestones"] and d["milestones"][0][:2] == ("G1", 4.0)),
+        # €0 is a real answer (the template's own first certain row is Financing 0);
+        # `and v` used to drop the row and understate non-labour cost, silently.
+        ("zero-euro certain-cost rows are kept",
+         any(r[0] == "Travel" and r[1] == 0.0 for r in d["certain"])),
         ("total rows excluded from every table",
          all(not r[0].upper().startswith("TOTAL")
              for k in ("overlap", "client", "certain") for r in d[k])),
@@ -1065,6 +1105,9 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
         ("no literal error token written into any cell",
          not any(tok in str(c.value) for ws in wbk.worksheets for row in ws.iter_rows()
                  for c in row if c.value for tok in ("#N/A", "#REF!", "#NAME?", "#DIV/0!"))),
+        # The LOE span must land in the Schedule sheet itself (S-01 is row 2, F is Span) —
+        # parse-level arrival alone still leaves a dead write site possible.
+        ("LOE span lands in the Schedule sheet", wbk["Schedule"]["F2"].value == 11.0),
     ]
 
     # ── single-source: narrative sheets + the export direction ────────────────

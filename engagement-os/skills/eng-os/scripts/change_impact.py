@@ -97,6 +97,12 @@ def role_of(rel):
         return "response-section"
     if "figures" in parts:
         return "figure"
+    if "3_drafting" in parts and "forms" in parts:
+        # Filled buyer forms are MAINTAINED artefacts: the xlsx/docx skill edits them in
+        # place and there is no upstream source to re-render them from. Classing them as
+        # rendered-output made the lint's required fill-the-form workflow a checkpoint
+        # blocker — two gates deadlocking the path one of them mandates.
+        return "buyer-form"
     if pathlib.PurePosixPath(rel).suffix in OUTPUT_EXTS:
         return "rendered-output"
     if rel.startswith("02_delivery/1_discovery/3_findings/"):
@@ -352,7 +358,8 @@ def scan(root):
     paths_changed = {c["path"] for c in changes}
     current_sections = current.get("sections", {})
     old_sections = old.get("sections", {})
-    source_change = any(c["role"] not in {"frozen", "rendered-output", "estimate-snapshot"}
+    source_change = any(c["role"] not in {"frozen", "rendered-output", "estimate-snapshot",
+                                          "buyer-form"}
                         for c in changes)
 
     def affect(section, reason):
@@ -384,6 +391,13 @@ def scan(root):
                     impacts, rel, "restore frozen copy and create a new dated version",
                     f"the frozen package was {c['change']}; submitted evidence is immutable",
                     "engagement-os:eng-propagate-change", "error")
+        elif role == "buyer-form" and c["change"] == "deleted":
+            add_impact(
+                impacts, rel, "restore it, or remove the response_form declaration that names it",
+                "a filled buyer form was deleted; the section declaring buyer-form has nothing to submit",
+                "engagement-os:eng-bid-respond")
+        elif role == "buyer-form":
+            pass                        # maintained authoring — filling the form IS the work
         elif role == "rendered-output" and c["change"] == "deleted":
             add_impact(
                 impacts, rel, "re-render when the sources are ready",
