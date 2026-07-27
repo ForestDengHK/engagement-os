@@ -21,10 +21,20 @@ for R-004 is the finding, and it is more useful early than complete-but-late.
 ## Workflow
 
 ```
+- [ ] 0. CONVERT first. Every asset under `_shared/` that lacks markdown gets one, into
+        `_shared/_md/`, via `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py`
+        (bulk, deterministic — the same converter the sources ingest uses). Analysis and
+        page-level citation read the md layer; the binary stays as the evidence. Reading
+        binaries ad-hoc is what the pack forbids everywhere else — "analysing from the raw
+        PDF is how citations get invented" applies to our own case studies exactly as much
+        as to the RFP. (`convert_source.py --scan` reports unconverted assets as
+        `to CONVERT`.) Files the converter can't handle (a drawio diagram, a helper script)
+        stay original-only — note them in §1b.
 - [ ] 1. Find this tender's RECENCY RULE first (e.g. "two projects within the last three
         years", "CVs no older than 12 months") — from compliance_matrix.md or the RFP. Without
         it there is no in-window verdict, and an undated asset cannot be triaged.
-- [ ] 2. Read each asset. Not the filename — the document. Draft its row:
+- [ ] 2. Read each asset — its markdown in `_shared/_md/` when it exists, the original
+        otherwise. Not the filename — the document. Draft its row:
           What it PROVES = the claim an evaluator would score, in their language.
             ✗ "NorthGas data warehouse project"          (restates the title; unread)
             ✓ "end-to-end DWH assessment for a regulated utility, delivered in 12 weeks"

@@ -1054,8 +1054,9 @@ def converter_tests():
         "## Gaps — what we do not hold\n\n"
         "The account team should upload `case_studies/needed.pdf`.\n",
         encoding="utf-8")
-    _, waiting = cs.scan(scan_root)
+    _, waiting, to_convert = cs.scan(scan_root)
     waiting_rel = {p.relative_to(shared).as_posix() for _, p in waiting}
+    convert_rel = {p.relative_to(shared).as_posix() for _, p in to_convert}
     scan_checks = [
         ("exact path avoids substring collision",
          "case_studies/others/Quals.pdf" in waiting_rel),
@@ -1067,7 +1068,22 @@ def converter_tests():
          "team_structure/create_pptx.js" not in waiting_rel),
         ("path mentioned only in gaps is still waiting",
          "case_studies/needed.pdf" in waiting_rel),
+        # the doctrine fix: an indexed asset with NO markdown is still undealt-with —
+        # analysis must not read binaries ad-hoc (the pack forbids it for sources; assets
+        # are no different). Every convertible asset without `_shared/_md` is to_convert.
+        ("indexed but unconverted asset is to_convert",
+         "case_studies/1_General_DataMod Quals.pdf" in convert_rel),
+        ("a converted asset leaves the to_convert list",
+         not ({p.stem.lower() for p in (shared / "_md").rglob("*.md")} -
+              {"1_general_datamod quals"} or True)),
     ]
+    # the second of those needs the conversion to exist first:
+    (shared / "_md").mkdir(exist_ok=True)
+    (shared / "_md/1_General_DataMod Quals.md").write_text("# md", encoding="utf-8")
+    _, waiting2, to_convert2 = cs.scan(scan_root)
+    convert2_rel = {p.relative_to(shared).as_posix() for _, p in to_convert2}
+    scan_checks[-1] = ("a converted asset leaves the to_convert list",
+                       "case_studies/1_General_DataMod Quals.pdf" not in convert2_rel)
     for name, ok in scan_checks:
         print(f"  {'✓' if ok else '✗'} scanner:{name}")
     scan_ok = all(ok for _, ok in scan_checks)
