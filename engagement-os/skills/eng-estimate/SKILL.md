@@ -195,7 +195,7 @@ state the assumed competitor range as the guess it is.
 
 ## Hand-off
 Return the range, assumptions, exclusions, client-time table, P50/P80, and decision table to the
-`rfp-arrived` playbook. It updates `rfp_analysis.md` §10 and uses the cost base in the human
-go/no-go decision. Do **not** invoke drafting from this skill: only after GO does the playbook pass
-the pricing material to `Skill(engagement-os:eng-bid-respond)`. Once the partner takes the pricing
+`rfp-arrived` playbook. It updates `rfp_analysis.md` §10 and uses the cost base in commercial and
+delivery decisions. Do **not** invoke drafting from this skill; the playbook owns sequencing and
+passes the pricing material to `Skill(engagement-os:eng-bid-respond)`. Once the partner takes the pricing
 decision, record it in `_pm/raid_and_decisions.md`, not back into this file.

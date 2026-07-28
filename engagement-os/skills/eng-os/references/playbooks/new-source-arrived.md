@@ -64,8 +64,8 @@ routes it there if it slipped in here.
      it → `Skill(engagement-os:eng-bid-respond)` to write or revise those, and re-run their
      review round. Sections already at `reviewed-r2` that the change touches drop back to
      `revise-r2` — a fact that moved under a section un-reviews it.
-   - **Does it change the go/no-go?** A newly discovered deal-breaker is an escalation, not a
-     matrix edit — surface it to the human.
+   - **Does it change a proceeding assumption?** A newly discovered deal-breaker is an escalation,
+     not a matrix edit — surface it without making the team's bid decision.
    - No impact → one line in the log and stop.
 5. **Log + memory — once per session** → `Skill(engagement-os:eng-maintain-memory)`.
    Engagement-log entry (what arrived, what it changed, what's still owed);

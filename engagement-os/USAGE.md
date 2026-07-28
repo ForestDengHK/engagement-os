@@ -88,7 +88,7 @@ acme-27-010/
 
 > **Variant:** default is a full open RFP. For a **framework mini-competition**, say that in
 > `/eng-new` — the route is planted into `rfp_analysis.md` and the pursuit loop adjusts
-> (go/no-go shrinks to capacity + conflict, call-off terms pre-agreed, possibly no clarification
+> (qualification focuses on capacity + conflict, call-off terms pre-agreed, possibly no clarification
 > window). Tested as scenario 7 in the release harness.
 
 ```
@@ -108,8 +108,7 @@ acme-27-010/
     [auto]  indexes firm-held assets — what each proves, date, in-window status, permissions
     [auto]  for a priced tender, hands the S-ID scope to eng-estimate
             → estimation.xlsx (the maintained model) + estimation.md (generated snapshot)
-    [auto]  finalises clarifications and the go/no-go recommendation using the cost base
-    [asks]  ← STOP. GO / NO-GO. Yours to decide. On no-go it logs why and stops.
+    [auto]  finalises clarifications, risks and proceeding assumptions using the cost base
     [auto]  researches every open gap, cited; unsourceable → [⚠VERIFY] → cut
     [auto]  writes the response FROM the matrix, in the RFP's mandated format
     [asks]  red-team gate — mandatory requirements all met, format compliant
@@ -117,7 +116,7 @@ acme-27-010/
     [auto]  freezes that exact submitted package to 4_final/ and records date + version
 ```
 
-**2 commands.** One stop that's genuinely yours: go/no-go.
+**2 commands.** Inputs handed to `/eng-rfp` are treated as authorised GO; risks stay visible.
 
 <details><summary>What lands on disk</summary>
 
@@ -262,7 +261,7 @@ deliverable ends up built on unvalidated findings.
 | Scenario | Commands | The one thing only you can do |
 |---|---|---|
 | Research | `/eng-new` → `/eng-source`* → `/eng-sprint` | approve the question list + choose the delivered format |
-| Pursuit | `/eng-new` → `/eng-rfp` | the go/no-go call |
+| Pursuit | `/eng-new` → `/eng-rfp` | evidence, risk and submission decisions |
 | Delivery | `/eng-new` → `/eng-source`* → `/eng-workshop`* → `/eng-sprint`* | approve the findings backbone |
 | Bid then deliver | scenario 2, then scenario 3 | both of the above |
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |

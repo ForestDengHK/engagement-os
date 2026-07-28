@@ -346,7 +346,7 @@ and it should be visible rather than baked in.
 Then model what the price has to survive: withholding taxes affect **cash flow**, not margin —
 show both and don't conflate them. An extension option needs a rate card that protects the later
 margin, not just this one. If the price the market will bear sits below the cost base, that is a
-go/no-go input, not a rounding exercise — and it is the one finding an estimate must never soften.
+commercial escalation, not a rounding exercise — and it is the one finding an estimate must never soften.
 
 ## Step 9 — price vs score: decision support, not a recommendation
 

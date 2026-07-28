@@ -29,11 +29,13 @@ need research; continuing from the previous list would research the wrong scope.
 ```
 Bid Research Progress:
 - [ ] 1. List every gap / needed item from the analysis (breadth = cover them all)
-- [ ] 2. External stream: web/standards/market/competitor → [T3:OWN], each with a URL/locator
+- [ ] 2. External stream: search primary sources first; record exact https URL + locator,
+        publication/version and access date
 - [ ] 3. Internal stream: firm-held case studies / CVs / past bids the user uploads → cite the doc
-- [ ] 4. Each claim: primary-over-secondary, dated, one solid cited fact beats three vague ones
+- [ ] 4. One independently checkable claim per row; split compound claims; fact vs inference
 - [ ] 5. Anything unsourceable → [⚠VERIFY] with what would close it (do NOT let it become a claim)
-- [ ] 6. Log every finding: serves / claim / stream / source+locator / tag / confidence / status
+- [ ] 6. Time-sensitive facts use closed-time-sensitive + valid-as-of + recheck-by
+- [ ] 7. Log every finding using the current bid_research_log.md schema
 ```
 
 **Breadth AND depth.** Breadth = no flagged gap left dark (a bid loses on the un-researched
@@ -52,6 +54,7 @@ to confirm it.
 - Fabricating or "rounding up" a credential/metric/reference is an automatic disqualifier.
 
 ## Hand-off
-Once the human GO gate has passed, the closed research log →
+Material supplied to this workflow is treated as authorised GO. Research findings can escalate
+delivery/commercial risks, but the agent does not make or enforce a bid/no-bid decision. The log →
 `Skill(engagement-os:eng-bid-respond)`. Open `[⚠VERIFY]` rows are closed or cut before the
 response asserts them.

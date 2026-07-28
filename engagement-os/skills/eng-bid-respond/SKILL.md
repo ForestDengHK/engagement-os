@@ -11,16 +11,15 @@ Figures: the `designing-figures` skill owns them — spec before pixels, archety
 
 ## Prerequisite
 Build from a **settled** analysis and a cited research log (`bid_research_log.md`). Settled means
-the go/no-go decision is taken, every requirement is extracted into `compliance_matrix.md`, and the
+every requirement is extracted into `compliance_matrix.md`, and the
 evidence is indexed — **not** that the rows are `met`. Rows close *because* the response answers
 them; waiting for a closed matrix would mean never starting. Draft in
 `01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`. Start the section map from
 `bid_response_outline.md.tmpl`, and each section file from `bid_section.md.tmpl` — both in
 `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
-**If missing:** no matrix or no go decision → `Skill(engagement-os:eng-rfp-analyze)`; no research
-log → `Skill(engagement-os:eng-bid-research)`. Drafting before the go decision writes chapters it
-may throw away, and a claim with no cited row cannot survive the traceability gate — lint errors on
+**If missing:** no matrix → `Skill(engagement-os:eng-rfp-analyze)`; no research
+log → `Skill(engagement-os:eng-bid-research)`. A claim with no cited row cannot survive the traceability gate — lint errors on
 a `BR-nnn` no log knows and warns on a section resting on an `open` row.
 
 Before writing or reviewing, invoke `Skill(engagement-os:eng-propagate-change)`. Work only the
@@ -94,6 +93,12 @@ Bid Response Progress:
         same figure lands in the workbook's Decision, the buyer's pricing form, and any Form of
         Tender — in a single edit, and the forms check above verifies no placeholder survives.
         A price that lives in three places without a check will eventually disagree with itself.
+- [ ] 2d. VISUAL OPPORTUNITY PASS — before drafting a high-weight section, mark the relationships
+        that an evaluator must understand at a glance: three-or-more mappings, a dependent
+        sequence, option trade-offs, ownership, architecture or a roadmap. Use a figure when it
+        materially reduces evaluator search time; otherwise record why a table or prose is
+        clearer. This is a scoring decision, not decoration. A 100+-mark section with a strong
+        visual relationship must not silently default to walls of text
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
         message, never a default row of boxes. Three artefacts per figure from ONE html source:
@@ -105,9 +110,19 @@ Bid Response Progress:
         caption naming `F-01_x.html` ships our internal filenames to the evaluator
 - [ ] 4. Weave the 3–5 win-themes at the high-weight criteria, each backed by a cited log row or
         an indexed firm asset (A-nnn)
+- [ ] 4b. EVIDENCE UTILISATION — reverse-check every A-nnn / BR-nnn declared in a section's
+        `evidence` or `depends_on`. Record what it contributes and the visible paragraph, table or
+        figure where that contribution lands. A method source is not “used” because its id appears
+        in frontmatter or Traceability: the reader must be able to see its structure, how it was
+        adapted to this buyer, and what it changes in the proposed work. Incorporate it materially
+        or remove it from the section; bibliography-only references are false differentiation
 - [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a `closed` research-log row (`BR-nnn`);
         kill any [⚠VERIFY]. Lint reports a section resting on an `open` row and counts every
-        unresolved marker while you draft — not for the first time at the freeze
+        unresolved marker while you draft — not for the first time at the freeze. Reconcile the
+        matrix after drafting: an honest caveat is not fulfilment. If the buyer asks for an
+        outcome, KPI/SLA, credential, signature or referee and the source does not hold it, keep
+        `Gap type = proof` and status `partial`/`gap`; never mark it `met` merely because the
+        section admits the evidence is absent
 - [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
         R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
         → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
@@ -183,7 +198,11 @@ carries its own log, because sections finish at different times.
 
 - **R1 — panel red-team** (`panel-review` if installed, else a manual multi-lens pass): does it
   score? **evaluator's eye** · **legal** (exceptions clean, exposure?) · **finance**
-  (priceable/deliverable at margin?) · **architect/delivery** (deliverable as staffed?).
+  (priceable/deliverable at margin?) · **architect/delivery** (deliverable as staffed?) ·
+  **visual argument** (does the selected form reveal a scoring relationship at A4 size, or is it
+  decorative, duplicated prose, or an unreadable mini-slide?) ·
+  **evidence utilisation** (does every declared method/case/standard visibly change the answer,
+  or is it only named in the bibliography/traceability?).
 - **R2 — experienced human.** What only experience sees: a claim that won't survive a client
   conversation, a promise delivery cannot staff, a tone wrong for this buyer.
 - **R3 — final read.** Cross-section consistency, format compliance, nothing left `[⚠VERIFY]`.
@@ -201,3 +220,6 @@ from the RFT; R2 is judgement and cannot.
 - **Look at both outputs.** Round-trip the PPTX back to an image and check the shape count — a
   one-slide export with 1-2 shapes is a screenshot in a wrapper, not an editable figure. Text that
   fits in HTML can clip as a PowerPoint shape.
+- **A figure passes only in the final medium.** Inspect the PNG inside the rendered A4 document,
+  not only at 1920×1080. If labels require zooming, redesign or use a table/prose. If the figure
+  merely repeats the paragraph without making a relationship visible, remove it.

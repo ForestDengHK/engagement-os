@@ -5,7 +5,7 @@ skill that owns it — follow that skill, don't reproduce it here. Runs in the `
 tree (created through `Skill(engagement-os:eng-scaffold)` for the pursuit block; no delivery
 block is needed to bid).
 
-## The shape: a spine, a loop, and two one-way gates
+## The shape: a spine, a loop, and a ship gate
 
 **This is not a waterfall.** Material arrives over weeks in an order you do not control — an
 appendix here, a buyer clarification there, a case study someone finally digs out, a benchmark
@@ -19,7 +19,7 @@ analyse, then write" describes a bid nobody has ever run.
          │                            │        ↓                                 │
          ▼                            │   ingest → canonical → matrix rows move  │
    ingest → analyse → assets          │        ↓                                 │
-      → estimate → GO/NO-GO 🛑 ───────┤   the sections it touches get written    │
+      → estimate → research/respond ──┤   the sections it touches get written    │
          │                            │   or revised → reviewed                  │
          ▼                            │                                          │
    compliance_matrix.md ◄─────────────┤                                          │
@@ -34,8 +34,8 @@ analyse, then write" describes a bid nobody has ever run.
   *"how far along are we"* means; no other artefact answers that question.
 - **The loop** — runs once per arrival, any number of times, in any order. Analysis is not a
   phase that completes; each arrival re-opens it a little.
-- **Two one-way gates** — the go/no-go (early, human) and the ship gate (last). Everything
-  between them is the loop.
+- **One one-way gate** — the ship gate. Material handed to this workflow is treated as authorised
+  GO; the agent surfaces risks and assumptions but does not decide whether the team bids.
 
 ---
 
@@ -51,17 +51,16 @@ alone; don't wait for the rest of the material to arrive.
    a requirement is not allowed to disappear silently.
 2. **Check the procurement route** — planted in `rfp_analysis.md` by the scaffolder's
    `--variant`. A **framework mini-competition** changes the loop: the buyer is pre-qualified,
-   so the go/no-go shrinks to capacity + conflict of interest; call-off terms are pre-agreed
+   so qualification checks focus on capacity + conflict of interest; call-off terms are pre-agreed
    (commercial risk review is narrower, not absent); and there may be **no clarification
    window** — check before planning step 5.
 3. **Analyse it** → `Skill(engagement-os:eng-rfp-analyze)`. Every requirement extracted with an
-   ID + clause cite into
-   `compliance_matrix.md`; the **scope decomposed into S-IDs with effort drivers** and a cited
+   ID + clause cite into `compliance_matrix.md`, reconciled against every obligation-bearing
+   source unit in `requirement_coverage.md`; the **scope decomposed into S-IDs with effort drivers** and a cited
    volumetric baseline; **our understanding and our solution** per client challenge, including
    what it does *not* solve; evaluation weights mapped; multi-role read; evidence-backed
    win-themes; risks and deal-breakers; the **materials-needed list** (research vs upload); a
-   provisional set of non-commercial go/no-go conditions. This is the spine's first version,
-   not its last; the final recommendation waits for the estimate in step 5.
+   provisional set of risks and proceeding assumptions. This is the spine's first version.
 4. **Check for a prior bid — before drafting anything.** A re-issue, a follow-on, or the same
    buyer asking again means most of the answer already exists *and already survived an
    evaluation*. Convert it (`Skill(engagement-os:eng-ingest-source)` →
@@ -82,12 +81,11 @@ alone; don't wait for the rest of the material to arrive.
    priced tenders — i.e. nearly all of them.) The S-ID table and indexed rate card become a
    bottom-up effort model, the client-side hours ask, itemised contingency, and a cost→price
    build; where the buyer publishes a cost formula, price converts to marks arithmetically. Do
-   this **before** the go/no-go: "can we win it at a price above our cost base" is a go/no-go
-   question, and it cannot be answered by feel.
+   this before drafting: price, margin and deliverability cannot be answered by feel.
 6. **Raise clarifications before the query deadline** →
    `Skill(engagement-os:eng-rfp-analyze)` step 6b →
-   `clarification_log.md`, and finalise the go/no-go recommendation using the returned cost
-   base. Questions are **derived by a dimension sweep** (scope · solution ·
+   `clarification_log.md`, and finalise proceeding assumptions using the returned cost base.
+   Questions are **derived by a dimension sweep** (scope · solution ·
    evidence/qualification · commercial · delivery · evaluation-process), then run through the
    multi-role lens (`panel-discuss` if installed), then **the human decides what actually
    goes** — some questions reveal more about our position than the answer is worth. The query
@@ -96,9 +94,9 @@ alone; don't wait for the rest of the material to arrive.
    answers are circulated to all bidders and become part of the tender documents — they
    re-enter through the loop like any other arrival.
 
-**🛑 GO / NO-GO — human.** No-go: stop, log the rationale. Go-if: resolve the conditions first.
-This gate exists so research and writing effort is never sunk into a bid we won't win or
-can't deliver.
+**Proceed by default.** The team has already made the bid decision by handing the material to this
+workflow. Open risks remain visible, owned and traceable into the estimate/response; they do not
+authorise the agent to stop research or drafting.
 
 ---
 
@@ -190,9 +188,8 @@ The output format is the *last* step, not a thing you build toward incrementally
 
 ## Stop gates
 
-- **STOP at the go/no-go** on a no-go.
-- **STOP and surface to the human** if research cannot source a claim a win-theme depends on
-  (`[⚠VERIFY]` on a load-bearing claim) — that is a go/no-go re-check, not a wording fix.
+- **Surface to the team** if research cannot source a claim a win-theme depends on
+  (`[⚠VERIFY]` on a load-bearing claim); cut it or replace it before shipping.
 - **STOP before submission** if any mandatory requirement is not `met` or any format rule is
   breached — format non-compliance is a common auto-reject. `eng-check` decides the
   mandatory-row check, the `[⚠VERIFY]`-in-a-frozen-response check, and the bucket-leak check

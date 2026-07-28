@@ -82,18 +82,24 @@ skill when the script's own output tells you it fell short:
 - merged or nested tables that came out ragged
 One re-done document is cheap; a whole batch through a skill is not. Escalate per document, not per batch.
 
-**Step 4 — image triage (the lossless rule; agent + vision).** The script **places every kept
-image inline at the position it held in the source**, each with a `[caption-needed]` stub, and
-lists them all in a triage index at the end tagged `[uncertain]`. Both markers are lint-gated
-(`images-uncaptioned`, `images-untriaged`) — a figure that arrives with neither a caption nor a
-classification is a figure the analysis will read straight past. For each:
-- `[decorative]` (logo/border/background) → delete the file, the inline block, and the index line.
-- `[content]` (a meaningful diagram/table) → keep; **replace the `[caption-needed]` stub with a
-  real caption** — what it shows, in the words of the surrounding clause, plus the clause cite.
-- `[uncertain]` → **OCR inline** into a `<details><summary>OCR extracted text</summary>…</details>`
-  block under the image, then retag `[ocr-done]`. **Never delete an `[uncertain]` image before its
-  text is captured.** An as-is architecture diagram in a tender is scope evidence: it drives the
-  estimate, so its content has to reach `rfp_analysis.md` as text, not as a picture.
+**Step 4 — image triage (the lossless rule; agent + vision).** The converter places every kept
+image inline where it sat in the source, with a `[caption-needed]` stub, and lists them all
+tagged `[uncertain]`. Deciding which carry information is a vision task, and it is **run, not
+described** — an as-is architecture diagram in a tender is scope evidence that drives the
+estimate, so its content has to reach `rfp_analysis.md` as text, not as a picture.
+
+```bash
+TRIAGE=${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/triage_images.py
+python3 "$TRIAGE" --worklist "$PACK/_md/<NN_topic>/<slug>.md"     # evidence to judge from
+# look at each image (Read renders it); for long lists dispatch parallel
+# vision subagents in batches of 5–6 images, as image-triage.md specifies
+python3 "$TRIAGE" --apply "$PACK/_md/<NN_topic>/<slug>.md" --verdicts verdicts.json
+```
+
+`--apply` refuses a partial pass, a `[decorative]` with no reason and a keep with no caption,
+then writes the ledger `eng_lint` reconciles against the extracted count. **How to tell an icon
+from a small diagram — and why size and OCR both lie — is in
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/image-triage.md`. Read it before judging.**
 
 **Step 5 — register** the row in `<pack-root>/_md/README.md`: `source file → md → pages/slides →
 topic → notes`. If it's a new topic, create the `NN_topic/` folder + a manifest sub-table.

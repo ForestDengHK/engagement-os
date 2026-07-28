@@ -181,6 +181,7 @@ RESEARCH_FILES = [
 PURSUIT_FILES = [
     ("rfp_analysis.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/rfp_analysis.md", {}),
     ("compliance_matrix.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/compliance_matrix.md", {}),
+    ("requirement_coverage.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/requirement_coverage.md", {}),
     ("clarification_log.md.tmpl", "01_pursuit/{ENG_ID}/2_analysis/clarification_log.md", {}),
     ("firm_assets.md.tmpl", "01_pursuit/_shared/firm_assets.md", {}),
     ("pursuit-shared-README.md.tmpl", "01_pursuit/_shared/README.md", {}),
@@ -201,10 +202,9 @@ FILE_BLOCKS = {"research": RESEARCH_FILES, "pursuit": PURSUIT_FILES, "delivery":
 #: What each procurement route changes about the pursuit loop. Planted into the analysis
 #: header via {{VARIANT_NOTE}} so the gates are adjusted where the work happens, not assumed.
 VARIANT_NOTES = {
-    "full-rfp": ("full open competition — clarification window, full go/no-go, and format "
+    "full-rfp": ("full open competition — clarification window and format "
                  "compliance all apply"),
-    "mini-comp": ("framework mini-competition — pre-qualified, so the go/no-go shrinks to "
-                  "capacity + conflict; call-off terms are pre-agreed; there may be NO "
+    "mini-comp": ("framework mini-competition — pre-qualified; call-off terms are pre-agreed; there may be NO "
                   "clarification window — check the call-off before relying on one"),
 }
 

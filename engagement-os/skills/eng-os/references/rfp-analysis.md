@@ -18,7 +18,7 @@ angle, and honest about what we don't yet have.
 - Step 6b — clarification questions (derived by dimension sweep, panel lens, human sends)
 - Step 7 — materials-needed list (research vs upload)
 - Step 7b — prior-bid check (conditional, and the negative result is recorded)
-- Step 8 — go / no-go recommendation
+- Step 8 — proceeding assumptions & escalations
 
 ## Where analysis sits in the pursuit pipeline
 
@@ -48,11 +48,16 @@ A bid with one wrong or unsourced claim loses trust — and the tender. So:
 
 ## Step 1 — requirement extraction
 
-Read the whole RFP (and every appendix/schedule) via the ingested markdown. Extract **every**
+Read the whole RFP (and every appendix/schedule) via the ingested markdown. Inventory every
+obligation-bearing source unit in `requirement_coverage.md`: numbered clause/question, form table,
+schedule, submission instruction and unnumbered mandatory text. Extract **every**
 obligation, not just the obvious ones — scope items, mandatory qualifications, submission
 mechanics, format rules, deadlines, evaluation weights, contract terms. Give each a stable
 **Req ID** and cite the exact clause. Mandatory ("must/shall") vs
 desirable ("should/may") is a required flag — mandatories are pass/fail gates.
+
+Reconcile both ways: every source unit has a reasoned disposition and every Req ID appears in a
+mapped row. An internally complete matrix can still be a perfectly organised subset of the RFP.
 
 **Citation order: the document's own numbering first.** If the RFP numbers its clauses
 (`§2.1(f)`, `§5.1.3`, Appendix 5 clause 16), cite those — they are stable, checkable by the
@@ -65,11 +70,12 @@ amended PDF.
 
 The centrepiece artefact (`compliance_matrix.md`). One row per requirement:
 
-`Req ID | RFP clause (§) | Requirement (verbatim/paraphrase) | Mandatory? | Our response approach | Evidence / proof | Owner | Gap? | Status`
+`Req ID | RFP clause (§) | Requirement | Mandatory? | Response / control | Proof required? | Proof source / status | Owner | Gap type | Status`
 
-Rules: every requirement has a row; every mandatory row must reach `met`; a row with no evidence
-is a `gap` (→ materials-needed or research). The matrix is the completeness check — the response
-is done when every row closes.
+Rules: every requirement has a row; every mandatory row must reach `met`. Separate knowing how to
+answer from holding proof. `Proof required? = no` needs an explicit control reason; otherwise a
+missing proof source is a proof gap. Gap type is none / answer / proof / control / clarification.
+The matrix closes the response; the coverage audit proves the source was completely considered.
 
 ## Step 2b — scope decomposition (the estimation baseline)
 
@@ -124,7 +130,7 @@ reference architecture it conforms to → the asset that proves we can do it.
   TOGAF ADM, the Kimball model, the vendor's own well-architected framework, ISO 27001, NIS2 —
   something an evaluator can check. If no standard applies, say the reasoning is ours and own it.
 - **Answer the "so does it work" question.** A solution row whose verdict is *partly* or *no* is
-  more credible than five rows of *fully*, and it is the honest input to the go/no-go. State
+  more credible than five rows of *fully*, and it is the honest input to risk ownership. State
   what we propose instead — a phase 2, a client-side action, an explicit assumption.
 - **Alignment is dual, per element** (the doctrine, made checkable): each solution element maps
   to (a) the requirement it answers, (b) the methodology or asset we run it with, (c) the standard
@@ -180,14 +186,14 @@ evaluation criteria from Step 3.
 Flag: onerous / uncapped-liability terms, unpriceable or ambiguous scope, impossible timelines,
 mandatory qualifications we may not meet, conflicts of interest, IP/data terms. Each risk gets an
 owner and a mitigation or a clarification-question to submit to the buyer. Deal-breakers feed the
-go/no-go.
+risk and proceeding-assumption register.
 
 ## Step 6b — clarification questions (derived, not noticed)
 
 Questions to the buyer are **produced by a sweep, not collected as they occur to someone**. The
 query deadline lands early and closes hard; after it, every remaining ambiguity can only be
 handled by stating an assumption, which scores worse than an answer. Anything not asked in time
-is a permanent loss, so the sweep runs as part of analysis — before the go/no-go, not after.
+is a permanent loss, so the sweep runs as part of analysis — before drafting, not after.
 
 **Sweep every dimension, one at a time.** Each has its own characteristic ambiguity, and a
 free-form re-read finds the ones in whichever dimension the reader happens to think in.
@@ -249,8 +255,9 @@ The same rule holds for any conditional artefact: **the file exists because the 
 never because the template list said so.** A scaffolder plants the artefacts every bid needs;
 everything else is created on the evidence that it applies.
 
-## Step 8 — go / no-go recommendation
+## Step 8 — proceeding assumptions & escalations
 
-Synthesise: fit to our best practice, win probability given weights + differentiators, deliverability,
-commercial attractiveness, and any deal-breakers. State a clear **go / no-go / go-if** with the
-conditions. This is a recommendation with evidence, not a vote.
+Material supplied to this workflow is treated as authorised GO. Synthesise the conditions the
+team must manage: evidence, delivery, commercial, legal and timing. Give each an owner, consequence,
+and explicit treatment in the estimate or response. Escalate facts; do not make or enforce the
+team's bid/no-bid decision.
