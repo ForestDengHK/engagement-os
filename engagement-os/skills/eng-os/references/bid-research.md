@@ -46,8 +46,10 @@ kinds of evidence and are challenged differently.
 
 ## Source discipline & tagging
 
-- **Primary over secondary.** A standard's own text beats a blog about it; a client's own
-  published number beats an analyst's estimate.
+- **Primary before secondary.** A standard's own text beats a blog about it; a client's own
+  published number beats an analyst's estimate. If only a secondary source exists, record the
+  primary search and why it failed.
+- **Atomic rows.** One independently checkable claim per row. Split compound claims.
 - **Every claim carries a citation** — source name + locator (URL, page, clause) — using the same
   provenance tags as the rest of the pack (`references/provenance-and-precedence.md`): external
   research `[T3:OWN <source>]`, RFP facts `[RFP §x]`, unconfirmed `[⚠VERIFY vs <source>]`.
@@ -68,7 +70,8 @@ This is the hard gate the user set: **the bid cannot contain any error.**
 
 Findings land in `bid_research_log.md` (one row per finding):
 
-`# | Serves (Req/theme) | Claim | Stream (ext/int) | Source + locator | Tag | Confidence | Status`
+Use the current `bid_research_log.md` template: atomic claim; fact/inference; stream; source type;
+exact source+locator; publication/version; valid-as-of; recheck-by; tag; confidence; status.
 
 The log is the bridge to `eng-bid-respond`: the response may only assert what the log has closed
 with a citation. Open `[⚠VERIFY]` rows either get closed or are cut from the bid.

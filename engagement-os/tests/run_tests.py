@@ -50,17 +50,23 @@ def clean_tree():
             "Feeds: D1\n"),
         "01_pursuit/27-010/2_analysis/compliance_matrix.md": (
             "# Compliance matrix\n\n"
-            "| Req ID | Requirement | Mandatory | Evidence | Status |\n"
-            "|---|---|---|---|---|\n"
-            "| R-0xx | <requirement> | M / D | <evidence> | <status> |\n"
-            "| R-001 | The bidder must do x | M | A-001 | met |\n"
-            "| R-002 | The bidder should do y | D | — | n/a |\n"),
+            "| Req ID | Requirement | Mandatory | Response / control | Proof required? | Proof source / status | Gap type | Status |\n"
+            "|---|---|---|---|---|---|---|---|\n"
+            "| R-0xx | <requirement> | M / D | <response> | <yes/no> | <source> | <gap> | <status> |\n"
+            "| R-001 | The bidder must do x | M | answer x | yes | A-001 | none | met |\n"
+            "| R-002 | The bidder should do y | D | control y | no — process control | not-required | none | n/a |\n"),
+        "01_pursuit/27-010/2_analysis/requirement_coverage.md": (
+            "# Requirement coverage\n\n"
+            "| Coverage ID | Source markdown | Source unit / locator | Disposition | Req IDs | Reviewer note |\n"
+            "|---|---|---|---|---|---|\n"
+            "| RC-001 | `rft.md` | §1.1 | mapped | R-001 | |\n"
+            "| RC-002 | `rft.md` | §2.1 | mapped | R-002 | |\n"),
         "01_pursuit/27-010/2_analysis/bid_research_log.md": (
             "# Bid research log\n\n"
-            "| # | Serves | Claim | Stream | Source | Tag | Confidence | Status |\n"
-            "|---|---|---|---|---|---|---|---|\n"
-            "| BR-001 | R-001 | The benchmark is 12 weeks | ext | example.org/x | `[T3:OWN]` | H | closed |\n"
-            "| BR-002 | R-002 | Referee permission pending | int | A-001 | internal | M | open — needs sign-off |\n"),
+            "| # | Serves | Atomic claim | Fact / inference | Stream | Source type | Exact source + locator | Published / version | Valid as of | Recheck by | Tag | Confidence | Status |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+            "| BR-001 | R-001 | The benchmark is 12 weeks | fact | ext | primary | https://example.org/x §Results | 2026-01-01 | 2026-01-01 | — | `[T3:OWN]` | H | closed |\n"
+            "| BR-002 | R-002 | Referee permission pending | fact | int | internal | A-001 | 2024 | 2026-01-01 | — | internal | M | open |\n"),
         "01_pursuit/27-010/3_drafting/bid_response_outline.md": (
             "# Bid response outline\n\n"
             "## Submission format (machine-checked)\n\n"
@@ -118,6 +124,7 @@ SEC = "01_pursuit/27-010/3_drafting/sections/v1/1.1_experience.md"
 LOG = "01_pursuit/27-010/2_analysis/bid_research_log.md"
 OUTLINE = "01_pursuit/27-010/3_drafting/bid_response_outline.md"
 MATRIX = "01_pursuit/27-010/2_analysis/compliance_matrix.md"
+COVERAGE = "01_pursuit/27-010/2_analysis/requirement_coverage.md"
 FINDING = "02_delivery/1_discovery/3_findings/platform/f1.md"
 ASSETS = "01_pursuit/_shared/firm_assets.md"
 
@@ -156,15 +163,17 @@ def _add_second_pursuit(t):
     """
     t["01_pursuit/27-011/2_analysis/compliance_matrix.md"] = (
         "# Compliance matrix\n\n"
-        "| Req ID | Requirement | Mandatory | Evidence | Status |\n"
-        "|---|---|---|---|---|\n"
-        "| R-501 | The bidder must do z | M | A-001 | met |\n")
+        "| Req ID | Requirement | Mandatory | Response / control | Proof required? | Proof source / status | Gap type | Status |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| R-501 | The bidder must do z | M | answer | yes | A-001 | none | met |\n")
+    t["01_pursuit/27-011/2_analysis/requirement_coverage.md"] = (
+        "# Coverage\n\n| Coverage ID | Source markdown | Source unit / locator | Disposition | Req IDs | Reviewer note |\n"
+        "|---|---|---|---|---|---|\n| RC-501 | `rft.md` | §1 | mapped | R-501 | |\n")
     t["01_pursuit/27-011/2_analysis/bid_research_log.md"] = (
         "# Bid research log\n\n"
-        "| # | Serves | Claim | Stream | Source | Tag | Confidence | Status |\n"
-        "|---|---|---|---|---|---|---|---|\n"
-        "| BR-001 | R-501 | A claim still open | ext | example.org/y | `[T3:OWN]` | M | "
-        "open — needs sign-off |\n")
+        "| # | Serves | Atomic claim | Fact / inference | Stream | Source type | Exact source + locator | Published / version | Valid as of | Recheck by | Tag | Confidence | Status |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+        "| BR-001 | R-501 | A claim still open | fact | ext | primary | https://example.org/y §1 | 2026 | 2026-01-01 | — | `[T3:OWN]` | M | open |\n")
     t["01_pursuit/27-011/3_drafting/bid_response_outline.md"] = (
         "# Bid response outline\n\n"
         "## Submission format (machine-checked)\n\n"
@@ -194,11 +203,50 @@ def _add_second_pursuit(t):
         "## Review log\n\n"
         "| Round | Reviewer / lens | Date | Verdict | What changed |\n"
         "|---|---|---|---|---|\n")
+    t["01_pursuit/27-011/1_received/_md/rft.md"] = "# RFT\n\n## §1\n\nMust do z.\n"
+    t["01_pursuit/27-011/1_received/_md/README.md"] = (
+        "# Manifest\n\n- `rft.md` — converted from `rft.docx`\n")
+    t["01_pursuit/27-011/1_received/rft.docx"] = "PK-rft"
 
 
 CASES = [
     # ── the clean tree itself ────────────────────────────────────────────────
     ("clean", lambda t: None, set(), set(), set()),
+
+    # ── analysis completeness + decision contracts ──────────────────────────
+    ("requirement-coverage-is-required",
+     lambda t: t.pop(COVERAGE),
+     {"requirement-coverage-missing"}, set(), set()),
+    ("every-matrix-row-maps-back-to-source",
+     lambda t: _sub(t, COVERAGE, "R-002", "R-001"),
+     {"requirement-not-source-mapped"}, set(), set()),
+    ("every-received-source-is-audited",
+     lambda t: (t.__setitem__("01_pursuit/27-010/1_received/_md/addendum.md",
+                              "# Addendum\n\nThe bidder must answer Z.\n"),
+                _sub(t, "01_pursuit/27-010/1_received/_md/README.md",
+                     "- `rft.md` — converted from `rft.docx`",
+                     "- `rft.md` — converted from `rft.docx`\n"
+                     "- `addendum.md` — converted from `addendum.docx`")),
+     set(), {"received-source-not-audited"}, set()),
+    ("proof-required-cannot-hide-behind-no-gap",
+     lambda t: _sub(t, MATRIX, "| yes | A-001 | none |", "| yes | — | none |"),
+     {"matrix-proof-gap-hidden"}, set(), set()),
+    ("an-open-gap-cannot-be-called-met",
+     lambda t: _sub(t, MATRIX, "| yes | A-001 | none |", "| yes | A-001 (KPI missing) | proof |"),
+     {"matrix-gap-marked-met"}, set(), set()),
+    ("closed-external-research-needs-exact-https",
+     lambda t: _sub(t, LOG, "https://example.org/x §Results", "example.org"),
+     {"research-source-not-exact"}, set(), set()),
+    ("time-sensitive-research-needs-validity-window",
+     lambda t: (_sub(t, LOG, "| closed |", "| closed-time-sensitive |"),
+                _sub(t, LOG, "| 2026-01-01 | — | `[T3:OWN]`",
+                     "| — | — | `[T3:OWN]`")),
+     {"research-time-window-missing"}, set(), set()),
+    ("named-standard-needs-method-provenance",
+     lambda t: t.__setitem__("01_pursuit/27-010/2_analysis/rfp_analysis.md",
+         "# Analysis\n\n| # | Their challenge | Best-practice / standard | Method provenance | Proof |\n"
+         "|---|---|---|---|---|\n| 1 | resilience | ISO 22301 | — | A-001 |\n"),
+     {"solution-method-unsourced"}, set(), set()),
 
     # ── bucket leak ──────────────────────────────────────────────────────────
     ("leak-absolute",
@@ -421,13 +469,13 @@ CASES = [
      lambda t: _sub(t, MATRIX, "| met |", "| open |"),
      set(), {"mandatory-open"}, set()),
     ("matrix-template-only",
-     lambda t: _sub(t, MATRIX, "| R-001 | The bidder must do x | M | A-001 | met |\n"
-                    "| R-002 | The bidder should do y | D | — | n/a |\n", ""),
+     lambda t: _sub(t, MATRIX, "| R-001 | The bidder must do x | M | answer x | yes | A-001 | none | met |\n"
+                    "| R-002 | The bidder should do y | D | control y | no — process control | not-required | none | n/a |\n", ""),
      {"section-req-unknown"}, {"matrix-empty"}, set()),   # the section's R-001 is now unknown too
     ("matrix-template-only-frozen",
      lambda t: (_approve_section(t),
-                _sub(t, MATRIX, "| R-001 | The bidder must do x | M | A-001 | met |\n"
-                     "| R-002 | The bidder should do y | D | — | n/a |\n", ""),
+                _sub(t, MATRIX, "| R-001 | The bidder must do x | M | answer x | yes | A-001 | none | met |\n"
+                     "| R-002 | The bidder should do y | D | control y | no — process control | not-required | none | n/a |\n", ""),
                 t.__setitem__("01_pursuit/27-010/4_final/v.docx", "x")),
      {"matrix-empty", "section-req-unknown"}, set(), set()),
     ("matrix-row-with-literal-lt",      # a real row containing '<' must NOT be skipped
@@ -537,6 +585,10 @@ CASES = [
      lambda t: _sub(t, SEC, "We did the thing.",
                     "We did the thing. See `No Such File.md §Page 3`."),
      set(), {"dangling-citation"}, set()),
+    ("citation-format-placeholder-is-not-a-real-citation",
+     lambda t: _sub(t, SEC, "We did the thing.",
+                    "We did the thing. Cite converted evidence as `<file>.md §Page N`."),
+     set(), set(), {"dangling-citation"}),
 
     # ── the negative answer must BE the section's answer ─────────────────────
     ("stray-na-does-not-exempt-the-estimate",
@@ -758,6 +810,35 @@ CASES = [
                 t.__setitem__("01_pursuit/_shared/_md/README.md",
                               "- `case-study.md` — converted from `case-study.pdf`\n")),
      set(), {"images-untriaged"}, set()),
+    # The failure the rule exists for: 13 images extracted from the AIB deck, all deleted as
+    # `[decorative]`, `images-untriaged` cleared — the lint rewarded the one action that lost
+    # the case study's evidence, because an emptied document reads exactly like one that never
+    # had figures. Only the ledger tells the two apart.
+    ("every extracted figure deleted, with nothing recording who decided",
+     lambda t: (t.__setitem__("01_pursuit/_shared/_md/deck.md",
+                              "# Deck\n\n## Images extracted — triage these\n\n"
+                              "**Extracted:** 13\n"),
+                t.__setitem__("01_pursuit/_shared/_md/README.md",
+                              "- `deck.md` — converted from `deck.pdf`\n")),
+     {"images-unaccounted"}, set(), set()),
+    ("a triage ledger accounts for the figures that went",
+     lambda t: (t.__setitem__("01_pursuit/_shared/_md/deck.md",
+                              "# Deck\n\n## Images — triaged\n\n**Extracted:** 13\n\n"
+                              "**Triage ledger.** 0 content · 0 ocr-done · 13 decorative "
+                              "(deleted). Every extracted image was judged.\n\n"
+                              "Deleted as decorative:\n\n- `p1_img0.png` decorative — logo\n"),
+                t.__setitem__("01_pursuit/_shared/_md/README.md",
+                              "- `deck.md` — converted from `deck.pdf`\n")),
+     set(), set(), {"images-unaccounted"}),
+    ("figures still listed are accounted for without a ledger",
+     lambda t: (t.__setitem__("01_pursuit/_shared/_md/deck.md",
+                              "# Deck\n\n## Images extracted — triage these\n\n"
+                              "**Extracted:** 2\n\n"
+                              "- `[content]` the target architecture\n"
+                              "- `[ocr-done]` the migration waves\n"),
+                t.__setitem__("01_pursuit/_shared/_md/README.md",
+                              "- `deck.md` — converted from `deck.pdf`\n")),
+     set(), set(), {"images-unaccounted"}),
     ("asset pack conversion with no manifest row",
      lambda t: (t.__setitem__("01_pursuit/_shared/_md/orphan.md", "# Orphan\n"),
                 t.__setitem__("01_pursuit/_shared/_md/README.md",
@@ -775,6 +856,10 @@ CASES = [
                      "- `rft.md` — converted from `rft.docx`\n"
                      "- `27-010 - Main RFT.md` — converted from `27-010 - Main RFT.docx`\n")),
      set(), set(), {"manifest-missing", "manifest-absent", "manifest-stale-row"}),
+    ("a prose markdown reference is not a manifest row",
+     lambda t: _sub(t, "_sources/public/_md/README.md", "No converted documents yet.",
+                    "No converted documents yet. See `firm_assets.md` for constraints."),
+     set(), set(), {"manifest-stale-row"}),
     ("manifest-absent",
      lambda t: (t.pop("_sources/public/_md/README.md"),
                 t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n")),
@@ -792,8 +877,8 @@ CASES = [
 
     # ── firm assets ──────────────────────────────────────────────────────────
     ("asset-unknown",
-     lambda t: _sub(t, MATRIX, "| R-002 | The bidder should do y | D | — | n/a |",
-                    "| R-002 | The bidder should do y | D | A-999 | n/a |"),
+     lambda t: _sub(t, MATRIX, "| R-002 | The bidder should do y | D | control y | no — process control | not-required | none | n/a |",
+                    "| R-002 | The bidder should do y | D | control y | yes | A-999 | none | n/a |"),
      {"asset-unknown"}, set(), set()),
     ("asset-index-missing",
      lambda t: t.pop(ASSETS),
@@ -802,8 +887,8 @@ CASES = [
      lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
                      "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
                      "## Gaps\n\nA-777 would have been ideal but we don't hold it.\n"),
-                _sub(t, MATRIX, "| R-002 | The bidder should do y | D | — | n/a |",
-                     "| R-002 | The bidder should do y | D | A-777 | n/a |")),
+                _sub(t, MATRIX, "| R-002 | The bidder should do y | D | control y | no — process control | not-required | none | n/a |",
+                     "| R-002 | The bidder should do y | D | control y | yes | A-777 | none | n/a |")),
      {"asset-unknown"}, set(), set()),
 
     # ── section frontmatter reconciliation ───────────────────────────────────
@@ -988,6 +1073,20 @@ def render_tests():
                    "(Attachment 2, cl. 5)" in out and "(Exhibit 3)" in out))
     checks.append(("explicit label wins", rd.buyer_label_for("/nonexistent", "RFQ") == "RFQ"))
     checks.append(("fallback label is RFP", rd.buyer_label_for("/nonexistent") == "RFP"))
+    joined = rd.assemble_document_parts(
+        ["# First\n\nA", "# Second\n\nB"],
+        [{"title": "First"}, {"title": "Second"}],
+        titled_separators=False)
+    checks.append(("DOCX sections use a real OpenXML page break",
+                   'w:type="page"' in joined and "\\newpage" not in joined))
+    joined = rd.assemble_document_parts(
+        ["# First\n\nA", "# Second\n\nB"],
+        [{"title": "First"}, {"title": "Second"}],
+        titled_separators=True)
+    checks.append(("required separator gets its own titled page",
+                   joined.count('w:type="page"') == 1
+                   and joined.count("w:pageBreakBefore") == 1
+                   and joined.count("Second") == 1 and "\n\nB" in joined))
 
     for name, ok in checks:
         print(f"  {'✓' if ok else '✗'} render:{name}")
@@ -1068,7 +1167,7 @@ def converter_tests():
         "## Gaps — what we do not hold\n\n"
         "The account team should upload `case_studies/needed.pdf`.\n",
         encoding="utf-8")
-    _, waiting, to_convert = cs.scan(scan_root)
+    _, waiting, to_convert, _ = cs.scan(scan_root)
     waiting_rel = {p.relative_to(shared).as_posix() for _, p in waiting}
     convert_rel = {p.relative_to(shared).as_posix() for _, p in to_convert}
     scan_checks = [
@@ -1094,10 +1193,36 @@ def converter_tests():
     # the second of those needs the conversion to exist first:
     (shared / "_md").mkdir(exist_ok=True)
     (shared / "_md/1_General_DataMod Quals.md").write_text("# md", encoding="utf-8")
-    _, waiting2, to_convert2 = cs.scan(scan_root)
+    _, waiting2, to_convert2, reindex2 = cs.scan(scan_root)
     convert2_rel = {p.relative_to(shared).as_posix() for _, p in to_convert2}
     scan_checks[-1] = ("a converted asset leaves the to_convert list",
                        "case_studies/1_General_DataMod Quals.pdf" not in convert2_rel)
+
+    # A row goes stale silently: image triage rewrites the asset's markdown long after the row
+    # was drafted, and everything the diagrams prove arrives in that rewrite. Nobody hand-checks
+    # a table for rows that stopped being true.
+    import os as _os
+    import time as _time
+    indexed_at = _time.time() + 60                    # the row was drafted AFTER the markdown
+    _os.utime(shared / "firm_assets.md", (indexed_at, indexed_at))
+    _, _, _, reindex2 = cs.scan(scan_root)
+    reindex2_rel = {p.relative_to(shared).as_posix() for _, p in reindex2}
+    scan_checks.append(("a row written after its markdown is not stale",
+                        "case_studies/1_General_DataMod Quals.pdf" not in reindex2_rel))
+    later = _time.time() + 120                        # …then triage rewrote the markdown
+    _os.utime(shared / "_md/1_General_DataMod Quals.md", (later, later))
+    _, _, _, reindex3 = cs.scan(scan_root)
+    reindex3_rel = {p.relative_to(shared).as_posix() for _, p in reindex3}
+    scan_checks += [
+        ("markdown newer than the index puts its asset up for RE-INDEX",
+         "case_studies/1_General_DataMod Quals.pdf" in reindex3_rel),
+        # one logical asset = one row; `X.drawio` beside `X.pptx` shares a stem but is a
+        # companion, not a second row to redraft
+        ("a companion sharing a stem is not a second stale row",
+         "team_structure/create_pptx.js" not in reindex3_rel),
+        ("an unindexed asset is only to_index, never to_reindex",
+         "case_studies/others/Quals.pdf" not in reindex3_rel),
+    ]
     for name, ok in scan_checks:
         print(f"  {'✓' if ok else '✗'} scanner:{name}")
     scan_ok = all(ok for _, ok in scan_checks)
@@ -1140,6 +1265,397 @@ def converter_tests():
     anchors_ok = all(ok for _, ok in anchor_checks)
     print("✓ native-clause anchor tests pass" if anchors_ok
           else "✗ native-clause anchor tests FAILING")
+
+    # ── image collector: only bytes-provable decoration is dropped ────────────
+    # Found on the real AIB deck: a 93KB architecture diagram shown on two consecutive
+    # slides was auto-deleted as "template furniture" because ANY repeat died. Now only a
+    # raster on most units is furniture; a rarer repeat keeps its first copy for triage.
+    def _blob(tag):
+        return (b"PNG" + tag) * 2000               # >= MIN_IMG_BYTES, distinct per tag
+
+    img_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-img-"))
+    coll = cs.ImageCollector(str(img_dir), str(img_dir), "doc__")
+    coll.add(_blob(b"A"), 2, "p2_img0.png")
+    coll.add(_blob(b"A"), 3, "p3_img0.png")        # same bytes, two of ten units — content?
+    coll.add(_blob(b"B"), 1, "p1_img0.png")        # unique
+    stale = img_dir / "doc__from_previous_conversion.png"
+    stale.write_bytes(_blob(b"OLD"))
+    other_source = img_dir / "other__live.png"
+    other_source.write_bytes(_blob(b"OTHER"))
+    kept, furniture, dup = coll.finalise(total_units=10)
+    img_checks = [
+        ("low-frequency repeat keeps its first copy",
+         [pathlib.Path(r).name for r, _ in kept] == ["doc__p1_img0.png", "doc__p2_img0.png"]),
+        ("only the duplicate file is deleted",
+         not (img_dir / "doc__p3_img0.png").exists()
+         and (img_dir / "doc__p2_img0.png").exists()),
+        ("counts report duplicate not furniture", furniture == 0 and dup == 1),
+        ("regeneration removes stale files for this source",
+         not stale.exists() and coll.stale_removed == 1),
+        ("regeneration never removes another source's files", other_source.exists()),
+    ]
+
+    img_dir2 = pathlib.Path(tempfile.mkdtemp(prefix="engos-img2-"))
+    coll2 = cs.ImageCollector(str(img_dir2), str(img_dir2), "doc__")
+    for u in (1, 2, 3, 4, 5, 6):
+        coll2.add(_blob(b"LOGO"), u, f"p{u}_img0.png")
+    kept2, furniture2, dup2 = coll2.finalise(total_units=10)
+    img_checks += [
+        ("a raster on most units is furniture and every copy goes",
+         kept2 == [] and furniture2 == 6 and dup2 == 0
+         and not list(img_dir2.iterdir())),
+    ]
+    img_dir3 = pathlib.Path(tempfile.mkdtemp(prefix="engos-img3-"))
+    coll3 = cs.ImageCollector(str(img_dir3), str(img_dir3), "x__")
+    for u in range(4):
+        coll3.add(_blob(b"H"), u, f"u{u}.png")
+    img_checks.append(("docx fallback uses the absolute bar alone",
+                       coll3.finalise()[1] == 4))
+
+    # A vector-drawn diagram is no embedded raster, so extraction alone loses it; the page
+    # must be rendered. Fixture: one text page, one page of 30 vector rects.
+    try:
+        import fitz
+        vec_pdf = pathlib.Path(tempfile.mkdtemp(prefix="engos-vec-")) / "deck.pdf"
+        d = fitz.open()
+        p = d.new_page()
+        p.insert_text((72, 72), "plain text page")
+        p2 = d.new_page()
+        for k in range(30):
+            p2.draw_rect(fitz.Rect(50 + (k % 6) * 80, 100 + (k // 6) * 80,
+                                   110 + (k % 6) * 80, 160 + (k // 6) * 80))
+        p2.insert_text((72, 72), "architecture diagram labels")
+        d.save(str(vec_pdf))
+        d.close()
+        vec_out = vec_pdf.parent / "_md"
+        vec_md, err = cs.convert_pdf(str(vec_pdf), str(vec_out / "images"),
+                                     str(vec_out))
+        img_checks += [
+            ("vector page is rendered as a snapshot",
+             (vec_out / "images" / "deck__p2_page.png").exists()
+             and "deck__p2_page.png" in vec_md),
+            ("plain text page gets no snapshot",
+             "p1_page.png" not in vec_md),
+        ]
+
+        # Extraction can "succeed" and still leave the reader unable to read the diagram:
+        # every figure on the page is a thumbnail whose own labels are too small. The AIB
+        # deck produced a caption saying "read the full-size figure in the source PDF" —
+        # the trip back to the binary that md-first exists to avoid.
+        thumb_pdf = pathlib.Path(tempfile.mkdtemp(prefix="engos-thumb-")) / "deck.pdf"
+        d2 = fitz.open()
+        # A dense diagram thumbnail: small enough that its labels are unreadable, detailed
+        # enough to clear MIN_IMG_BYTES. Noise stands in for that detail — a flat fill
+        # compresses to a few KB and would be dropped as an icon, correctly.
+        import random
+        import struct
+        import zlib
+        random.seed(7)
+        tw, th = 560, 360
+        rows = b"".join(b"\x00" + bytes(random.randrange(256) for _ in range(tw * 3))
+                        for _ in range(th))
+        def _chunk(tag, data):
+            return (struct.pack(">I", len(data)) + tag + data
+                    + struct.pack(">I", zlib.crc32(tag + data)))
+        thumb_png = (b"\x89PNG\r\n\x1a\n"
+                     + _chunk(b"IHDR", struct.pack(">IIBBBBB", tw, th, 8, 2, 0, 0, 0))
+                     + _chunk(b"IDAT", zlib.compress(rows)) + _chunk(b"IEND", b""))
+        tp = d2.new_page()
+        tp.insert_text((72, 72), "target architecture, shown as three thumbnails")
+        tp.insert_image(fitz.Rect(60, 100, 360, 300), stream=thumb_png)
+        d2.save(str(thumb_pdf))
+        d2.close()
+        thumb_out = thumb_pdf.parent / "_md"
+        thumb_md, _ = cs.convert_pdf(str(thumb_pdf), str(thumb_out / "images"),
+                                     str(thumb_out))
+        img_checks.append(
+            ("a page whose only figures are unreadable thumbnails is rendered too",
+             "deck__p1_page.png" in thumb_md
+             and (thumb_out / "images" / "deck__p1_page.png").exists()))
+        img_checks += [
+            ("a readable page snapshot replaces its embedded component",
+             "deck__p1_img0.png" not in thumb_md
+             and not (thumb_out / "images" / "deck__p1_img0.png").exists()),
+            ("the markdown audits how many components the snapshot consolidated",
+             f"{cs.fc.CONSOLIDATED_LINE} 1 embedded raster component" in thumb_md),
+        ]
+    except ImportError:
+        print("  - pymupdf missing — vector-snapshot checks skipped")
+
+    for name, ok in img_checks:
+        print(f"  {'✓' if ok else '✗'} images:{name}")
+    img_ok = all(ok for _, ok in img_checks)
+    print("✓ image collector/snapshot tests pass" if img_ok
+          else "✗ image collector/snapshot tests FAILING")
+
+    # Placement tokens may carry alt text after a `|` — markitdown's accessibility
+    # description becomes the figure label instead of being dropped with its dead link.
+    alt_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-alt-"))
+    coll4 = cs.ImageCollector(str(alt_dir), str(alt_dir), "d__")
+    coll4.add(_blob(b"ALT"), 1, "s1_65.png")
+    coll4.finalise()                              # production runs it inside img_section
+    alt_md = cs.place_inline_images(
+        "text\n" + cs.IMG_TOKEN % "s1_65.png|Org chart — delivery reporting lines" + "\nmore",
+        coll4)
+    alt_checks = [
+        ("alt text becomes the figure label",
+         "![Org chart — delivery reporting lines]" in alt_md),
+        ("unresolvable token still resolves to nothing",
+         cs.place_inline_images(cs.IMG_TOKEN % "ghost.png", coll4).strip() == ""),
+    ]
+    for name, ok in alt_checks:
+        print(f"  {'✓' if ok else '✗'} images:{name}")
+    img_ok = img_ok and all(ok for _, ok in alt_checks)
+
+    # ── triage executor: the step that used to be prose ────────────────────────
+    fc_spec = importlib.util.spec_from_file_location(
+        "figure_contract", PLUGIN / "skills/eng-os/scripts/figure_contract.py")
+    fc = importlib.util.module_from_spec(fc_spec)
+    fc_spec.loader.exec_module(fc)
+    ti_spec = importlib.util.spec_from_file_location(
+        "triage_images", PLUGIN / "skills/eng-os/scripts/triage_images.py")
+    ti = importlib.util.module_from_spec(ti_spec)
+    ti_spec.loader.exec_module(ti)
+
+    # Round trip on the REAL converter output. convert_source writes the figure blocks,
+    # triage_images rewrites them and eng_lint counts them; before figure_contract existed
+    # each carried its own copy of the same literals, so renaming the stub in one left the
+    # others matching a pattern that no longer occurred — and `--apply` would rewrite
+    # nothing while reporting success. This is the test that makes the shared module bite.
+    rt_checks = []
+    try:
+        import fitz
+        rt_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-roundtrip-"))
+        rt_pdf = rt_dir / "src.pdf"
+        rd = fitz.open()
+        rp = rd.new_page()
+        rp.insert_text((72, 72), "the clause this figure belongs to")
+        for k in range(30):
+            rp.draw_rect(fitz.Rect(50 + (k % 6) * 80, 120 + (k // 6) * 80,
+                                   110 + (k % 6) * 80, 180 + (k // 6) * 80))
+        rd.save(str(rt_pdf))
+        rd.close()
+        rt_md = rt_dir / "_md" / "src.md"
+        rt_md.parent.mkdir(parents=True)
+        body, _ = cs.convert_pdf(str(rt_pdf), str(rt_md.parent / "images"), str(rt_md.parent))
+        rt_md.write_text(body, encoding="utf-8")
+        work = ti.worklist(str(rt_md))
+        rt_checks.append(("triage finds every figure the converter wrote",
+                          len(work) == body.count("- `[uncertain]` ")
+                          and len(work) > 0))
+        tally = ti.apply_verdicts(str(rt_md), [
+            {"image": w["image"], "verdict": "content",
+             "caption": "Rendered page showing the vector diagram this clause refers to, "
+                        "boxes arranged in a grid [Page 1]"} for w in work])
+        after = rt_md.read_text(encoding="utf-8")
+        rt_checks += [
+            ("apply rewrites every block the converter wrote",
+             tally["content"] == len(work) and fc.CAPTION_STUB not in after),
+            ("lint's accounting reconciles against the converter's own count",
+             int(fc.EXTRACTED_COUNT.search(after).group(1)) == len(work)
+             and len(fc.INDEX_ANY.findall(after)) == len(work)),
+        ]
+    except ImportError:
+        print("  - pymupdf missing — contract round-trip skipped")
+    for name, ok in rt_checks:
+        print(f"  {'✓' if ok else '✗'} contract:{name}")
+    img_ok = img_ok and all(ok for _, ok in rt_checks)
+
+    tri = pathlib.Path(tempfile.mkdtemp(prefix="engos-triage-")) / "_md"
+    (tri / "images").mkdir(parents=True)
+
+    def _png(path, w, h):
+        import struct
+        import zlib
+        raw = b"".join(b"\x00" + bytes((90, 20, 80)) * w for _ in range(h))
+        def chunk(tag, data):
+            return (struct.pack(">I", len(data)) + tag + data
+                    + struct.pack(">I", zlib.crc32(tag + data)))
+        path.write_bytes(
+            b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+    STUB = ("*Figure `%s` — `[caption-needed]`: say what this shows, in the words of the "
+            "surrounding clause; if it carries text, OCR it inline first.*\n")
+
+    def _fixture():
+        for n, (w, h) in (("a.png", (364, 231)), ("b.png", (163, 163))):
+            _png(tri / "images" / n, w, h)
+        (tri / "x.md").write_text(
+            "# Deck\n\n## Page 3:\n\nThe target architecture was agreed.\n\n"
+            "![a.png](images/a.png)\n\n" + STUB % "a.png" + "\n\n"
+            "![b.png](images/b.png)\n\n" + STUB % "b.png" + "\n"
+            "Later clause text.\n\n---\n\n## Images extracted — triage these\n\n"
+            "**Extracted:** 2\n\n"
+            "**Auto-dropped as decorative:** 4 template furniture (logo / footer mark on "
+            "most units).\n\n"
+            "Each is also **placed inline** … classify each `[decorative]` / `[content]`.\n\n"
+            "- `[uncertain]` ![a.png](images/a.png)\n"
+            "- `[uncertain]` ![b.png](images/b.png)\n", encoding="utf-8")
+        return tri / "x.md"
+
+    md = _fixture()
+    from shutil import which as _which
+    if _which("tesseract"):
+        # The production call receives an absolute path. On the macOS build used for the real
+        # IDO pack, Leptonica rejected that path while the same file opened from its directory.
+        # Empty OCR is fine for this flat fixture; None means the executable/path call failed.
+        tri_ocr_absolute_ok = ti._ocr((tri / "images" / "a.png").resolve()) is not None
+    else:
+        tri_ocr_absolute_ok = True
+    work = ti.worklist(str(md))
+    tri_checks = [
+        ("tesseract can read an absolute worklist path", tri_ocr_absolute_ok),
+        # a caption written from the index at the end of the file is a caption written from
+        # nothing — the worklist must carry the markdown around where the figure was PLACED
+        ("worklist anchors each image to its unit",
+         [w["unit"] for w in work] == ["Page 3", "Page 3"]),
+        ("worklist carries the surrounding clause, not the index",
+         "target architecture was agreed" in work[0]["context"]),
+        ("worklist reads dimensions without Pillow",
+         (work[0]["width"], work[0]["height"]) == (364, 231)),
+    ]
+
+    # A partial pass must be refused: an image nobody looked at and an image someone judged
+    # must not end up in the same state, or the ledger records a decision nobody made.
+    def _raises(verdicts):
+        try:
+            ti.apply_verdicts(str(md), verdicts)
+            return False
+        except SystemExit:
+            return True
+
+    tri_checks += [
+        ("a partial pass is refused",
+         _raises([{"image": "a.png", "verdict": "content", "caption": "x"}])),
+        ("a reasonless deletion is refused",
+         _raises([{"image": "a.png", "verdict": "content", "caption": "x"},
+                  {"image": "b.png", "verdict": "decorative"}])),
+        ("a keep with no caption is refused",
+         _raises([{"image": "a.png", "verdict": "content"},
+                  {"image": "b.png", "verdict": "decorative", "reason": "icon"}])),
+        ("ocr-done with no captured text is refused",
+         _raises([{"image": "a.png", "verdict": "ocr-done", "caption": "x"},
+                  {"image": "b.png", "verdict": "decorative", "reason": "icon"}])),
+        ("a refused pass left the markdown untouched",
+         "`[caption-needed]`" in md.read_text(encoding="utf-8")
+         and (tri / "images/b.png").exists()),
+    ]
+
+    tally = ti.apply_verdicts(str(md), [
+        {"image": "a.png", "verdict": "ocr-done",
+         "caption": "As-is data architecture — sources feed an ingestion band into the "
+                    "warehouse, which serves risk, finance and BI consumers [Page 3]",
+         "ocr": "Data Sources | Ingestion"},
+        {"image": "b.png", "verdict": "decorative", "reason": "line icon — gear"}])
+    out = md.read_text(encoding="utf-8")
+    tri_checks += [
+        ("apply reports the tally", tally == {"content": 0, "decorative": 1, "ocr-done": 1}),
+        ("the caption stub is replaced in place, at the figure",
+         "*Figure `a.png` — As-is data architecture — sources feed an ingestion band" in out
+         and "[caption-needed]" not in out),
+        ("OCR text is parked under the figure it came from",
+         "<details><summary>OCR extracted text — a.png</summary>" in out),
+        ("a decorative figure loses its file, its block and its index line",
+         not (tri / "images/b.png").exists() and "images/b.png" not in out),
+        # once where it sat in the source, once in the index — the index entry is the audit
+        # trail, the inline one is what a reader actually meets
+        ("the kept figure survives inline AND in the index",
+         out.split("## Images")[0].count("![a.png](images/a.png)") == 1
+         and "- `[ocr-done]` ![a.png](images/a.png)" in out
+         and (tri / "images/a.png").exists()),
+        # the ledger is what tells "we judged these" apart from "someone deleted them"
+        ("the ledger records the verdicts and the reason",
+         "**Triage ledger.** 0 content · 1 ocr-done · 1 decorative" in out
+         and "`b.png` decorative — line icon — gear" in out),
+        ("the converter's accounting lines survive triage",
+         "**Extracted:** 2" in out and "**Auto-dropped as decorative:**" in out),
+        # the heading and the "classify each …" instructions describe work --apply just
+        # finished; leaving them tells the next reader to redo it
+        ("finished work stops advertising itself as pending",
+         "## Images — triaged" in out and "triage these" not in out
+         and "classify each" not in out),
+        ("nothing is left awaiting triage", ti.worklist(str(md)) == []),
+    ]
+
+    # The caption is what a downstream reader gets instead of the image; a label is not one.
+    md = _fixture()
+    tri_checks += [
+        ("a caption too thin to replace the image is refused",
+         _raises([{"image": "a.png", "verdict": "content", "caption": "Figure 3"},
+                  {"image": "b.png", "verdict": "decorative", "reason": "icon"}])),
+        ("a caption that only repeats the filename is refused",
+         _raises([{"image": "a.png", "verdict": "content",
+                   "caption": "a.png a.png a.png a.png a.png a.png a.png a.png"},
+                  {"image": "b.png", "verdict": "decorative", "reason": "icon"}])),
+    ]
+
+    # `ocr-done` means the figure's words did NOT survive extraction. When they plainly did,
+    # transcribing them again buries the interpretation. Measured on the real AIB deck: 14 of
+    # 18 OCR blocks were 95-100% words the markdown already had.
+    dup_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-dup-")) / "_md"
+    (dup_dir / "images").mkdir(parents=True)
+    _png(dup_dir / "images/c.png", 900, 500)
+    PROSE = ("Main Limitations and Pain Points identified across the multiple workshops held "
+             "with stakeholders: latency, governance, lineage, tooling, skills and cost.")
+    (dup_dir / "y.md").write_text(
+        "# Deck\n\n## Page 7:\n\n" + PROSE + "\n\n![c.png](images/c.png)\n\n"
+        + STUB % "c.png" + "\nEnd.\n\n---\n\n## Images extracted — triage these\n\n"
+        "**Extracted:** 1\n\n- `[uncertain]` ![c.png](images/c.png)\n", encoding="utf-8")
+
+    def _raises_dup(verdicts):
+        try:
+            ti.apply_verdicts(str(dup_dir / "y.md"), verdicts)
+            return False
+        except SystemExit:
+            return True
+
+    tri_checks += [
+        # measured directly: tesseract finds no text in a synthetic solid-colour fixture, and
+        # the overlap number is what decides ocr-done vs content on every real figure
+        ("overlap is 100% when the page already carries the figure's words",
+         ti._overlap(PROSE, ti._unit_prose(
+             (dup_dir / "y.md").read_text(encoding="utf-8"), "Page 7")) == 1.0),
+        ("overlap is 0% when the words exist only inside the image",
+         ti._overlap("Kafka Airflow Snowflake dbt Collibra", ti._unit_prose(
+             (dup_dir / "y.md").read_text(encoding="utf-8"), "Page 7")) == 0.0),
+        ("a figure with no readable text reports no overlap rather than a false zero",
+         ti.worklist(str(dup_dir / "y.md"))[0]["text_already_in_md"] is None),
+        ("re-transcribing text the page already carries is refused",
+         _raises_dup([{"image": "c.png", "verdict": "ocr-done",
+                       "caption": "The pain-point table from the workshop series [Page 7]",
+                       "ocr": PROSE}])),
+        ("the same figure passes as content with a structural caption",
+         ti.apply_verdicts(str(dup_dir / "y.md"), [
+             {"image": "c.png", "verdict": "content",
+              "caption": "Pain-point table, four columns — capability, limitation, impact and "
+                         "severity RAG — one row per capability assessed [Page 7]"}]
+         ) == {"content": 1, "decorative": 0, "ocr-done": 0}),
+        ("text genuinely absent from the page is still captured",
+         ti.apply_verdicts(str(md), [
+             {"image": "a.png", "verdict": "ocr-done",
+              "caption": "Reference architecture, sources through to consumers [Page 3]",
+              "ocr": "Kafka Airflow Snowflake dbt Looker Collibra Monte Carlo"},
+             {"image": "b.png", "verdict": "decorative", "reason": "icon"}]
+         ) == {"content": 0, "decorative": 1, "ocr-done": 1}),
+    ]
+
+    md = _fixture()                                   # re-triage must replace, not stack
+    ti.apply_verdicts(str(md), [
+        {"image": "a.png", "verdict": "content",
+         "caption": "First pass — sources, ingestion and warehouse bands with their "
+                    "consumers arranged left to right [Page 3]"},
+        {"image": "b.png", "verdict": "decorative", "reason": "icon"}])
+    text_once = md.read_text(encoding="utf-8")
+    tri_checks.append(("one ledger per file", text_once.count("**Triage ledger.**") == 1))
+
+    for name, ok in tri_checks:
+        print(f"  {'✓' if ok else '✗'} triage:{name}")
+    tri_ok = all(ok for _, ok in tri_checks)
+    print("✓ image triage executor tests pass" if tri_ok
+          else "✗ image triage executor tests FAILING")
+    img_ok = img_ok and tri_ok
 
     # Lint and render share one frontmatter parser. The shipped template puts an inline
     # lifecycle comment on `status`; treating it as part of the value made every planted
@@ -1571,7 +2087,7 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
     print("✓ estimate workbook builder tests pass" if wb_ok
           else "✗ estimate workbook builder tests FAILING")
 
-    return 0 if manifest_ok and scan_ok and anchors_ok and contract_ok and wb_ok else 1
+    return 0 if manifest_ok and scan_ok and anchors_ok and img_ok and contract_ok and wb_ok else 1
 
 
 

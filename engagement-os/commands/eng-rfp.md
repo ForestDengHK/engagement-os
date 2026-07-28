@@ -1,5 +1,5 @@
 ---
-description: An RFP / tender arrived — ingest, analyse, index evidence, estimate, stop for the human go/no-go, research/respond, review, check, render, verify, and freeze the submission.
+description: An RFP / tender arrived — ingest, audit source coverage, analyse risks and assumptions, index evidence, estimate, research/respond, review, check, render, verify, and freeze.
 ---
 
 Run the **rfp-arrived** playbook:

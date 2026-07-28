@@ -251,6 +251,14 @@ evidence** in the research log (a named engagement, a measured outcome, a real c
 them where the high-weight evaluation criteria are scored. A theme without proof in the log gets
 cut — no slogans.
 
+Run the same test in reverse. Every asset or research row declared in a section is a promise that
+the source materially influenced the answer, not a bibliography entry. Before R1, make an
+evidence-utilisation pass: for each declared A-nnn / BR-nnn identify the visible paragraph, table
+or figure it shaped and what it contributes. For a method source, the client-facing answer must
+show its useful structure, adaptation to this buyer and effect on activities, decisions or
+deliverables. An id that appears only in frontmatter or on the Traceability line is unused:
+incorporate it or remove it. Citation coverage without utilisation is false differentiation.
+
 ## Traceability of every claim
 
 Same discipline as the whole pack: every factual claim in the response traces to either an
@@ -258,6 +266,13 @@ Same discipline as the whole pack: every factual claim in the response traces to
 document for firm credentials). A reviewer must be able to open the source behind any number,
 credential, or outcome. **No unsupported claim, no fabricated credential — ever.** Anything still
 `[⚠VERIFY]` is cut or closed before submission, never shipped.
+
+Accuracy and completeness are separate tests. Replacing an unsupported KPI with “the held
+reference does not record a KPI” passes the accuracy test but still leaves the buyer's KPI request
+unfulfilled. After drafting, reconcile every proof-bearing matrix row against what the source
+actually contains. Missing outcomes, KPIs/SLAs, credentials, signatures and referee details stay
+as `Gap type = proof` with status `partial` or `gap` until supplied; a caveat never converts them
+to `met`.
 
 ## The panel red-team gate (not optional)
 

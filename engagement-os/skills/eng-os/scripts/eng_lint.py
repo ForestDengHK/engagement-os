@@ -29,6 +29,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import section_contract as sc
 import change_impact as ci
+import figure_contract as fc
 
 EVIDENCE_TAGS = {"[Observed]", "[Reported]", "[Assumed]", "[RFP]"}
 TEXT_EXT = {".md", ".txt"}
@@ -165,6 +166,24 @@ def matrix_table(root, m):
             continue                                # planted template row
         rows.append((i, raw))
     return hmap, rows
+
+
+def markdown_tables(path):
+    """Yield (normalised headers, line-numbered rows) for simple pipe tables."""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    i = 0
+    while i + 1 < len(lines):
+        if lines[i].lstrip().startswith("|") and re.match(r"^\s*\|?[\s:|-]+\|\s*$", lines[i + 1]):
+            headers = [c.strip().lower() for c in lines[i].strip().strip("|").split("|")]
+            rows, j = [], i + 2
+            while j < len(lines) and lines[j].lstrip().startswith("|"):
+                cells = [c.strip() for c in lines[j].strip().strip("|").split("|")]
+                rows.append((j + 1, cells))
+                j += 1
+            yield headers, rows
+            i = j
+        else:
+            i += 1
 
 
 # ── rules ────────────────────────────────────────────────────────────────────────
@@ -602,6 +621,191 @@ def rule_research_rows_closed(root, r):
                        "the claim before this section ships")
 
 
+def rule_requirement_coverage(root, r):
+    """Every received Markdown source unit and every Req ID must be reconciled independently."""
+    mats = matrix_paths(root)
+    if not mats:
+        return
+    r.ran()
+    for mat in mats:
+        eng = mat.parent.parent
+        reqs = matrix_req_ids_for(mat)
+        if not reqs:
+            continue
+        cov = eng / "2_analysis/requirement_coverage.md"
+        if not cov.exists():
+            r.error("requirement-coverage-missing", str(cov.relative_to(root)),
+                    "matrix has real requirements but no independent source coverage audit")
+            continue
+        real, mapped, sources, locators = [], set(), set(), {}
+        for headers, rows in markdown_tables(cov):
+            if not headers or "coverage id" not in headers:
+                continue
+            hi = {h: i for i, h in enumerate(headers)}
+            for line, cells in rows:
+                cid = cells[hi["coverage id"]] if hi["coverage id"] < len(cells) else ""
+                if not re.fullmatch(r"RC-\d{3,}", cid, re.I):
+                    continue
+                real.append((line, cells))
+                src = cells[hi.get("source markdown", -1)] if hi.get("source markdown", -1) < len(cells) else ""
+                src_name = pathlib.Path(src.strip("`")).name
+                sources.add(src_name)
+                locator = cells[hi.get("source unit / locator", -1)] if hi.get("source unit / locator", -1) < len(cells) else ""
+                locators.setdefault(src_name, []).append(locator.strip("`").lower())
+                disp = cells[hi.get("disposition", -1)].lower() if hi.get("disposition", -1) < len(cells) else ""
+                ids = set(sc.REQ_ID_RE.findall(cells[hi.get("req ids", -1)] if hi.get("req ids", -1) < len(cells) else ""))
+                if disp == "mapped":
+                    if not ids:
+                        r.error("requirement-coverage-unmapped", f"{cov.relative_to(root)}:{line}",
+                                f"{cid} says mapped but names no Req ID")
+                    mapped |= ids
+                elif disp not in {"informational", "duplicate", "superseded", "out-of-scope"}:
+                    r.error("requirement-coverage-disposition", f"{cov.relative_to(root)}:{line}",
+                            f"{cid} has invalid disposition '{disp}'")
+        if not real:
+            r.error("requirement-coverage-empty", str(cov.relative_to(root)),
+                    "coverage audit has no real RC rows")
+            continue
+        for req in sorted(reqs - mapped):
+            r.error("requirement-not-source-mapped", str(cov.relative_to(root)),
+                    f"{req} exists in the matrix but no mapped coverage row reaches it")
+        for req in sorted(mapped - reqs):
+            r.error("requirement-coverage-phantom", str(cov.relative_to(root)),
+                    f"coverage maps {req}, which the matrix does not define")
+        received = eng / "1_received/_md"
+        expected = {p.name for p in received.glob("*.md") if p.name.lower() != "readme.md"}
+        for name in sorted(expected - sources):
+            r.warn("received-source-not-audited", str(cov.relative_to(root)),
+                   f"{name} has no real coverage row — reconcile it before review")
+        for source in sorted(received.glob("*.md")):
+            if source.name.lower() == "readme.md":
+                continue
+            headings = []
+            for line in source.read_text(encoding="utf-8", errors="replace").splitlines():
+                m = re.match(r"^#{2,4}\s+(.+?)\s*$", line)
+                if m and not re.search(r"images extracted|triage|manifest|conversion metadata",
+                                       m.group(1), re.I):
+                    headings.append(m.group(1).strip().lower())
+            declared = locators.get(source.name, [])
+            for heading in headings:
+                if not any(d and (heading.startswith(d) or d.startswith(heading)) for d in declared):
+                    r.warn("source-unit-not-audited", str(cov.relative_to(root)),
+                           f"{source.name} heading '{heading}' has no coverage disposition")
+
+
+def rule_matrix_proof_model(root, r):
+    """Response approach, proof and gap state must not collapse into one ambiguous column."""
+    mats = matrix_paths(root)
+    if not mats:
+        return
+    r.ran()
+    allowed = {"none", "answer", "proof", "control", "clarification"}
+    for mat in mats:
+        for headers, rows in markdown_tables(mat):
+            if not any("mandatory" in h for h in headers):
+                continue
+            hi = {h: i for i, h in enumerate(headers)}
+            modern = all(k in hi for k in ("proof required?", "proof source / status", "gap type"))
+            if not modern:
+                r.warn("matrix-proof-schema-legacy", str(mat.relative_to(root)),
+                       "matrix conflates response, proof and gap; migrate to the current template")
+                break
+            for line, cells in rows:
+                joined = "|".join(cells)
+                rid = sc.REQ_ID_RE.search(joined)
+                if not rid:
+                    continue
+                required = cells[hi["proof required?"]].lower()
+                source = cells[hi["proof source / status"]].strip()
+                gap = cells[hi["gap type"]].lower()
+                status_i = hi.get("status")
+                status = cells[status_i].lower() if status_i is not None else ""
+                if gap not in allowed:
+                    r.error("matrix-gap-type", f"{mat.relative_to(root)}:{line}",
+                            f"{rid.group(0)} has invalid gap type '{gap}'")
+                if required.startswith("yes") and source in {"", "—", "-"} and gap != "proof":
+                    r.error("matrix-proof-gap-hidden", f"{mat.relative_to(root)}:{line}",
+                            f"{rid.group(0)} requires proof but has no source and is not a proof gap")
+                if required.startswith("no") and len(required.split("—", 1)) < 2:
+                    r.warn("matrix-no-proof-unreasoned", f"{mat.relative_to(root)}:{line}",
+                           f"{rid.group(0)} says no proof required without a reason")
+                if gap != "none" and status == "met":
+                    r.error("matrix-gap-marked-met", f"{mat.relative_to(root)}:{line}",
+                            f"{rid.group(0)} has a '{gap}' gap but status is 'met' — "
+                            "an honest caveat does not fulfil missing buyer evidence")
+            break
+
+
+def rule_research_source_quality(root, r):
+    """Closed research rows need atomic, exact, authoritative and time-bounded provenance."""
+    logs = sorted(root.glob("01_pursuit/*/2_analysis/bid_research_log.md"))
+    if not logs:
+        return
+    r.ran()
+    required = {"atomic claim", "fact / inference", "source type", "exact source + locator",
+                "published / version", "valid as of", "recheck by", "status"}
+    for log in logs:
+        found = False
+        for headers, rows in markdown_tables(log):
+            if not headers or headers[0] != "#":
+                continue
+            found = True
+            hi = {h: i for i, h in enumerate(headers)}
+            if not required <= set(headers):
+                r.warn("research-schema-legacy", str(log.relative_to(root)),
+                       "research log lacks atomic/source-type/exact-locator/time-validity fields")
+                break
+            for line, cells in rows:
+                rid = research_row_id(cells[0] if cells else "")
+                if not rid:
+                    continue
+                get = lambda k: cells[hi[k]].strip() if hi[k] < len(cells) else ""
+                status, stream, source = get("status").lower(), get("stream").lower(), get("exact source + locator")
+                if status not in {"open", "closed", "closed-time-sensitive", "superseded"}:
+                    r.warn("research-status-invalid", f"{log.relative_to(root)}:{line}",
+                           f"{rid} uses '{status}'; migrate to an exact controlled value")
+                if stream == "ext" and status.startswith("closed") and not re.search(r"https://\S+", source):
+                    r.error("research-source-not-exact", f"{log.relative_to(root)}:{line}",
+                            f"{rid} is closed external research without an exact https URL")
+                if status == "closed-time-sensitive" and (
+                        get("valid as of") in {"", "—", "-"} or get("recheck by") in {"", "—", "-"}):
+                    r.error("research-time-window-missing", f"{log.relative_to(root)}:{line}",
+                            f"{rid} is time-sensitive without valid-as-of and recheck-by dates")
+                if get("fact / inference").lower() not in {"fact", "inference"}:
+                    r.error("research-claim-kind", f"{log.relative_to(root)}:{line}",
+                            f"{rid} must say fact or inference")
+            break
+        if not found:
+            r.warn("research-table-missing", str(log.relative_to(root)),
+                   "no research findings table found")
+
+
+def rule_solution_method_provenance(root, r):
+    """A named best practice must resolve to a method source, not merely sound authoritative."""
+    analyses = sorted(root.glob("01_pursuit/*/2_analysis/rfp_analysis.md"))
+    if not analyses:
+        return
+    r.ran()
+    for path in analyses:
+        for headers, rows in markdown_tables(path):
+            bp = next((i for i, h in enumerate(headers) if "best-practice" in h or "standard" in h), None)
+            if bp is None:
+                continue
+            prov = next((i for i, h in enumerate(headers) if "method provenance" in h), None)
+            if prov is None:
+                r.warn("solution-method-provenance-missing", str(path.relative_to(root)),
+                       "solution table names standards but has no provenance column")
+                break
+            for line, cells in rows:
+                if not cells or not re.fullmatch(r"\d+", cells[0]):
+                    continue
+                value = cells[prov] if prov < len(cells) else ""
+                if not re.search(r"\b(?:A|BR)-\d{3}\b|https://\S+", value):
+                    r.error("solution-method-unsourced", f"{path.relative_to(root)}:{line}",
+                            "named best practice has no A-nnn, BR-nnn or exact primary URL")
+            break
+
+
 def rule_outline_covers_matrix(root, r):
     """Every compliance-matrix row must appear in the response outline.
 
@@ -1016,7 +1220,7 @@ def rule_images_triaged(root, r):
     rule was only looking at `_sources/` — an untriaged figure in the RFP itself is worse,
     because scoring tables and requirement matrices arrive as images.
     """
-    tag = re.compile(r"^\s*-\s*`?\[uncertain\]`?", re.I)
+    tag = re.compile(r"^\s*-\s*`?\[" + fc.UNTRIAGED + r"\]`?", re.I)
     for pack, content in md_packs(root):
         r.ran()
         for p in content:
@@ -1029,11 +1233,46 @@ def rule_images_triaged(root, r):
             # A placed figure with no caption is only half-ingested: the pixels arrived, what
             # the document said they mean did not. The converter writes the stub; leaving it is
             # the same silent-decay failure as leaving an image untriaged.
-            c = text.count("[caption-needed]")
+            c = text.count(fc.CAPTION_STUB)
             if c:
                 r.warn("images-uncaptioned", str(p.relative_to(root)),
                        f"{c} placed figure(s) still `[caption-needed]` — write what each shows "
                        "in the words of the surrounding clause")
+
+
+def rule_images_accounted(root, r):
+    """Every image the converter extracted must be accounted for by name or by ledger.
+
+    The failure this exists for: a converted deck said `**Extracted:** 13`, and the markdown
+    that reached the bid had none. Deleting all thirteen as `[decorative]` cleared
+    `images-untriaged` — the lint rewarded the one action that lost the case study's evidence,
+    because a document whose figures were all deleted looks exactly like a document that never
+    had any. This is an ERROR, not a warning: unlike an untriaged image, which is visibly
+    unfinished work, a silently emptied document reads as finished.
+
+    `triage_images.py --apply` writes the ledger, so the clean path costs nothing; the rule
+    only bites when someone hand-deleted the figures instead.
+    """
+    extracted_re = fc.EXTRACTED_COUNT
+    tagged_re = fc.INDEX_ANY
+    for _pack, content in md_packs(root):
+        for p in content:
+            text = p.read_text(encoding="utf-8", errors="replace")
+            m = extracted_re.search(text)
+            if not m:
+                continue                              # converted before the count existed
+            r.ran()
+            n = int(m.group(1))
+            if not n:
+                continue
+            survivors = len(tagged_re.findall(text))
+            if survivors == n or fc.LEDGER_LINE in text:
+                continue
+            r.error("images-unaccounted", str(p.relative_to(root)),
+                    f"{n} image(s) were extracted, {survivors} are still listed and no triage "
+                    "ledger says what happened to the rest — run "
+                    "`triage_images.py --apply`, which records each verdict, rather than "
+                    "deleting figures by hand")
 
 
 def rule_media_links_resolve(root, r):
@@ -1077,11 +1316,15 @@ def rule_manifest_complete(root, r):
                         "their provenance isn't recorded anywhere")
             continue
         r.ran()
+        manifest_text = readme.read_text(encoding="utf-8", errors="replace")
         listed = {os.path.basename(x) for x in re.findall(
-            r"`([^`]+\.md)`", readme.read_text(encoding="utf-8", errors="replace"))}
-        # [^`]+ not [\w./-]+ — real filenames have spaces ("26-002 - DataWarehouse ....md").
-        # The [\w./-]+ version read zero rows from a manifest the converter had just written:
-        # writer and reader each "worked", and together they reported every file as unlisted.
+            r"(?m)^(?:-\s+|\|\s*)`([^`]+\.md)`"
+            r"(?:\s+—\s+converted from|\s*\|)", manifest_text)}
+        # Read manifest ROWS, not every prose code span. The shared-pack README legitimately
+        # says assets are tracked in `firm_assets.md`; treating that as a row reported the
+        # template itself stale. Support both row shapes the repo writes: converter bullets
+        # and the reference-pack table. `[^`]+` is intentional — real filenames have spaces
+        # ("26-002 - DataWarehouse ....md").
         present = {p.name for p in content}
         for p in content:
             if p.name not in listed:
@@ -1434,7 +1677,10 @@ def rule_figures_exist(root, r):
 RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_section_budget, rule_review_status, rule_figures_exist,
          rule_verify_not_shipped, rule_verify_open_in_draft,
-         rule_research_rows_closed, rule_internal_ids_in_prose,
+         rule_research_rows_closed, rule_research_source_quality,
+         rule_requirement_coverage, rule_matrix_proof_model,
+         rule_solution_method_provenance,
+         rule_internal_ids_in_prose,
          rule_anonymised_names,
          rule_response_form_matches_rft, rule_buyer_forms_filled,
          rule_outline_covers_matrix,
@@ -1443,7 +1689,7 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
          rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,
          rule_change_impact_pending,
-         rule_images_triaged,
+         rule_images_triaged, rule_images_accounted,
          rule_media_links_resolve, rule_manifest_complete, rule_pointer_table_resolves]
 
 

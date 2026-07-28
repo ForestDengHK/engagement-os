@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 16 skills + 8 commands + 28 templates + 9 deterministic
+Packaged as 16 skills + 8 commands + 29 templates + 11 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -78,7 +78,7 @@ Take either, both, or neither — see §4 for modes.
 |---|---|---|
 | `eng-os` | Method map + shared assets (references / templates / scripts / playbooks) | Engagement start; finding a convention or workflow |
 | `eng-scaffold` | Stand up the repo for the blocks you need (`--mode`) → delegate to `/panel-init` | "set up a new engagement" |
-| `eng-rfp-analyze` | Decompose an RFP: compliance matrix, eval-weight map, multi-role read, win-themes, go/no-go | A tender arrived |
+| `eng-rfp-analyze` | Decompose an RFP: source coverage, compliance matrix, scope, solution, evaluation map, risks | A tender arrived |
 | `eng-index-assets` | Index firm-held evidence: what it proves, date, in-window verdict, permission constraints | Assets arrive or the RFP exposes evidence gaps |
 | `eng-estimate` | Maintain the formula-live estimate workbook and generated markdown snapshot | A priced tender, SOW, or change request needs sizing |
 | `eng-propagate-change` | Detect a manual edit, refresh deterministic derivatives, reopen affected review, and preserve frozen history | "I changed the estimate/section/file; what does it affect?" |
@@ -112,7 +112,7 @@ that names the owning skill per step plus its stop gates. Six recurring situatio
 | **Post-workshop** | `/eng-workshop` | held-notes → findings → canonical deltas → question backlog → log |
 | **Deliverable sprint** | `/eng-sprint` | validate → panel-discuss (lock structure) → build → panel-review → rev index → choose delivered format |
 | **New engagement, day 1** | `/eng-new` | pick mode → scaffold → fill context → panel-init → first ingest batch |
-| **An RFP arrived** | `/eng-rfp` | ingest → analyse → index assets → estimate → go/no-go → research/respond loop → review → check → render/verify → freeze |
+| **An RFP arrived** | `/eng-rfp` | ingest → analyse → index assets → estimate → research/respond loop → review → check → render/verify → freeze |
 | **Written sections must become the delivered file** | `/eng-render` | analyse the directory → gate → strip → docx/pdf, or a manifest handed to `presentation-builder` |
 | **The scope grew** (bid won, study became an engagement) | `/eng-upgrade` | re-scaffold with the added block → top up CLAUDE.md → write the handoff → re-baseline sources |
 | **A reviewer changed an existing artefact** | `/engagement-os:eng-propagate-change` | detect changed IDs/files → refresh deterministic outputs → reopen affected sections → re-review/render → checkpoint |
@@ -230,18 +230,17 @@ Then, in every lane: fill `.claude/project-context.md` (the facts a machine can'
                              artefact, cited [RFP §x]). Background research → pre_award/.
 2. Analyse the RFP           eng-rfp-analyze → fills the planted rfp_analysis.md +
                              compliance_matrix.md: every requirement gets a row, eval weights
-                             mapped, win-themes, risks, materials-needed, go/no-go.
+                             mapped, win-themes, risks and materials-needed.
 3. Estimate if priced        eng-rfp invokes the engagement-os:eng-estimate plugin skill here
                              (also directly available as /engagement-os:eng-estimate):
                              create/update estimation.xlsx, invoke xlsx for verification,
                              refresh the generated markdown snapshot.
-4. GO / NO-GO — human        Stop here on a no-go and log why. Don't sink writing effort
-                             into a bid you won't win or can't deliver.
-5. Research the gaps         eng-bid-research → close every matrix `gap` with a citation.
+4. Research the gaps         Inputs handed to this workflow are treated as authorised GO.
+                             eng-bid-research closes every matrix `gap` with a citation.
                              Zero fabrication; unsourceable → [⚠VERIFY] → cut.
-6. Write the response        eng-bid-respond → built FROM the matrix, in the RFP's mandated
+5. Write the response        eng-bid-respond → built FROM the matrix, in the RFP's mandated
                              format. Every claim traces to [RFP §x] or a closed log row.
-7. Review, check, issue       panel-review → eng-check strict → eng-render → verify the actual
+6. Review, check, issue       panel-review → eng-check strict → eng-render → verify the actual
                              file → freeze that exact submitted package to 4_final/ and record it.
 ```
 

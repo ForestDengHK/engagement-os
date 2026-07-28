@@ -10,17 +10,21 @@ live one level up in their own folders and are **never edited**; everything here
 
 ## Conversion conventions
 - **One MD per source file**, in the matching `NN_<topic>/` folder, with `## Page N:` / `## Slide N:` /
-  `## Section N:` anchors so any claim downstream can cite `file.md §Page 12`.
+  `## Section N:` anchors so any claim downstream can cite `<file>.md §Page 12`.
 - **Header on each MD:** source path, page/slide count, date shared, author/origin if known,
   CONFIDENTIAL marker if applicable.
 - **Tables** rendered as markdown tables; captions written from surrounding text.
 
 ## Image / OCR rule (lossless)
-Every image triaged into one bucket:
-- `[decorative]` → deleted (logos, borders, backgrounds).
-- `[content]` → kept as a captioned PNG under `images/<topic>/`.
-- `[uncertain]` → OCR'd inline into a `<details><summary>OCR extracted text</summary>…</details>`
-  block, then retagged `[ocr-done]`. Never delete an `[uncertain]` image before its text is captured.
+Every image is triaged into one bucket, by `scripts/triage_images.py` — never by hand:
+decorative → deleted with a recorded reason (logos, borders, backgrounds); content → kept, placed
+where it sat in the source, under a caption that says what it shows so a reader of this markdown
+never has to open it; and where the figure's words did not survive text extraction, those words
+are captured inline in a collapsible block. A figure whose text is not yet captured is never
+deleted.
+
+(Deliberately prose, not a tagged list: the triage tags are what the lint counts, so a README
+that spells them out would report itself as untriaged work forever.)
 
 ## Manifest
 

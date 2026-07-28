@@ -1,0 +1,20 @@
+# Requirement Coverage Audit — {{CLIENT}} {{ENG_ID}}
+
+> Independent completeness check against every Markdown file in `1_received/_md/`. A requirement
+> is not complete merely because the matrix is internally consistent: every obligation-bearing
+> source unit must be accounted for here.
+
+**Audited:** {{DATE}}
+
+| Coverage ID | Source markdown | Source unit / locator | Disposition | Req IDs | Reviewer note |
+|---|---|---|---|---|---|
+| RC-0xx | `<file>.md` | `§<clause>` / `§Page N` / `<table or form>` | mapped / informational / duplicate / superseded / out-of-scope | R-0xx | |
+
+## Contract
+
+- Split each source into obligation-bearing units: numbered clauses/questions, form tables,
+  schedules, submission instructions and unnumbered mandatory text.
+- `mapped` requires one or more real Req IDs. Other dispositions require a reason.
+- Every Req ID in `compliance_matrix.md` must appear in at least one mapped row.
+- Every Markdown source file in the received-pack manifest must appear in at least one real row.
+- Re-run this audit when an amendment or replacement source arrives.

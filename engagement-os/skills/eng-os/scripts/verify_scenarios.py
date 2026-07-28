@@ -259,13 +259,12 @@ def check_internal_skill_invocations():
 
 
 def check_pursuit_continuity():
-    """Pin the one-way gates and hand-off order across the public guide and playbook."""
+    """Pin the default-GO hand-off order across the public guide and playbook."""
     playbook = (PB / "rfp-arrived.md").read_text(encoding="utf-8")
     ordered = (
         "Skill(engagement-os:eng-rfp-analyze)",
         "Skill(engagement-os:eng-index-assets)",
         "Skill(engagement-os:eng-estimate)",
-        "**🛑 GO / NO-GO — human.**",
         "Skill(engagement-os:eng-bid-research)",
         "Skill(engagement-os:eng-bid-respond)",
         "Skill(engagement-os:eng-check)",
@@ -277,22 +276,22 @@ def check_pursuit_continuity():
     chain_ok = all(p >= 0 for p in positions) and positions == sorted(positions)
 
     guide_checks = (
-        ("README estimate precedes GO",
-         ROOT / "README.md", "3. Estimate if priced", "4. GO / NO-GO"),
-        ("USAGE estimate precedes GO",
+        ("README estimate precedes research",
+         ROOT / "README.md", "3. Estimate if priced", "4. Research the gaps"),
+        ("USAGE estimate precedes research",
          ROOT / "USAGE.md", "for a priced tender, hands the S-ID scope to eng-estimate",
-         "STOP. GO / NO-GO"),
-        ("analysis cannot bypass GO",
+         "researches every open gap"),
+        ("analysis declares authorised GO",
          ROOT / "skills/eng-rfp-analyze/SKILL.md",
-         "Do **not** invoke\nresearch or drafting from this skill",
-         "only after the human GO gate"),
-        ("estimate cannot bypass GO",
+         "treated as authorised GO",
+         "does not make or enforce"),
+        ("estimate returns sequencing to playbook",
          ROOT / "skills/eng-estimate/SKILL.md",
          "Do **not** invoke drafting from this skill",
-         "only after GO"),
+         "playbook owns sequencing"),
     )
     print("\n  pursuit continuity:")
-    print(f"  {'✓' if chain_ok else '✗'} analyse → assets → estimate → human GO "
+    print(f"  {'✓' if chain_ok else '✗'} analyse → assets → estimate "
           "→ research → respond → check → render → verify → freeze")
     ok = chain_ok
     for label, path, before, after in guide_checks:

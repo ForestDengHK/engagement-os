@@ -39,11 +39,16 @@ _sources/<bucket>/                   ← SOURCE tier (originals, never edited)
 
 ## The lossless image / OCR rule (the key discipline)
 
-**The converter drops the obvious cases first**, so triage is only spent on images that might
-matter: a raster repeated across pages/slides is template furniture (logo, footer, divider) and
-anything under ~6KB is an icon or rule. Both are counted in the output. On a real 24-page policy
-this took 49 extracted images down to 1. The lossless rule is about not losing *information* — a
-logo carries none.
+**The converter drops only what bytes can prove decorative**, so triage is only spent on images
+that might matter: a raster on *most* pages/slides is template furniture (logo, footer mark) and
+anything under ~6KB is an icon or rule. Both are counted in the output. A repeat rarer than that
+keeps its first copy — a deck legitimately re-shows a content diagram, and deleting a unique
+image is a judgment call the converter does not make. A diagram drawn in vector shapes is no
+raster at all, so a vector-heavy PDF page is rendered as a page snapshot and a shape-composed
+pptx slide is rendered via LibreOffice; a page whose figures were all extracted as unreadable
+thumbnails is rendered too, because an extraction that leaves the reader unable to read the
+diagram has not saved it. The lossless rule is about not losing *information* — a logo carries
+none.
 
 What survives is triaged into exactly one of three buckets:
 
@@ -58,6 +63,11 @@ What survives is triaged into exactly one of three buckets:
   ```
 
 **The rule that makes it lossless:** *if a human could not be certain the image is decorative, its text is OCR'd into the MD before the image may be dropped.* Never delete an `[uncertain]` image before its text is captured. This is what lets a reader trust "read the MD, don't re-open the source."
+
+Triage is **run, not described**: `scripts/triage_images.py --worklist` gathers the evidence and
+`--apply` writes the verdicts back with a ledger, refusing a partial pass or a reasonless
+deletion. The judgment itself — icon or diagram, and why size and OCR both lie about it — is
+[references/image-triage.md](image-triage.md).
 
 ## Why canonical = multiple files, not one mega-file
 

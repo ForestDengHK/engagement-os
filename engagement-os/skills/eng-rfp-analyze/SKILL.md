@@ -1,6 +1,6 @@
 ---
 name: eng-rfp-analyze
-description: Use when an RFP / tender / ITT has arrived and needs decomposing before bidding, or the user says "analyse this RFP", "should we bid", "build the compliance matrix", "what does this tender need", or "break down the requirements". Produces a requirement/compliance matrix, an evaluation-weight score map, a multi-role analysis, evidence-backed win-themes, risk/deal-breaker flags, a materials-needed list (research vs upload), and a go/no-go — every claim cited to the RFP clause, nothing fabricated.
+description: Use when an RFP / tender / ITT has arrived and needs decomposing before bidding, or the user says "analyse this RFP", "build the compliance matrix", "what does this tender need", or "break down the requirements". Produces a requirement/compliance matrix, an evaluation-weight score map, a multi-role analysis, evidence-backed win-themes, risks/escalations, and a materials-needed list — every claim cited to the RFP clause, nothing fabricated.
 ---
 
 # Analysing an RFP
@@ -17,12 +17,13 @@ so every requirement can be cited by clause/page.
 (no pursuit tree at all → `Skill(engagement-os:eng-scaffold)`, or just run `/eng-rfp`, which
 chains both). Analysing from the raw PDF is how clause citations get invented.
 
-Work in `01_pursuit/<ENG-ID>/2_analysis/`. **Three artefacts always, two on condition:**
+Work in `01_pursuit/<ENG-ID>/2_analysis/`. **Four artefacts always, two on condition:**
 
 | Artefact | When | What it carries |
 |---|---|---|
 | `rfp_analysis.md` | always | this skill's output |
 | `compliance_matrix.md` | always | the completeness spine, one row per requirement |
+| `requirement_coverage.md` | always | source-unit → Req-ID completeness audit |
 | `clarification_log.md` | always | questions to the buyer + settled readings — the **query deadline lands before submission** |
 | `bid_reuse_analysis.md` | **only if a prior bid exists** | section-by-section diff of what carries over |
 | `estimation.xlsx` + generated `estimation.md` | **only if the tender is priced** | the maintained effort → cost model plus its diffable snapshot (`eng-estimate`) |
@@ -39,7 +40,8 @@ expiring credential is visible before it fails a mandatory row.
 
 ```
 RFP Analysis Progress:
-- [ ] 1. Extract EVERY requirement → Req ID + clause cite + mandatory/desirable flag
+- [ ] 1. Inventory every obligation-bearing source unit in requirement_coverage.md, then extract
+        EVERY requirement. Reconcile both ways: every source unit is disposed; every Req ID maps
 - [ ] 1b. Date sanity (any deadline already past → red flag + first clarification Q) and the
         marking rubric itself (per-band definitions → into the score map)
 - [ ] 2. Build compliance_matrix.md (one row per requirement)
@@ -52,15 +54,20 @@ RFP Analysis Progress:
 - [ ] 7. Materials-needed list: WE research vs YOU upload (be specific)
 - [ ] 7b. Prior-bid check — found one → bid_reuse_analysis.md; none → record the negative
 - [ ] 8. Return the S-ID table to the RFP playbook for eng-estimate (priced tenders only)
-- [ ] 9. When the estimate returns, finalise the go / no-go recommendation with conditions
+- [ ] 9. Record proceeding assumptions, unresolved conditions and escalation owners; continue
+        the bid workflow because material supplied to this system is treated as authorised GO.
+        The agent does not make or enforce the team's bid/no-bid decision
 ```
 
 Fill `rfp_analysis.md` (steps 2b–8) and `compliance_matrix.md` (step 2) from the templates in
 `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
-**Step 1 — completeness.** Read the whole RFP and every appendix/schedule. Extract *all*
+**Step 1 — completeness.** Read the whole RFP and every appendix/schedule. First inventory its
+numbered clauses/questions, form tables, schedules, submission instructions and unnumbered
+mandatory text in `requirement_coverage.md`. Then extract *all*
 obligations (scope, qualifications, submission mechanics, format rules, deadlines, weights,
-contract terms), not just the obvious ones. Cite each: `[RFP §x]`.
+contract terms), not just the obvious ones. Cite each: `[RFP §x]`. Resolve every inventory row as
+mapped / informational / duplicate / superseded / out-of-scope with a reason.
 
 **Step 1b — two extractions the checklist used to miss, both found by dogfooding the pack:**
 - **Date sanity.** Compare every extracted date against TODAY. A deadline already past is not
@@ -89,8 +96,9 @@ triage before decomposing, not after.
 
 **Step 2c — understanding, then solution.** Per client challenge: their statement (cited) → what
 we think is actually driving it → what we would do → **fully / partly / no** on whether that
-resolves it → the *named* standard it conforms to ("industry best practice" is not one) → the
-asset that proves we can do it. Then state plainly what our solution does **not** solve. This
+resolves it → the *named and versioned* standard it conforms to → exact method provenance
+(`BR-nnn`, `A-nnn`, or primary URL) → the asset that proves we can do it. A standard name without
+provenance is a research gap. Then state plainly what our solution does **not** solve. This
 section is the source text for the response's method and deliverables sections — usually where
 the marks concentrate.
 
@@ -115,6 +123,6 @@ speculative file is a liability.
 ## Hand-off
 Return the scope table (§3), gaps, materials-needed list, matrix, and win-themes to the
 `rfp-arrived` playbook. It invokes `Skill(engagement-os:eng-estimate)` for priced tenders, then
-returns here to finalise the clarification log and go/no-go recommendation. Do **not** invoke
-research or drafting from this skill: only after the human GO gate does the playbook invoke
-`Skill(engagement-os:eng-bid-research)` and `Skill(engagement-os:eng-bid-respond)`.
+returns here to finalise the clarification log and proceeding assumptions. The playbook then
+invokes `eng-bid-research` and `eng-bid-respond`; risks remain visible but do not become an
+agent-owned stop decision.

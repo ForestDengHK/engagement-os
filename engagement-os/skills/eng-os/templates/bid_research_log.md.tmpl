@@ -6,13 +6,19 @@
 
 **Updated:** {{DATE}}
 
-| # | Serves (Req/theme) | Claim | Stream | Source + locator | Tag | Confidence | Status |
-|---|---|---|---|---|---|---|---|
-| BR-001 | R-00x / theme-1 | <the sourced fact> | ext / int | <URL or doc §page> | `[T3:OWN]` / `[RFP §x]` | H/M/L | closed |
-| BR-002 | | | | | `[⚠VERIFY]` | | open — needs <what> |
+| # | Serves (Req/theme) | Atomic claim | Fact / inference | Stream | Source type | Exact source + locator | Published / version | Valid as of | Recheck by | Tag | Confidence | Status |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BR-001 | R-00x / theme-1 | <one independently checkable claim> | fact | ext | primary | <https://... + clause/page/heading> | YYYY-MM-DD / vN | YYYY-MM-DD | — | `[T3:OWN]` | H/M/L | closed |
+| BR-002 | | | | int | internal | A-nnn §Page N | | | | `[⚠VERIFY]` | | open |
 
 **Stream:** `ext` = our research of the outside world · `int` = firm-held (user-uploaded case study / CV / past bid).
-**Rule:** no number, credential, or outcome enters the response without a `closed` row + citation here.
+**Rule:** no number, credential, outcome or best-practice assertion enters the response without a
+closed row + exact locator here. One row is one atomic claim; split compound claims.
+External secondary sources require a primary-source search and a reason in the locator cell when
+no primary source exists.
+**Status:** exactly `open`, `closed`, `closed-time-sensitive`, or `superseded`.
+`closed-time-sensitive` requires `Valid as of` and `Recheck by`; it remains usable only before that
+date. Do not hide future work inside text such as “closed — recheck before submission”.
 **Row ids:** `BR-nnn`, cited from a response section as `BR-003` (or `log #3`). Both forms are read by
 lint and by the change-impact engine; a section citing an `open` row is reported, not shipped.
 

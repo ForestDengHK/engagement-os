@@ -18,6 +18,15 @@ No `_shared/` tree yet → run `eng-scaffold --mode pursuit` first. No assets ye
 **gaps** section anyway from the RFP's evidence requirements: knowing we can evidence nothing
 for R-004 is the finding, and it is more useful early than complete-but-late.
 
+## Re-running on a stale row
+A row is drafted once and then quietly stops being true — most often because step 0b's image
+triage rewrote the asset's markdown afterwards, putting what the diagrams prove into it. The
+scan reports those as **to RE-INDEX** (`convert_source.py --scan`, surfaced by `/eng-source`):
+work step 2 for *those rows only*, rereading the markdown now that its figures are captioned,
+and say in the report what changed about what the asset proves. Do not hand-patch rows and do
+not rewrite the whole table — the constraints and permission columns carry human decisions
+that a redraft must preserve.
+
 ## Workflow
 
 ```
@@ -30,11 +39,27 @@ for R-004 is the finding, and it is more useful early than complete-but-late.
         as to the RFP. (`convert_source.py --scan` reports unconverted assets as
         `to CONVERT`.) Files the converter can't handle (a drawio diagram, a helper script)
         stay original-only — note them in §1b.
+- [ ] 0b. TRIAGE the figures that conversion extracted, before reading anything for step 2.
+        Our own case studies are mostly decks, and a deck's argument is in its diagrams — the
+        target architecture, the migration waves, the team shape. Those arrive as `[uncertain]`
+        images and are worthless to a bid until someone has looked at them and written what
+        they show. Skipping this is how an AIB case study reached the index proving nothing
+        but its own title.
+        ```bash
+        TRIAGE=${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/triage_images.py
+        python3 "$TRIAGE" --worklist 01_pursuit/_shared/_md/<asset>.md
+        # look at each image (Read renders it); for long lists dispatch parallel
+        # vision subagents in batches of 5–6 images, as image-triage.md specifies
+        python3 "$TRIAGE" --apply 01_pursuit/_shared/_md/<asset>.md --verdicts verdicts.json
+        ```
+        Method — how to tell an icon from a small diagram, and why size and OCR both lie:
+        `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/image-triage.md`. Read it before judging.
 - [ ] 1. Find this tender's RECENCY RULE first (e.g. "two projects within the last three
         years", "CVs no older than 12 months") — from compliance_matrix.md or the RFP. Without
         it there is no in-window verdict, and an undated asset cannot be triaged.
 - [ ] 2. Read each asset — its markdown in `_shared/_md/` when it exists, the original
-        otherwise. Not the filename — the document. Draft its row:
+        otherwise. Not the filename, and not the prose alone: after step 0b the captions carry
+        what the diagrams prove, and on a deck that is most of the evidence. Draft its row:
           What it PROVES = the claim an evaluator would score, in their language.
             ✗ "NorthGas data warehouse project"          (restates the title; unread)
             ✓ "end-to-end DWH assessment for a regulated utility, delivered in 12 weeks"
@@ -58,9 +83,9 @@ for R-004 is the finding, and it is more useful early than complete-but-late.
         serves none is not a gap in the bid — say so rather than padding the index.
 - [ ] 5. Write the GAPS section: every evidence-bearing requirement with no in-window asset.
         Each gap gets a route: external research
-        (after GO → `Skill(engagement-os:eng-bid-research)`) or an upload request
+        (`Skill(engagement-os:eng-bid-research)`) or an upload request
         (→ a named human, with what exactly is needed). Record the route now; do not start
-        research or drafting before the human GO gate.
+        research or drafting; the RFP playbook owns sequencing.
 - [ ] 6. Report back: how many requirements are now evidenced, which are UNKNOWN pending a
         date, which are genuine gaps and who owns each.
 ```

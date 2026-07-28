@@ -227,6 +227,60 @@ def buyer_label_for(sections_dir, explicit=None):
     return "RFP"
 
 
+def separator_pages_required(sections_dir):
+    """Whether the buyer requires a titled separator page between response sections."""
+    import pathlib as _pl
+    for base in _pl.Path(sections_dir).resolve().parents:
+        outline = base / "bid_response_outline.md"
+        if outline.exists():
+            m = re.search(r"separator page between sub-sections\s*\|\s*([^|\n]+)",
+                          outline.read_text(encoding="utf-8", errors="replace"), re.I)
+            if m:
+                return m.group(1).strip().strip("*`").lower() in {
+                    "required", "yes", "true", "mandatory"
+                }
+            break
+    return False
+
+
+# Raw OpenXML is the portable page-break mechanism for pandoc's DOCX writer. `\newpage` is
+# LaTeX-only and was silently ignored on the Word route, joining two separately-scored answers
+# on one page even when the outline said separator pages were mandatory.
+DOCX_PAGE_BREAK = (
+    "```{=openxml}\n"
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n'
+    "```"
+)
+
+
+def assemble_document_parts(parts, sections, titled_separators=False):
+    """Join client sections with real Word page breaks and optional titled separator pages."""
+    if not parts:
+        return ""
+    assembled = [parts[0]]
+    for text, section in zip(parts[1:], sections[1:]):
+        if titled_separators:
+            # The heading lives on the mandated separator page; do not repeat it at the top of
+            # the answer page immediately afterwards.
+            text = re.sub(r"^\s*#\s+.+?(?:\n+|$)", "", text, count=1)
+            import html as _html
+            title = _html.escape(section["title"])
+            # Put pageBreakBefore ON the title paragraph. A standalone break paragraph can be
+            # pushed to the next page when the previous answer exactly fills its last page, then
+            # execute there and create a completely blank ghost page.
+            title_block = (
+                "```{=openxml}\n"
+                "<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/>"
+                "<w:pageBreakBefore/></w:pPr><w:r><w:t>"
+                f"{title}</w:t></w:r></w:p>\n"
+                "```"
+            )
+            assembled.extend([title_block, DOCX_PAGE_BREAK, text])
+        else:
+            assembled.extend([DOCX_PAGE_BREAK, text])
+    return "\n\n".join(assembled)
+
+
 def client_text(body: str, buyer_label="RFP") -> str:
     """Normalise authoring shorthand into what the recipient should read.
 
@@ -576,6 +630,7 @@ def main() -> int:
         parts.append(text)
     for note in stripped_notes:
         print(f"  note: {note}", file=sys.stderr)
+    banner_text = None
     if args.force and pol["shippable"] and blocking_overridden:
         # A forced strict-profile build is a legitimate artefact — a reviewer needs to see the
         # real thing, page counts and all, before every gate closes. What it must never be is
@@ -593,9 +648,16 @@ def main() -> int:
                    for b in blocking_overridden]
         banner += ["", "Re-run without `--force` once they are closed; that build carries no "
                    "banner and is the one that may be submitted.", ""]
-        parts.insert(0, "\n".join(banner))
+        banner_text = "\n".join(banner)
+    document_text = assemble_document_parts(
+        parts, sections, titled_separators=separator_pages_required(args.sections)
+    )
+    if banner_text:
+        # The banner belongs above the first answer, not in the section list. Treating it as a
+        # section shifted every separator title by one and silently omitted the final one.
+        document_text = banner_text + "\n\n" + document_text
     with open(md_path, "w", encoding="utf-8") as fh:
-        fh.write("\n\n\\newpage\n\n".join(parts))
+        fh.write(document_text)
     print(f"\nwrote {md_path}")
     if args.to == "md":
         return 0

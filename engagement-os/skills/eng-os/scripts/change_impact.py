@@ -58,7 +58,8 @@ def is_relevant(root, path):
         return True
     s = rel.as_posix()
     if re.search(r"01_pursuit/[^/]+/2_analysis/"
-                 r"(?:rfp_analysis|compliance_matrix|bid_research_log|estimation)\.(?:md|xlsx)$",
+                 r"(?:rfp_analysis|compliance_matrix|requirement_coverage|"
+                 r"bid_research_log|estimation)\.(?:md|xlsx)$",
                  s):
         return True
     if s == "01_pursuit/_shared/firm_assets.md":
@@ -92,6 +93,8 @@ def role_of(rel):
         return "estimate-snapshot"
     if name == "compliance_matrix.md":
         return "compliance-matrix"
+    if name == "requirement_coverage.md":
+        return "requirement-coverage"
     if name == "rfp_analysis.md":
         return "rfp-analysis"
     if name == "firm_assets.md":
@@ -445,6 +448,14 @@ def scan(root):
                 impacts, rel, "regenerate from estimation.xlsx",
                 "the generated snapshot changed without its source workbook",
                 "engagement-os:eng-estimate", "error")
+
+    if "requirement-coverage" in roles_changed:
+        for rel in sorted(p for p, f in current["files"].items()
+                          if f["role"] in {"compliance-matrix", "rfp-analysis"}):
+            add_impact(impacts, rel, "reconcile source coverage and re-run analysis",
+                       "the independent requirement coverage audit changed",
+                       "engagement-os:eng-rfp-analyze")
+
 
     if "estimate-workbook" in roles_changed:
         for rel in sorted(p for p, f in current["files"].items()
