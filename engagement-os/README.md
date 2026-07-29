@@ -37,7 +37,7 @@ Markdown.
 Pick the line that matches the machine you are on. All three are supported; none of
 them is a degraded version of another. The full guideline — the three machine states,
 when to skip entirely, and the two ways to end up with duplicate copies — is
-[`INSTALL.md` in the catalog](https://github.com/ForestDengHK/forest-consulting/blob/main/INSTALL.md).
+[`INSTALL.md`](INSTALL.md).
 
 **Core only — installs nothing else.** engagement-os declares no plugin dependencies,
 so this pulls in exactly one plugin and never touches the rest of your setup:
