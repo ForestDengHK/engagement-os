@@ -1,6 +1,6 @@
 ---
 name: eng-check
-description: Use before shipping anything, or when the user asks "is this ready", "check the bid", "can we submit", "run the checks", "what's blocking submission", "验一下". Runs every mechanical gate that applies — repo invariants (unmet mandatory requirements, unverified claims in a frozen response, confidentiality-bucket leaks, dangling citations) and, if the artefact is a deck, the package gates. Reports what is blocking and why, in the order a human should fix it. Never fixes silently; never overrides a gate.
+description: Use before shipping anything, or when the user asks "is this ready", "check the bid", "can we submit", "run the checks", "what's blocking submission", "验一下". Also answers "what companion skills am I missing / do I need to install anything" (`eng-check companions`). Runs every mechanical gate that applies — repo invariants (unmet mandatory requirements, unverified claims in a frozen response, confidentiality-bucket leaks, dangling citations) and, if the artefact is a deck, the package gates. Reports what is blocking and why, in the order a human should fix it. Never fixes silently; never overrides a gate.
 ---
 
 # Checking whether it is safe to ship
@@ -10,8 +10,31 @@ This skill is the door: it decides *which* checks apply, runs them, and turns th
 "here is what is blocking you, here is what each one means".
 
 **Dependency (packaging note).** The engines are
-`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/eng_lint.py` and `verify_deck.py`. This skill is
-the facade; both live with the eng-os kernel. Pruning skills individually must keep `eng-os`.
+`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/eng_lint.py`, `verify_deck.py` and
+`check_companions.py`. This skill is the facade; all three live with the eng-os kernel.
+Pruning skills individually must keep `eng-os`.
+
+## "companions" — am I missing anything, or can I skip the install?
+
+Invoked as `eng-check companions` (or any "do I need to install anything / what's missing"
+phrasing), run **only** this and report its output — the repo gates below do not apply:
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/check_companions.py
+```
+
+It surveys every skill this pack delegates to, says where each one resolved from, and prints
+install commands **only for what is genuinely absent**. Two outcomes, and both are terminal:
+
+- **nothing missing** → say so and stop. Do not offer the bundle; installing it on top of
+  skills the user already keeps in `~/.claude/skills/` gives them a second namespaced copy
+  of each. "Skip it" is the correct advice, not a fallback.
+- **something missing** → relay the impact line for each, then the commands verbatim.
+  A missing *recommended* companion is not a blocker: engagement-os declares no plugin
+  dependencies, stays enabled, and the skill that delegates to it has a written fallback.
+
+Run it unprompted the first time a stage actually needs a companion — not at every session
+start, and never as a gate on work the user can still do.
 
 ## Workflow
 

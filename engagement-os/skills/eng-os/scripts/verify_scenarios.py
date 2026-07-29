@@ -10,12 +10,16 @@ so they are only checked against the modes that actually build them.
 
 Usage: python3 verify_scenarios.py [--keep]
 """
+import os
 import pathlib
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import check_companions as cc
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]   # <plugin>/
 CMD, PB = ROOT / "commands", ROOT / "skills/eng-os/references/playbooks"
@@ -146,16 +150,12 @@ EXTERNAL_RE = re.compile(
     r"`(xlsx|docx|pptx|pdf|presentation-builder|designing-figures|panel-[a-z-]+)`")
 
 
-def external_skill_roots():
-    home = pathlib.Path.home()
-    return (list(home.glob(".claude/plugins/marketplaces/*/skills"))
-            + list(home.glob(".claude/plugins/*/*/skills"))
-            + list(home.glob(".claude/plugins/marketplaces/*/plugins/*/skills"))
-            + list(home.glob(".claude/skills")))
-
-
 def check_external_skills():
-    roots = external_skill_roots()
+    # One resolver, shared with check_companions.py — the layouts a skill can live in
+    # (personal, skills-dir, versioned plugin cache, marketplace clone) are a moving
+    # target, and two private copies of that list is how one of them silently stops
+    # finding an installed skill.
+    roots = cc.skill_roots()
     referenced = {}
     for f in list(ROOT.glob("skills/**/*.md")) + list(ROOT.glob("commands/*.md")):
         for name in EXTERNAL_RE.findall(f.read_text(encoding="utf-8", errors="replace")):

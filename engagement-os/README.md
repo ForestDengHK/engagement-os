@@ -2,7 +2,7 @@
 
 **A composable operating system for document-heavy consulting engagements, bid to delivery.**
 Raw client materials come in; defensible deliverables go out; every step in between is traceable.
-Packaged as 16 skills + 8 commands + 29 templates + 11 deterministic
+Packaged as 16 skills + 8 commands + 29 templates + 12 deterministic
 scripts, ready to land on day 1 — and you scaffold only the part of the lifecycle you're
 actually doing (bid only, delivery only, a standalone research assignment, or all of it).
 
@@ -34,11 +34,37 @@ Markdown.
 
 ## 1. Install
 
-Hosted in the `engagement-os` marketplace (this repo):
+Pick the line that matches the machine you are on. All three are supported; none of
+them is a degraded version of another.
+
+**Core only — installs nothing else.** engagement-os declares no plugin dependencies,
+so this pulls in exactly one plugin and never touches the rest of your setup:
 
 ```
 /plugin install engagement-os@engagement-os
 ```
+
+**Everything, one step** — a fresh machine, or you want the delegated-to skills too.
+`consulting-suite` is a bundle plugin: its manifest is a `dependencies` list and
+nothing else, so installing it resolves engagement-os + panel-framework + deck-craft
+(figures and decks) + the Office document skills:
+
+```
+/plugin marketplace add ForestDengHK/forest-consulting
+/plugin install consulting-suite@forest-consulting
+```
+
+**Already have them?** Then skip both companion steps — there is nothing to install,
+and the bundle would add nothing. To find out which case you are in:
+
+```
+/engagement-os:eng-check companions
+```
+
+It lists every delegated-to skill, where it resolved from, and prints the exact
+install commands only for what is actually missing. Skills you already keep in
+`~/.claude/skills/` count as present; installing the bundle on top of them would give
+you a second, namespaced copy of each, which is why this check exists.
 
 Optional parser dependencies for `convert_source.py`:
 `pip install pymupdf python-pptx python-docx openpyxl`
@@ -46,13 +72,17 @@ Optional parser dependencies for `convert_source.py`:
 
 After install the skills appear under the `engagement-os:eng-*` namespace.
 
-**Recommended companion:** the Panel Framework (red-line review gate, `/panel-*` skills):
-```
-/plugin marketplace add ForestDengHK/panel-framework
-/plugin install panel-framework@panel-framework
-```
-engagement-os delegates to it when present and falls back to a documented manual
-multi-lens review when it is not.
+### Why the companions are not declared as dependencies
+
+Claude Code resolves a declared dependency automatically, which sounds like the right
+answer until one cannot be resolved: it then **disables the dependent plugin** until
+the user fixes it. A hard `dependencies` entry on `document-skills` would mean anyone
+who has not added the `anthropic-agent-skills` marketplace ends up with a dead
+engagement-os rather than one that merely cannot recalculate a workbook. So the
+install-everything path is a separate target (`consulting-suite`), the skip path is
+installing engagement-os alone, and the missing-piece report is a gate you run when
+you want it. What each companion actually costs you when absent is in the check's own
+output, and the review gate's fallback is written into `eng-build-deliverable`.
 
 ## 2. What this is
 
