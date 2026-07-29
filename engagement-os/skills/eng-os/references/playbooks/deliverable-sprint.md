@@ -25,14 +25,14 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
    The deliverable may only consume validated findings. Resolve or explicitly carry
    every open `[⚠VERIFY]` that touches this deliverable's scope.
    Verify: sweep report shows no un-tagged claims in scope; conflicts arbitrated.
-2. **Lock the structure** → `Skill(panel-discuss)` (companion module).
+2. **Lock the structure** → `Skill(panel-framework:panel-discuss)` (companion module).
    Agree the skeleton (sections, backbone mapping, what's in/out) before any content.
    Verify: skeleton approved; recorded in the deliverable framework doc.
 3. **Build** → `Skill(engagement-os:eng-build-deliverable)`.
    As-is: pull every finding tagged for this deliverable, group by backbone, add the
    deliverable's own so-what. To-be: derive from remediation cause-tags + research
    (`[T3:OWN]`-tagged), tethered to source facts. Version openly: SKELETON → v0.x → v1.0.
-4. **Red-line review** → `Skill(panel-review)`.
+4. **Red-line review** → `Skill(panel-framework:panel-review)`.
    Multi-role review; every red-line resolved or explicitly deferred with an owner.
    Verify: review record saved; no unresolved red-lines.
 5. **Rev the index + memory** → `Skill(engagement-os:eng-maintain-memory)`.
@@ -52,6 +52,11 @@ eng-validate-findings ─► panel-discuss ─► eng-build-deliverable ─► p
    | a document (page limit, mandated template, portal upload) | ask for Word, PDF, or both | `Skill(engagement-os:eng-render)` |
    | a presentation (steering committee, defence, meeting) | ask for a deck; render delegates the manifest | `Skill(engagement-os:eng-render)` → `Skill(presentation-builder)` |
    | a workbook (cost model, register, data appendix) | **render does not own this** | `Skill(xlsx)` or, for a priced bid model, `Skill(engagement-os:eng-estimate)` |
+
+   Companion names in that table (`presentation-builder`, `xlsx`) are bare because that is how a
+   personal skill is invoked; installed as a plugin the same skill is namespaced under it
+   (`deck-craft:presentation-builder`, `document-skills:xlsx`). Use whichever form is in your
+   skill list — `eng-check companions` prints this machine's names.
 
    Verify: the analyse pass says WOULD BUILD under the right profile; for a deck, the assembled
    actual `.pptx` passes `Skill(engagement-os:eng-check)` with the expected slide count; the

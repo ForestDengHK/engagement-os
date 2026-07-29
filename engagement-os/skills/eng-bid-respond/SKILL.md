@@ -57,7 +57,10 @@ Bid Response Progress:
         Each section declares which one applies in `response_form`:
           buyer-form: <their file>  the answer IS their form, filled — Appendix 3 reference data
                                     sheet, Appendix 4 CV sheet, the pricing workbook. Fill it with
-                                    `Skill(docx)` / `Skill(xlsx)`; NEVER re-typeset it in our layout
+                                    `Skill(docx)` / `Skill(xlsx)` — or `Skill(document-skills:docx)`
+                                    etc. if they are installed as a plugin rather than as personal
+                                    skills; `eng-check companions` prints this machine's names —
+                                    NEVER re-typeset it in our layout
           buyer-structure           they numbered the questions and gave the answer options —
                                     reproduce their numbering and their wording exactly
           prose                     they gave a response box and a page limit; the answer is our

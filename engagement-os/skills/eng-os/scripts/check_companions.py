@@ -100,6 +100,34 @@ def find_skill(name, roots=None):
     return None
 
 
+def invocation_name(name, path):
+    """What you must actually type on THIS machine to invoke `name`.
+
+    The same skill has two different names depending on how it was installed: a personal
+    or skills-directory skill is invoked bare, a plugin skill is namespaced under the
+    plugin that ships it (`panel-framework:panel-discuss`). Both can be true at once —
+    a personal copy and a plugin copy coexist rather than one overriding the other — and
+    a doc that hardcodes one form is wrong on every machine holding the other. So the
+    name is derived from where the file was found, not assumed.
+
+    `~/.claude/skills/<name>/SKILL.md`                        → bare
+    `.../plugins/cache/<marketplace>/<plugin>/<ver>/skills/…`  → `<plugin>:<name>`
+    """
+    parts = path.parts
+    if "cache" in parts:
+        i = parts.index("cache")
+        if len(parts) > i + 2:
+            return f"{parts[i + 2]}:{name}"
+    if "marketplaces" in parts:
+        i = parts.index("marketplaces")
+        # <marketplaces>/<mk>/skills/<name> is the marketplace repo's own layout; the
+        # plugin name is the directory between the marketplace and `skills`, when there
+        # is one, and otherwise the marketplace-level plugin of the same name.
+        if len(parts) > i + 2 and parts[i + 2] != "skills":
+            return f"{parts[i + 2]}:{name}"
+    return name
+
+
 def survey():
     roots = skill_roots()
     rows = []
@@ -111,6 +139,7 @@ def survey():
             "provider": provider,
             "impact": impact,
             "found": str(found.parent) if found else None,
+            "invoke_as": invocation_name(name, found) if found else None,
         })
     return rows
 
@@ -162,10 +191,19 @@ def main():
 
     print("\nEngagement OS — companion skills\n")
     width = max(len(r["skill"]) for r in rows)
+    iwidth = max([len(r["invoke_as"] or "") for r in rows] + [10])
+    print(f"    {'skill':<{width}}  {'invoke on this machine as':<{iwidth}}  found in")
     for r in sorted(rows, key=lambda r: (r["found"] is not None, r["skill"])):
         mark = "✓" if r["found"] else ("✗" if r["level"] == "required" else "○")
         where = _shorten(r["found"]) if r["found"] else "NOT INSTALLED"
-        print(f"  {mark} {r['skill']:<{width}}  {r['provider']:<42} {where}")
+        print(f"  {mark} {r['skill']:<{width}}  {(r['invoke_as'] or '—'):<{iwidth}}  {where}")
+
+    renamed = [r for r in rows if r["invoke_as"] and r["invoke_as"] != r["skill"]]
+    if renamed:
+        print("\n  Namespaced here (a plugin skill is invoked under the plugin that ships it,")
+        print("  a personal skill bare) — use the middle column, not the bare name:")
+        for r in renamed:
+            print(f"    {r['skill']} → Skill({r['invoke_as']})")
 
     if not missing:
         print(f"\n✓ all {len(rows)} companions resolve — nothing to install.")

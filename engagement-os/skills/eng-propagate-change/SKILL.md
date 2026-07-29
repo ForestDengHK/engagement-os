@@ -58,7 +58,11 @@ runs; this skill is also invoked automatically by the downstream gates below.
 status and append a change-impact `revise` row to the review log. It must not rewrite the
 section's argument, estimate, evidence, or final file.
 
-**Steps 4–5 — explicit hand-offs.**
+**Steps 4–5 — explicit hand-offs.** Names below that are not `engagement-os:*` belong to
+companion skills, whose invocation name depends on how they were installed: bare when
+personal, namespaced under the plugin that ships them (`document-skills:xlsx`,
+`deck-craft:designing-figures`) when from one. If the bare name is not in your skill list,
+use the namespaced form — `eng-check companions` prints it for this machine.
 
 - `estimation.xlsx` or S-ID change →
   `Skill(engagement-os:eng-estimate)`; that skill invokes `Skill(xlsx)`, recalculates, verifies
