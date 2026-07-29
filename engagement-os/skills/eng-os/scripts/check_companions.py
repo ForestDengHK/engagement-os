@@ -30,8 +30,8 @@ import os
 import pathlib
 import sys
 
-SUITE_MARKETPLACE = "forest-consulting"
-SUITE_REPO = "ForestDengHK/forest-consulting"
+SUITE_MARKETPLACE = "engagement-os"
+SUITE_REPO = "ForestDengHK/engagement-os"
 
 # A dependency in a marketplace the user has not added is left unresolved, so the
 # `marketplace add` line is part of the instruction, not a footnote to it.

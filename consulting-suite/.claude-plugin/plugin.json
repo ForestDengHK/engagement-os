@@ -1,0 +1,16 @@
+{
+  "name": "consulting-suite",
+  "version": "1.0.0",
+  "description": "Install-everything bundle for document-heavy consulting work: the engagement operating system, the panel review gate, deck and figure craft, and the Office document skills. Ships no components of its own — installing it resolves and installs the four plugins below, and skips any you already have.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "keywords": ["consulting", "bundle", "engagement", "deck", "review"],
+  "dependencies": [
+    "engagement-os",
+    "deck-craft",
+    { "name": "panel-framework", "marketplace": "panel-framework" },
+    { "name": "document-skills", "marketplace": "anthropic-agent-skills" }
+  ]
+}

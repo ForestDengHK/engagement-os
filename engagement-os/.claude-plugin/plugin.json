@@ -1,6 +1,6 @@
 {
   "name": "engagement-os",
-  "version": "1.47.3",
+  "version": "1.48.0",
   "description": "A repeatable operating model for document-heavy consulting engagements, bid to delivery. Composable: scaffold a repo as bid-only, delivery-only, both, or a bare client-research base. Pursuit side: analyse an RFP, index evidence, maintain a formula-live estimate, stop for the human go/no-go, research the gaps, write a compliant response, then check, render, verify, and freeze the exact submission package. Delivery side: ingest client materials to citable markdown, maintain a canonical fact base, write and validate findings, build deliverables through a panel review gate, and keep agent memory lean. A cross-cutting change-propagation skill detects reviewer edits to scope, requirements, evidence, estimates, sections, figures and generated files; it refreshes deterministic projections through existing skills, reopens only affected review, and preserves frozen history. Every stage is separately invokable through its skill; scripts remain agent-only implementation details. Mechanical gates cover confidentiality leaks, unverified claims, unmet mandatory requirements, broken skill handoffs, stale estimate snapshots, and unresolved downstream change impact.",
   "author": {
     "name": "Forest Deng",

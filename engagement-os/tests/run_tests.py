@@ -2106,7 +2106,7 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
          == "document-skills:xlsx"),
         ("marketplace clone with a plugin subdir namespaces on the plugin",
          cc.invocation_name("designing-figures", P.home() / ".claude/plugins/marketplaces"
-                            "/forest-consulting/deck-craft/skills/designing-figures/SKILL.md")
+                            "/engagement-os/deck-craft/skills/designing-figures/SKILL.md")
          == "deck-craft:designing-figures"),
         ("marketplace clone whose skills sit at its root stays bare",
          cc.invocation_name("xlsx", P.home() / ".claude/plugins/marketplaces"
