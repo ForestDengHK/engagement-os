@@ -1972,6 +1972,24 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
         ("LOE span lands in the Schedule sheet", wbk["Schedule"]["F2"].value == 11.0),
     ]
 
+    # The --to-md footgun: the positional is the SEED markdown, so passing the workbook
+    # positionally makes the snapshot target == the workbook, and the export overwrites the
+    # one maintained artefact with markdown. Refuse, and leave the file byte-identical.
+    import sys as _sys
+    guard_xlsx = out.with_name("guard.xlsx")
+    bw.build(d, 0.5, str(guard_xlsx))
+    before = guard_xlsx.read_bytes()
+    _argv, _sys.argv = _sys.argv, ["build_estimate_workbook.py", str(guard_xlsx), "--to-md"]
+    try:
+        rc = bw.main()
+    finally:
+        _sys.argv = _argv
+    wb_checks += [
+        ("--to-md onto the workbook's own path is refused", rc == 2),
+        ("the refused export leaves the workbook byte-identical",
+         guard_xlsx.read_bytes() == before),
+    ]
+
     # ── single-source: narrative sheets + the export direction ────────────────
     narrative = bw.parse_narrative(GOOD_MD)
     nar_out = out.with_name("nar.xlsx")
