@@ -2087,7 +2087,41 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
     print("✓ estimate workbook builder tests pass" if wb_ok
           else "✗ estimate workbook builder tests FAILING")
 
-    return 0 if manifest_ok and scan_ok and anchors_ok and img_ok and contract_ok and wb_ok else 1
+    # ── companion invocation names ────────────────────────────────────────────────
+    # The same skill answers to two different names depending on how it was installed,
+    # and a doc that hardcodes the wrong one sends the agent nowhere while reading as
+    # authoritative. Pin the derivation against each real layout.
+    import check_companions as cc
+    P = pathlib.Path
+    inv_checks = [
+        ("personal skill is invoked bare",
+         cc.invocation_name("xlsx", P.home() / ".claude/skills/xlsx/SKILL.md") == "xlsx"),
+        ("installed plugin skill is namespaced under its plugin",
+         cc.invocation_name("panel-discuss", P.home() / ".claude/plugins/cache/panel-framework"
+                            "/panel-framework/1.0.0/skills/panel-discuss/SKILL.md")
+         == "panel-framework:panel-discuss"),
+        ("plugin name, not marketplace name, is the namespace",
+         cc.invocation_name("xlsx", P.home() / ".claude/plugins/cache/anthropic-agent-skills"
+                            "/document-skills/1.0.0/skills/xlsx/SKILL.md")
+         == "document-skills:xlsx"),
+        ("marketplace clone with a plugin subdir namespaces on the plugin",
+         cc.invocation_name("designing-figures", P.home() / ".claude/plugins/marketplaces"
+                            "/forest-consulting/deck-craft/skills/designing-figures/SKILL.md")
+         == "deck-craft:designing-figures"),
+        ("marketplace clone whose skills sit at its root stays bare",
+         cc.invocation_name("xlsx", P.home() / ".claude/plugins/marketplaces"
+                            "/anthropic-agent-skills/skills/xlsx/SKILL.md") == "xlsx"),
+        ("a project-local skill is invoked bare",
+         cc.invocation_name("docx", P("/tmp/proj/.claude/skills/docx/SKILL.md")) == "docx"),
+    ]
+    for name, ok in inv_checks:
+        print(f"  {'✓' if ok else '✗'} companions:{name}")
+    inv_ok = all(ok for _, ok in inv_checks)
+    print("✓ companion invocation-name tests pass" if inv_ok
+          else "✗ companion invocation-name tests FAILING")
+
+    return (0 if manifest_ok and scan_ok and anchors_ok and img_ok and contract_ok
+            and wb_ok and inv_ok else 1)
 
 
 

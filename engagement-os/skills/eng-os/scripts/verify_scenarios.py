@@ -146,8 +146,12 @@ def check_doc_links():
 # renamed or uninstalled is worse than no reference: the instruction reads as authoritative and
 # silently sends the agent nowhere, and the usual repair is to reimplement the thing locally,
 # which is exactly what delegating was meant to avoid.
+# The optional `<plugin>:` prefix is not decoration: the same skill is invoked bare when it is a
+# personal skill and namespaced when it came from a plugin, so both spellings occur in the docs
+# and both have to be checked. Resolution is on the bare name — the prefix names the provider,
+# not a different skill.
 EXTERNAL_RE = re.compile(
-    r"`(xlsx|docx|pptx|pdf|presentation-builder|designing-figures|panel-[a-z-]+)`")
+    r"`(?:[a-z0-9-]+:)?(xlsx|docx|pptx|pdf|presentation-builder|designing-figures|panel-[a-z-]+)`")
 
 
 def check_external_skills():

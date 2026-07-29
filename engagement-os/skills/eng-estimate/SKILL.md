@@ -77,7 +77,9 @@ nothing, which matters on a bid re-priced three times. The snapshot is regenerat
 edit and carries a DO-NOT-EDIT banner.
 
 **Invoke the installed `xlsx` skill through the Skill tool before any workbook mutation or
-verification (`Skill(xlsx)`).** Use it for anything spreadsheet-shaped beyond running this
+verification (`Skill(xlsx)`, or `Skill(document-skills:xlsx)` if that is how it is installed
+here — a companion skill is invoked bare when it is a personal skill and namespaced under
+its plugin when it came from one; `eng-check companions` prints this machine's name for it).** Use it for anything spreadsheet-shaped beyond running this
 engine — editing the workbook, adding a sheet, changing formatting, or diagnosing a formula. It owns the
 conventions this workbook already follows (Arial; blue text for inputs, black for formulas, green
 for cross-sheet links, yellow fill for cells to edit; percentages stored as fractions) and the
