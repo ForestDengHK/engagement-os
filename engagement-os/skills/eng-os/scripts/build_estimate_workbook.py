@@ -46,6 +46,9 @@ import pathlib
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import check_companions as cc
+
 # Conventions are NOT invented here. They are the `xlsx` skill's financial-model conventions,
 # which is the firm-wide standard every other spreadsheet already follows: blue text for
 # hardcoded inputs, black for formulas, green for cross-sheet links, yellow fill for cells the
@@ -1250,9 +1253,12 @@ def find_recalc():
     """
     env = os.environ.get("XLSX_SKILL_DIR")
     roots = [pathlib.Path(env)] if env else []
-    roots += list(pathlib.Path.home().glob(
-        ".claude/plugins/marketplaces/*/skills/xlsx"))
-    roots += list(pathlib.Path.home().glob(".claude/skills/xlsx"))
+    # Shared resolver — an installed plugin lives in the versioned cache, not only in a
+    # marketplace clone, and missing that layout made this fall back to the soffice path
+    # above on exactly the machines that had the skill properly installed.
+    found = cc.find_skill("xlsx")
+    if found:
+        roots.append(found.parent)
     for r in roots:
         c = r / "scripts" / "recalc.py"
         if c.exists():
