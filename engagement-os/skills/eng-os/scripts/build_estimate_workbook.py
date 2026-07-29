@@ -1385,6 +1385,15 @@ def main():
             print(f"ERROR: no workbook at {out} — seed one first", file=sys.stderr)
             return 2
         md_out = args.markdown or (os.path.splitext(out)[0] + ".md")
+        # The positional is the SEED markdown; --out is the workbook. Passing the workbook
+        # positionally (`... estimation.xlsx --to-md`) makes md_out == out, and the export
+        # then writes the markdown snapshot OVER the workbook — silent destruction of the
+        # one maintained artefact, discovered an hour later as "zipfile: not a zip".
+        if os.path.abspath(md_out) == os.path.abspath(out):
+            print(f"ERROR: snapshot target and workbook are the same path ({out}).\n"
+                  "  The positional argument is the seed markdown, not the workbook — "
+                  "use `--out estimation.xlsx --to-md`.", file=sys.stderr)
+            return 2
         # Export reads cached values. openpyxl leaves none behind, and neither does a hand edit
         # in Excel that was never reopened — so recalculate before reading, or the snapshot is
         # a page of blanks that looks like a successful export. And when recalculation is
