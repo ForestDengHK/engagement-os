@@ -35,7 +35,9 @@ Markdown.
 ## 1. Install
 
 Pick the line that matches the machine you are on. All three are supported; none of
-them is a degraded version of another.
+them is a degraded version of another. The full guideline — the three machine states,
+when to skip entirely, and the two ways to end up with duplicate copies — is
+[`INSTALL.md` in the catalog](https://github.com/ForestDengHK/forest-consulting/blob/main/INSTALL.md).
 
 **Core only — installs nothing else.** engagement-os declares no plugin dependencies,
 so this pulls in exactly one plugin and never touches the rest of your setup:
@@ -71,6 +73,21 @@ Optional parser dependencies for `convert_source.py`:
 (Homebrew / PEP-668 Python: `pip install --user --break-system-packages pymupdf python-pptx python-docx openpyxl`, or use a venv.)
 
 After install the skills appear under the `engagement-os:eng-*` namespace.
+
+### Updating
+
+A plugin is cached under its manifest `version`, so a release that does not bump
+`version` never reaches anyone — the cache key is unchanged and the update is a no-op.
+Refresh the marketplace first, then update by **full id**; `claude plugin update
+engagement-os` without the marketplace suffix reports `Plugin not found`:
+
+```
+claude plugin marketplace update engagement-os
+claude plugin update engagement-os@engagement-os
+```
+
+Then `/reload-plugins`, or restart — a session started before the update keeps running
+the old copy's skills.
 
 ### Why the companions are not declared as dependencies
 
