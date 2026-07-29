@@ -6,11 +6,24 @@
     "name": "Forest Deng",
     "email": "forest.jinying.denghk@outlook.com"
   },
+  "allowCrossMarketplaceDependenciesOn": ["panel-framework", "anthropic-agent-skills"],
   "plugins": [
     {
       "name": "engagement-os",
       "description": "Composable operating system for consulting engagements. Pursuit: rfp-analyze → bid-research → bid-respond. Delivery: scaffold → ingest → canonicalize → findings → validate → build, with a panel review gate. Scaffold only the blocks you need (research / pursuit / delivery / full, pursuit variant full-rfp / mini-comp); source material is bucketed by confidentiality constraint. Every stage separately invokable, including the standalone render (eng-render). eng-* skills + playbook commands + templates + scripts, with a fixture-tested lint.",
       "source": "./engagement-os",
+      "category": "productivity"
+    },
+    {
+      "name": "deck-craft",
+      "description": "Client-grade deck and figure craft. presentation-builder turns a body of context into a full deck with a real storyline and action titles; designing-figures picks the archetype before anything is drawn, so a figure stops coming out as one cramped row of boxes. Used on its own, or as the render end of engagement-os.",
+      "source": "./deck-craft",
+      "category": "productivity"
+    },
+    {
+      "name": "consulting-suite",
+      "description": "Install-everything bundle for document-heavy consulting work: the engagement operating system, the panel review gate, deck and figure craft, and the Office document skills. Ships no components of its own — installing it resolves and installs the four plugins it depends on, and skips any you already have.",
+      "source": "./consulting-suite",
       "category": "productivity"
     }
   ]

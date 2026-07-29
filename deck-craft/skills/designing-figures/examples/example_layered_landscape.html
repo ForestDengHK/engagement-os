@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GNI current-state data landscape — v1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+  :root{
+    --ink:#06038D; --ink2:#2A2D9C; --accent:#0099FF; --teal:#007A82; --teal2:#009CA6;
+    --green:#84BD00; --band:#E9EEF8; --panel:#F6F8FD; --hair:#D8DEEC;
+    --body:#3A3E55; --muted:#8A90A6;
+    --s1:#5E0B15; --s2:#C0392B; --s3:#CC6A10; --open:#8C8C8C;
+    --font:'Open Sans','Segoe UI',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1920px;height:1080px;background:#fff;font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .canvas{position:relative;width:1920px;height:1080px;padding:56px 64px 0;}
+  .barL{position:absolute;left:0;top:0;bottom:0;width:12px;background:var(--ink);}
+
+  .kicker{font-size:18px;font-weight:700;letter-spacing:0.18em;color:var(--teal);text-transform:uppercase;}
+  .title{font-size:46px;font-weight:300;color:var(--ink);margin-top:6px;letter-spacing:-0.5px;}
+  .title b{font-weight:700;}
+  .keymsg{display:flex;align-items:center;gap:18px;background:var(--band);border-left:8px solid var(--accent);padding:16px 24px;margin-top:18px;}
+  .keymsg .lab{font-size:14px;font-weight:700;letter-spacing:0.08em;color:var(--teal);text-transform:uppercase;white-space:nowrap;}
+  .keymsg .txt{font-size:19px;font-weight:600;color:var(--ink);line-height:1.3;}
+
+  .stages{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:24px;align-items:start;}
+  .stage{display:flex;flex-direction:column;gap:12px;}
+  .hd{position:relative;background:var(--panel);border:1px solid var(--hair);border-radius:10px;padding:16px 16px 16px 58px;min-height:78px;}
+  .hd .num{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .hd .nm{font-size:20px;font-weight:700;color:var(--ink);}
+  .hd .role{font-size:13px;color:var(--muted);margin-top:2px;}
+  .hd .flow{position:absolute;right:-13px;top:50%;transform:translateY(-50%);z-index:3;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(6,3,141,.25);}
+
+  .card{position:relative;background:#fff;border:1px solid var(--hair);border-radius:9px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;}
+  .ic{flex:none;width:24px;height:24px;background:var(--teal);-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;margin-top:1px;}
+  .card .nm{font-size:16px;font-weight:700;color:var(--ink);line-height:1.2;}
+  .card .sub{font-size:13px;color:var(--body);margin-top:3px;line-height:1.32;}
+  .sev{position:absolute;top:10px;right:10px;font-size:11px;font-weight:700;color:#fff;padding:2px 7px;border-radius:4px;letter-spacing:.04em;}
+  .sev.s1{background:var(--s1);} .sev.s2{background:var(--s2);} .sev.s3{background:var(--s3);}
+
+  /* spine = the single Oracle warehouse column */
+  .stage.spine .hd{background:var(--ink);border-color:var(--ink);}
+  .stage.spine .hd .num{background:#fff;color:var(--ink);}
+  .stage.spine .hd .nm{color:#fff;} .stage.spine .hd .role{color:#AEB8E8;}
+  .stage.spine{background:#EEF1FB;border:1px solid var(--hair);border-radius:12px;padding:12px;margin-top:-12px;}
+  .stage.spine .card{border-color:#C6CEEC;}
+  .stage.spine .card.hero{background:var(--ink);border-color:var(--ink);}
+  .stage.spine .card.hero .nm{color:#fff;font-size:18px;} .stage.spine .card.hero .sub{color:#C6CEEC;}
+  .stage.spine .card.hero .ic{background:#fff;}
+
+  /* cross-cutting band */
+  .xband{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px;}
+  .xseg{background:var(--band);border-radius:10px;padding:16px 22px;display:flex;gap:16px;align-items:flex-start;}
+  .xseg .xic{flex:none;width:30px;height:30px;background:var(--ink);-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;}
+  .xseg .xh{font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--ink);text-transform:uppercase;}
+  .xseg .xt{font-size:14px;color:var(--body);margin-top:4px;line-height:1.34;}
+
+  .foot{position:absolute;left:64px;right:64px;bottom:24px;display:flex;align-items:center;gap:24px;border-top:1px solid var(--hair);padding-top:14px;font-size:13px;color:var(--muted);}
+  .legend{display:flex;gap:20px;align-items:center;}
+  .legend .li{display:flex;gap:7px;align-items:center;}
+  .legend .dot{width:13px;height:13px;border-radius:3px;}
+  .foot .src{margin-left:auto;}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="barL"></div>
+
+  <div class="kicker">Current state · data warehouse &amp; reporting estate</div>
+  <h1 class="title">Current-state data landscape <b>(As-Is)</b></h1>
+  <div class="keymsg">
+    <span class="lab">Key message</span>
+    <span class="txt">A single, ageing Oracle 19c warehouse underpins the entire estate — and demand is shifting to self-service BI faster than governance can follow.</span>
+  </div>
+
+  <div class="stages">
+
+    <!-- 1 SOURCES -->
+    <div class="stage">
+      <div class="hd"><div class="num">1</div><div class="nm">Source systems</div><div class="role">Operational systems of record</div><div class="flow">→</div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-wrench.svg);mask-image:url(icons/lucide-wrench.svg)"></span><div><div class="nm">Maximo</div><div class="sub">Asset management · drives 74% of BO report traffic</div></div><span class="sev s2">S2</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-database.svg);mask-image:url(icons/lucide-database.svg)"></span><div><div class="nm">Oracle EBS</div><div class="sub">Finance · 84 concurrent-program reports</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-map.svg);mask-image:url(icons/lucide-map.svg)"></span><div><div class="nm">GIS</div><div class="sub">Spatial / network data</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">OT / SCADA</div><div class="sub">Honeywell · 67 reports, Excel-by-email · bypasses DWH</div></div><span class="sev s3">S3</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-plug.svg);mask-image:url(icons/lucide-plug.svg)"></span><div><div class="nm">Specialist gateways</div><div class="sub">ICING, CRM &amp; point feeds</div></div></div>
+    </div>
+
+    <!-- 2 INGESTION -->
+    <div class="stage">
+      <div class="hd"><div class="num">2</div><div class="nm">Ingestion</div><div class="role">How data lands</div><div class="flow">→</div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-git-branch.svg);mask-image:url(icons/lucide-git-branch.svg)"></span><div><div class="nm">28 Oracle DB links</div><div class="sub">Direct source-to-warehouse links</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-plug.svg);mask-image:url(icons/lucide-plug.svg)"></span><div><div class="nm">ODBC connectors</div><div class="sub">Heterogeneous source pulls</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-file-spreadsheet.svg);mask-image:url(icons/lucide-file-spreadsheet.svg)"></span><div><div class="nm">File / SFTP landing</div><div class="sub">Spreadsheet &amp; flat-file feeds</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-refresh-cw.svg);mask-image:url(icons/lucide-refresh-cw.svg)"></span><div><div class="nm">Nightly delete–reload</div><div class="sub">Full reload chains, not incremental</div></div><span class="sev s3">S3</span></div>
+    </div>
+
+    <!-- 3 WAREHOUSE — SPINE -->
+    <div class="stage spine">
+      <div class="hd"><div class="num">3</div><div class="nm">Oracle 19c warehouse</div><div class="role">Single enterprise instance</div><div class="flow">→</div></div>
+      <div class="card hero"><span class="ic" style="-webkit-mask-image:url(icons/lucide-server.svg);mask-image:url(icons/lucide-server.svg)"></span><div><div class="nm">Oracle 19c EE on RHEL 8</div><div class="sub">One instance · Dell PowerEdge · no DR / single point of failure</div></div><span class="sev s1">S1</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-workflow.svg);mask-image:url(icons/lucide-workflow.svg)"></span><div><div class="nm">Three-tier load</div><div class="sub">Stage → detail → mart</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">28 data marts</div><div class="sub">+ materialised views</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">9 a.m. load SLA</div><div class="sub">Overnight batch + midday partial</div></div><span class="sev s2">S2</span></div>
+    </div>
+
+    <!-- 4 SEMANTIC / CONSUMPTION -->
+    <div class="stage">
+      <div class="hd"><div class="num">4</div><div class="nm">Semantic &amp; consumption</div><div class="role">Reporting &amp; BI layer</div><div class="flow">→</div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">SAP BusinessObjects</div><div class="sub">~1,300 active of ~5,000 on platform</div></div><span class="sev s2">S2</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-file-spreadsheet.svg);mask-image:url(icons/lucide-file-spreadsheet.svg)"></span><div><div class="nm">SharePoint delivery</div><div class="sub">≥430 reports — the real delivery channel</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Power BI</div><div class="sub">65 governed · +582% incidents YoY · governance lagging</div></div><span class="sev s2">S2</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Microsoft Fabric</div><div class="sub">Emerging · shared semantic models in flight</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">APOS Insight</div><div class="sub">Consumption telemetry</div></div></div>
+    </div>
+
+    <!-- 5 CONSUMERS -->
+    <div class="stage">
+      <div class="hd"><div class="num">5</div><div class="nm">Consumers</div><div class="role">Who relies on it</div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-users.svg);mask-image:url(icons/lucide-users.svg)"></span><div><div class="nm">~380 consumers</div><div class="sub">incl. 71 external / guest</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">~1,700 active reports</div><div class="sub">across 5 platforms</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">Enterprise reporting</div><div class="sub">Balanced-scorecard pack · regulatory</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-users.svg);mask-image:url(icons/lucide-users.svg)"></span><div><div class="nm">Finance &amp; Supply Chain</div><div class="sub">Heaviest publishers (224 / 380)</div></div></div>
+    </div>
+  </div>
+
+  <!-- cross-cutting -->
+  <div class="xband">
+    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-shield-check.svg);mask-image:url(icons/lucide-shield-check.svg)"></span><div><div class="xh">Governance &amp; ownership</div><div class="xt">DCC owns DWH + BO · multi-vendor estate · lineage &amp; catalogue gaps</div></div></div>
+    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-lock.svg);mask-image:url(icons/lucide-lock.svg)"></span><div><div class="xh">Security &amp; regulatory</div><div class="xt">GDPR · MoU data-sharing · row-level security not yet on PBI models</div></div></div>
+    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-fingerprint.svg);mask-image:url(icons/lucide-fingerprint.svg)"></span><div><div class="xh">Personal data</div><div class="xt">~430 PII columns identified across the reporting estate</div></div></div>
+  </div>
+
+  <div class="foot">
+    <div class="legend">
+      <div class="li"><span class="dot" style="background:var(--s1)"></span>S1 Critical</div>
+      <div class="li"><span class="dot" style="background:var(--s2)"></span>S2 High</div>
+      <div class="li"><span class="dot" style="background:var(--s3)"></span>S3 Medium</div>
+      <div class="li"><span class="dot" style="background:var(--accent)"></span>→ data flow</div>
+    </div>
+    <div class="src">GNI 26-002 · Deliverable 1 — Current-State Assessment · figures per canonical inventory (illustrative; confirm in discovery)</div>
+  </div>
+</div>
+</body>
+</html>

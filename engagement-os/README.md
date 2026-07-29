@@ -48,12 +48,16 @@ so this pulls in exactly one plugin and never touches the rest of your setup:
 
 **Everything, one step** — a fresh machine, or you want the delegated-to skills too.
 `consulting-suite` is a bundle plugin: its manifest is a `dependencies` list and
-nothing else, so installing it resolves engagement-os + panel-framework + deck-craft
-(figures and decks) + the Office document skills:
+nothing else, so installing it resolves engagement-os + deck-craft (figures and
+decks) + panel-framework + the Office document skills. The dependencies span three
+marketplaces, and Claude Code never adds a marketplace for you — so the three adds
+come first:
 
 ```
-/plugin marketplace add ForestDengHK/forest-consulting
-/plugin install consulting-suite@forest-consulting
+/plugin marketplace add ForestDengHK/engagement-os
+/plugin marketplace add ForestDengHK/panel-framework
+/plugin marketplace add anthropics/skills
+/plugin install consulting-suite@engagement-os
 ```
 
 **Already have them?** Then skip both companion steps — there is nothing to install,

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GNI data landscape — v2 maturity heatmap</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+  :root{
+    --ink:#06038D; --accent:#0099FF; --teal:#007A82; --band:#E9EEF8; --panel:#F6F8FD; --hair:#D8DEEC;
+    --body:#3A3E55; --muted:#8A90A6;
+    --ok:#5E9B22; --con:#D98212; --gap:#C0392B; --neu:#8A90A6;
+    --okbg:#F1F7E9; --conbg:#FCF2E3; --gapbg:#FBEBEB; --neubg:#F6F8FD;
+    --font:'Open Sans','Segoe UI',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1920px;height:1080px;background:#fff;font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .canvas{position:relative;width:1920px;height:1080px;padding:56px 64px 0;}
+  .barL{position:absolute;left:0;top:0;bottom:0;width:12px;background:var(--ink);}
+  .kicker{font-size:18px;font-weight:700;letter-spacing:0.18em;color:var(--teal);text-transform:uppercase;}
+  .title{font-size:46px;font-weight:300;color:var(--ink);margin-top:6px;letter-spacing:-0.5px;}
+  .title b{font-weight:700;}
+  .keymsg{display:flex;align-items:center;gap:18px;background:var(--band);border-left:8px solid var(--gap);padding:16px 24px;margin-top:18px;}
+  .keymsg .lab{font-size:14px;font-weight:700;letter-spacing:0.08em;color:var(--teal);text-transform:uppercase;white-space:nowrap;}
+  .keymsg .txt{font-size:19px;font-weight:600;color:var(--ink);line-height:1.3;}
+
+  .stages{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:24px;align-items:start;}
+  .stage{display:flex;flex-direction:column;gap:11px;}
+  .hd{position:relative;background:var(--panel);border:1px solid var(--hair);border-radius:10px;padding:14px 14px 14px 56px;min-height:72px;}
+  .hd .num{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .hd .nm{font-size:19px;font-weight:700;color:var(--ink);}
+  .hd .role{font-size:12px;color:var(--muted);margin-top:2px;}
+  .hd .flow{position:absolute;right:-13px;top:50%;transform:translateY(-50%);z-index:3;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;}
+
+  .card{position:relative;border:1px solid var(--hair);border-left-width:7px;border-radius:8px;padding:12px 14px;display:flex;gap:11px;align-items:flex-start;}
+  .card .nm{font-size:15px;font-weight:700;color:var(--ink);line-height:1.2;}
+  .card .sub{font-size:12.5px;color:var(--body);margin-top:3px;line-height:1.3;}
+  .card .st{position:absolute;top:11px;right:12px;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+  .ic{flex:none;width:22px;height:22px;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;margin-top:1px;}
+  .m-ok{border-color:#cfe2b6;border-left-color:var(--ok);background:var(--okbg);} .m-ok .st{color:var(--ok);} .m-ok .ic{background:var(--ok);}
+  .m-con{border-color:#f0d9b3;border-left-color:var(--con);background:var(--conbg);} .m-con .st{color:var(--con);} .m-con .ic{background:var(--con);}
+  .m-gap{border-color:#eccaca;border-left-color:var(--gap);background:var(--gapbg);} .m-gap .st{color:var(--gap);} .m-gap .ic{background:var(--gap);}
+  .m-neu{border-color:var(--hair);border-left-color:var(--neu);background:var(--neubg);} .m-neu .st{color:var(--neu);} .m-neu .ic{background:var(--neu);}
+
+  .foot{position:absolute;left:64px;right:64px;bottom:24px;display:flex;align-items:center;gap:24px;border-top:1px solid var(--hair);padding-top:14px;font-size:13px;color:var(--muted);}
+  .legend{display:flex;gap:22px;align-items:center;}
+  .legend .li{display:flex;gap:8px;align-items:center;font-weight:600;color:var(--body);}
+  .legend .dot{width:14px;height:14px;border-radius:3px;}
+  .foot .src{margin-left:auto;}
+  .tally{display:flex;gap:14px;align-items:center;margin-top:20px;}
+  .tally .pill{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--hair);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:600;color:var(--body);}
+  .tally .pill b{font-size:18px;}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="barL"></div>
+  <div class="kicker">Current state · estate health map</div>
+  <h1 class="title">Where the gaps are <b>— maturity by component</b></h1>
+  <div class="keymsg"><span class="lab">Key message</span><span class="txt">The risk is concentrated, not spread: the single Oracle warehouse, the nightly full-reload, the OT/SCADA bypass, and ungoverned Power BI growth are the four red gaps to close first.</span></div>
+
+  <div class="stages">
+    <div class="stage">
+      <div class="hd"><div class="num">1</div><div class="nm">Source systems</div><div class="role">Systems of record</div><div class="flow">→</div></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-wrench.svg);mask-image:url(icons/lucide-wrench.svg)"></span><div><div class="nm">Maximo</div><div class="sub">Drives 74% of BO traffic · concentration</div></div><span class="st">Constrained</span></div>
+      <div class="card m-ok"><span class="ic" style="-webkit-mask-image:url(icons/lucide-database.svg);mask-image:url(icons/lucide-database.svg)"></span><div><div class="nm">Oracle EBS</div><div class="sub">Finance · stable feed</div></div><span class="st">Healthy</span></div>
+      <div class="card m-ok"><span class="ic" style="-webkit-mask-image:url(icons/lucide-map.svg);mask-image:url(icons/lucide-map.svg)"></span><div><div class="nm">GIS</div><div class="sub">Spatial / network data</div></div><span class="st">Healthy</span></div>
+      <div class="card m-gap"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">OT / SCADA</div><div class="sub">67 Excel-by-email · bypasses the DWH</div></div><span class="st">Gap</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-plug.svg);mask-image:url(icons/lucide-plug.svg)"></span><div><div class="nm">Specialist gateways</div><div class="sub">ICING, CRM &amp; point feeds</div></div><span class="st">Constrained</span></div>
+    </div>
+    <div class="stage">
+      <div class="hd"><div class="num">2</div><div class="nm">Ingestion</div><div class="role">How data lands</div><div class="flow">→</div></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-git-branch.svg);mask-image:url(icons/lucide-git-branch.svg)"></span><div><div class="nm">28 Oracle DB links</div><div class="sub">Tightly coupled point links</div></div><span class="st">Constrained</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-plug.svg);mask-image:url(icons/lucide-plug.svg)"></span><div><div class="nm">ODBC connectors</div><div class="sub">Heterogeneous pulls</div></div><span class="st">Constrained</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-file-spreadsheet.svg);mask-image:url(icons/lucide-file-spreadsheet.svg)"></span><div><div class="nm">File / SFTP landing</div><div class="sub">Spreadsheet &amp; flat-file feeds</div></div><span class="st">Constrained</span></div>
+      <div class="card m-gap"><span class="ic" style="-webkit-mask-image:url(icons/lucide-refresh-cw.svg);mask-image:url(icons/lucide-refresh-cw.svg)"></span><div><div class="nm">Nightly delete–reload</div><div class="sub">Full reload, not incremental · fragile</div></div><span class="st">Gap</span></div>
+    </div>
+    <div class="stage">
+      <div class="hd"><div class="num">3</div><div class="nm">Oracle 19c warehouse</div><div class="role">Single instance</div><div class="flow">→</div></div>
+      <div class="card m-gap"><span class="ic" style="-webkit-mask-image:url(icons/lucide-server.svg);mask-image:url(icons/lucide-server.svg)"></span><div><div class="nm">Oracle 19c EE on RHEL 8</div><div class="sub">One instance · no DR · single point of failure</div></div><span class="st">Gap</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-workflow.svg);mask-image:url(icons/lucide-workflow.svg)"></span><div><div class="nm">Three-tier load</div><div class="sub">Stage → detail → mart</div></div><span class="st">Constrained</span></div>
+      <div class="card m-ok"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">28 data marts</div><div class="sub">Well-structured · materialised views</div></div><span class="st">Healthy</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">9 a.m. load SLA</div><div class="sub">Met, but no headroom</div></div><span class="st">Constrained</span></div>
+    </div>
+    <div class="stage">
+      <div class="hd"><div class="num">4</div><div class="nm">Semantic &amp; consumption</div><div class="role">Reporting &amp; BI</div><div class="flow">→</div></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">SAP BusinessObjects</div><div class="sub">~1,300 active of ~5,000 · 70% retire opp.</div></div><span class="st">Constrained</span></div>
+      <div class="card m-con"><span class="ic" style="-webkit-mask-image:url(icons/lucide-file-spreadsheet.svg);mask-image:url(icons/lucide-file-spreadsheet.svg)"></span><div><div class="nm">SharePoint delivery</div><div class="sub">≥430 reports · de-facto, unmanaged channel</div></div><span class="st">Constrained</span></div>
+      <div class="card m-gap"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Power BI</div><div class="sub">+582% incidents YoY · governance lagging</div></div><span class="st">Gap</span></div>
+      <div class="card m-ok"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Microsoft Fabric</div><div class="sub">Right direction · shared semantic models</div></div><span class="st">Emerging</span></div>
+      <div class="card m-ok"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">APOS Insight</div><div class="sub">Usable consumption telemetry</div></div><span class="st">Healthy</span></div>
+    </div>
+    <div class="stage">
+      <div class="hd"><div class="num">5</div><div class="nm">Consumers</div><div class="role">Who relies on it</div></div>
+      <div class="card m-neu"><span class="ic" style="-webkit-mask-image:url(icons/lucide-users.svg);mask-image:url(icons/lucide-users.svg)"></span><div><div class="nm">~380 consumers</div><div class="sub">incl. 71 external / guest</div></div></div>
+      <div class="card m-neu"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">~1,700 active reports</div><div class="sub">across 5 platforms</div></div></div>
+      <div class="card m-neu"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">Enterprise reporting</div><div class="sub">Balanced-scorecard · regulatory</div></div></div>
+      <div class="card m-neu"><span class="ic" style="-webkit-mask-image:url(icons/lucide-users.svg);mask-image:url(icons/lucide-users.svg)"></span><div><div class="nm">Finance &amp; Supply Chain</div><div class="sub">Heaviest publishers</div></div></div>
+    </div>
+  </div>
+
+  <div class="tally">
+    <span class="pill"><span class="legend"><span class="dot" style="background:var(--gap)"></span></span><b>4</b> red gaps to close first</span>
+    <span class="pill"><span class="legend"><span class="dot" style="background:var(--con)"></span></span><b>9</b> constrained — modernise</span>
+    <span class="pill"><span class="legend"><span class="dot" style="background:var(--ok)"></span></span><b>5</b> healthy — keep / extend</span>
+  </div>
+
+  <div class="foot">
+    <div class="legend">
+      <div class="li"><span class="dot" style="background:var(--ok)"></span>Healthy</div>
+      <div class="li"><span class="dot" style="background:var(--con)"></span>Constrained</div>
+      <div class="li"><span class="dot" style="background:var(--gap)"></span>Gap / at-risk</div>
+      <div class="li"><span class="dot" style="background:var(--neu)"></span>Consumer (n/a)</div>
+    </div>
+    <div class="src">GNI 26-002 · Deliverable 1 — Current-State Assessment · maturity is an illustrative working assessment; confirm in discovery</div>
+  </div>
+</div>
+</body>
+</html>

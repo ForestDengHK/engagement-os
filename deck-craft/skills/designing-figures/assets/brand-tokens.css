@@ -1,0 +1,34 @@
+/* Brand token starter for exhibits. Copy into the exhibit HTML's :root and swap values
+   to the client's palette. Two ready sets below — uncomment/replace as needed.
+   Lift exact values from the client's deck/build script when one exists. */
+
+:root{
+  /* ---- GNI / Deloitte-corporate set (used by the worked examples) ---- */
+  --ink:#06038D;        /* primary structure / dominant colour */
+  --ink2:#2A2D9C;
+  --accent:#0099FF;     /* sharp accent for the focus / flow */
+  --teal:#007A82;       /* supporting */
+  --teal2:#009CA6;
+  --green:#84BD00;      /* positive semantics only */
+  --band:#E9EEF8;       /* key-message / cross-cutting band fill */
+  --panel:#F6F8FD;      /* card / panel fill */
+  --hair:#D8DEEC;       /* borders */
+  --body:#3A3E55;       /* body text */
+  --muted:#8A90A6;      /* captions / legend */
+
+  /* severity / maturity scale (reserve red/green for real semantics) */
+  --s1:#5E0B15;  --s2:#C0392B;  --s3:#CC6A10;  --open:#8C8C8C;
+  --ok:#5E9B22;  --con:#D98212;  --gap:#C0392B;  --neu:#8A90A6;
+
+  --font:'Open Sans','Segoe UI',system-ui,-apple-system,sans-serif;
+}
+
+/* ---- Generic neutral-corporate alternative (swap the block above) ----
+:root{
+  --ink:#0F1B2D; --accent:#2D6CDF; --teal:#0E7C86; --green:#3F9142;
+  --band:#EEF2F7; --panel:#F6F8FA; --hair:#E2E8F0; --body:#334155; --muted:#7A8699;
+  --s1:#7A1020; --s2:#C0392B; --s3:#D98212; --open:#8C8C8C;
+  --ok:#3F9142; --con:#D98212; --gap:#C0392B; --neu:#8A90A6;
+  --font:'Helvetica Neue','Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*/

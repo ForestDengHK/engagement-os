@@ -1,0 +1,10 @@
+{
+  "name": "deck-craft",
+  "version": "1.0.0",
+  "description": "Client-grade deck and figure craft. presentation-builder turns a body of context into a full deck with a real storyline and action titles; designing-figures picks the archetype before anything is drawn, so a figure stops coming out as one cramped row of boxes. Used on its own, or as the render end of engagement-os.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "keywords": ["slides", "deck", "figures", "diagrams", "presentation"]
+}

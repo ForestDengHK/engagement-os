@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GNI data landscape — v3 flow-weighted</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+  :root{
+    --ink:#06038D; --accent:#0099FF; --teal:#007A82; --green:#5E9B22; --con:#D98212; --gap:#C0392B;
+    --band:#E9EEF8; --hair:#D8DEEC; --body:#3A3E55; --muted:#8A90A6;
+    --font:'Open Sans','Segoe UI',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1920px;height:1080px;background:#fff;font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .canvas{position:relative;width:1920px;height:1080px;padding:56px 64px 0;}
+  .barL{position:absolute;left:0;top:0;bottom:0;width:12px;background:var(--ink);}
+  .kicker{font-size:18px;font-weight:700;letter-spacing:0.18em;color:var(--teal);text-transform:uppercase;}
+  .title{font-size:46px;font-weight:300;color:var(--ink);margin-top:6px;letter-spacing:-0.5px;}
+  .title b{font-weight:700;}
+  .keymsg{display:flex;align-items:center;gap:18px;background:var(--band);border-left:8px solid var(--teal);padding:16px 24px;margin-top:18px;}
+  .keymsg .lab{font-size:14px;font-weight:700;letter-spacing:0.08em;color:var(--teal);text-transform:uppercase;white-space:nowrap;}
+  .keymsg .txt{font-size:19px;font-weight:600;color:var(--ink);line-height:1.3;}
+
+  svg.flow{position:absolute;left:0;top:0;width:1920px;height:1080px;}
+  .lbl{position:absolute;}
+  .lbl .nm{font-size:17px;font-weight:700;color:var(--ink);line-height:1.15;}
+  .lbl .sub{font-size:13.5px;color:var(--body);margin-top:3px;line-height:1.25;}
+  .lblL{text-align:right;width:150px;}
+  .lblR{text-align:left;width:250px;}
+  .pct{position:absolute;font-weight:800;color:#fff;font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.35);}
+  .pctd{position:absolute;font-weight:800;font-size:16px;}
+  .whlbl{position:absolute;text-align:center;width:320px;}
+  .whlbl .nm{font-size:20px;font-weight:700;color:var(--ink);}
+  .whlbl .sub{font-size:14px;color:var(--gap);font-weight:600;margin-top:2px;}
+
+  .foot{position:absolute;left:64px;right:64px;bottom:24px;display:flex;align-items:center;gap:24px;border-top:1px solid var(--hair);padding-top:14px;font-size:13px;color:var(--muted);}
+  .legend{display:flex;gap:22px;align-items:center;}
+  .legend .li{display:flex;gap:8px;align-items:center;font-weight:600;color:var(--body);}
+  .legend .sw{width:22px;height:12px;border-radius:2px;}
+  .foot .src{margin-left:auto;}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="barL"></div>
+  <div class="kicker">Current state · report-traffic flow</div>
+  <h1 class="title">Where the load concentrates <b>— and where it escapes</b></h1>
+  <div class="keymsg"><span class="lab">Key message</span><span class="txt">~74% of reporting flows Maximo → one warehouse → SharePoint. Power BI is the fast-growing escape route, and ~9% of reporting bypasses the warehouse entirely.</span></div>
+
+  <svg class="flow" viewBox="0 0 1920 1080">
+    <!-- ribbons (thickness ∝ traffic share) -->
+    <!-- Maximo -> warehouse (dominant artery) -->
+    <path d="M270,285 C550,285 550,300 830,300 L830,626 C550,626 550,611 270,611 Z" fill="#06038D" fill-opacity="0.82"/>
+    <!-- Other DWH sources -> warehouse -->
+    <path d="M270,623 C550,623 550,626 830,626 L830,701 C550,701 550,698 270,698 Z" fill="#0099FF" fill-opacity="0.5"/>
+    <!-- warehouse -> BO/SharePoint -->
+    <path d="M1000,300 C1275,300 1275,300 1550,300 L1550,621 C1275,621 1275,621 1000,621 Z" fill="#007A82" fill-opacity="0.78"/>
+    <!-- warehouse -> Power BI (growth) -->
+    <path d="M1000,621 C1275,621 1275,633 1550,633 L1550,693 C1275,693 1275,681 1000,681 Z" fill="#5E9B22" fill-opacity="0.72"/>
+    <!-- warehouse -> direct/other -->
+    <path d="M1000,681 C1275,681 1275,705 1550,705 L1550,725 C1275,725 1275,701 1000,701 Z" fill="#8A90A6" fill-opacity="0.5"/>
+    <!-- bypass: OT/SCADA + EBS routes around the warehouse -->
+    <path d="M270,710 C760,710 1060,735 1550,735 L1550,775 C1060,775 760,750 270,750 Z" fill="#D98212" fill-opacity="0.68"/>
+
+    <!-- nodes -->
+    <rect x="180" y="285" width="90" height="326" rx="5" fill="#2A2D9C"/>
+    <rect x="180" y="623" width="90" height="75" rx="5" fill="#2A2D9C"/>
+    <rect x="180" y="710" width="90" height="40" rx="5" fill="#D98212"/>
+    <rect x="830" y="300" width="170" height="401" rx="7" fill="#06038D"/>
+    <rect x="1550" y="300" width="90" height="321" rx="5" fill="#007A82"/>
+    <rect x="1550" y="633" width="90" height="60" rx="5" fill="#5E9B22"/>
+    <rect x="1550" y="705" width="90" height="20" rx="4" fill="#8A90A6"/>
+    <rect x="1550" y="735" width="90" height="40" rx="5" fill="#D98212"/>
+  </svg>
+
+  <!-- left labels -->
+  <div class="lbl lblL" style="left:24px;top:448px;transform:translateY(-50%)"><div class="nm">Maximo</div><div class="sub">74% of BO traffic</div></div>
+  <div class="lbl lblL" style="left:24px;top:660px;transform:translateY(-50%)"><div class="nm">Other DWH sources</div><div class="sub">GIS · ICING · CRM</div></div>
+  <div class="lbl lblL" style="left:24px;top:730px;transform:translateY(-50%)"><div class="nm">OT/SCADA + EBS</div><div class="sub">bypass</div></div>
+
+  <!-- warehouse label -->
+  <div class="whlbl" style="left:755px;top:250px;"><div class="nm">Oracle 19c warehouse</div><div class="sub">one instance · no DR</div></div>
+
+  <!-- right labels -->
+  <div class="lbl lblR" style="left:1660px;top:460px;transform:translateY(-50%)"><div class="nm">BO → SharePoint</div><div class="sub">≈80% of human consumption</div></div>
+  <div class="lbl lblR" style="left:1660px;top:663px;transform:translateY(-50%)"><div class="nm">Power BI <span style="color:#5E9B22">↑</span></div><div class="sub">+582% incidents YoY — growing fast</div></div>
+  <div class="lbl lblR" style="left:1660px;top:715px;transform:translateY(-50%)"><div class="nm" style="font-size:15px">Direct / other</div></div>
+  <div class="lbl lblR" style="left:1660px;top:755px;transform:translateY(-50%)"><div class="nm" style="font-size:15px">Operational / shadow</div></div>
+
+  <!-- ribbon callouts -->
+  <div class="pct" style="left:500px;top:435px;">74%</div>
+  <div class="pct" style="left:1230px;top:445px;">≈80%</div>
+  <div class="pctd" style="left:1130px;top:648px;color:#5E9B22;">fast-growing</div>
+  <div class="pctd" style="left:720px;top:760px;color:#D98212;">≈9% bypass the warehouse</div>
+
+  <div class="foot">
+    <div class="legend">
+      <div class="li"><span class="sw" style="background:#06038D"></span>Maximo artery</div>
+      <div class="li"><span class="sw" style="background:#007A82"></span>BO / SharePoint</div>
+      <div class="li"><span class="sw" style="background:#5E9B22"></span>Power BI (growth)</div>
+      <div class="li"><span class="sw" style="background:#D98212"></span>Bypass</div>
+      <div class="li">ribbon width ∝ report-traffic share</div>
+    </div>
+    <div class="src">GNI 26-002 · Deliverable 1 · shares illustrative (YE deck + inventory); confirm in discovery</div>
+  </div>
+</div>
+</body>
+</html>
