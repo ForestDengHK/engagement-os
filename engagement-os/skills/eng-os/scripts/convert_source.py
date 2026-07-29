@@ -876,7 +876,9 @@ def scan(root):
     material have different destinations:
 
       INGEST  — sourced material (given to us or found by us, plus the tender pack). Un-ingested
-        when nothing named after it exists under the matching `_md/`. Needs no manifest.
+        when nothing named after it exists under the matching `_md/` — where "named after it"
+        is a same-stem md OR a manifest row mapping the source to a slugged md (the documented
+        `_md/<NN_topic>/<slug>.md` convention).
       CONVERT — our OWN reusable assets under `01_pursuit/_shared/<kind>/` with no markdown
         under `_shared/_md/`. Assets get the SAME md-first treatment as sources: analysing
         binaries ad-hoc is what the pack forbids everywhere else ("analysing from the raw PDF
@@ -900,6 +902,7 @@ def scan(root):
     for area, md_dir in areas:
         converted = {p.stem.lower() for p in md_dir.rglob("*.md") if p.name != "README.md"} \
             if md_dir.exists() else set()
+        converted |= manifest_aliases(md_dir)
         for src in sorted(area.rglob("*")):
             if not src.is_file() or src.suffix.lower() not in DISPATCH:
                 continue
@@ -947,7 +950,7 @@ def scan(root):
         md_dir = shared / "_md"
         md_by_stem = {p.stem.lower(): p for p in md_dir.rglob("*.md")
                       if p.name not in ("README.md",)} if md_dir.exists() else {}
-        converted = set(md_by_stem)
+        converted = set(md_by_stem) | manifest_aliases(md_dir)
         for asset in sorted(shared.rglob("*")):
             if not asset.is_file() or asset.name.startswith("."):
                 continue
@@ -979,20 +982,45 @@ def scan(root):
     return to_ingest, to_index, to_convert, to_reindex
 
 
+def manifest_aliases(md_dir):
+    """Source stems the pack's manifest maps to an md of a different name.
+
+    Same-stem matching covers `_md/<source>.md`; the manifest row covers the skill's own
+    documented topic/slug convention (`_md/01_rft/rft_main.md` ← `26-002 - ....docx`).
+    Without this the scan re-reports a converted document as waiting forever — the report
+    everyone trusts crying wolf. Found on the 2026-07-29 mini GNI e2e.
+    """
+    aliases = set()
+    readme = md_dir / "README.md"
+    if readme.exists():
+        for line in readme.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = re.match(r"\s*-\s+`([^`]+)`\s+—\s+converted from\s+`([^`]+)`", line)
+            if m:
+                aliases.add(pathlib.PurePosixPath(m.group(2)).stem.lower())
+    return aliases
+
+
 def update_manifest(out_path, src):
     """Upsert this conversion's provenance row in the pack's README.md manifest.
 
-    Only fires when the output lands in a `_md/` pack directory — anywhere else there is no
+    Only fires when the output lands under a `_md/` pack directory — anywhere else there is no
     manifest convention to maintain. eng_lint's manifest-complete rule errors on a converted
     MD with no row, so if the converter doesn't write the row, every conversion lands the
     user in a lint error they can only clear by hand. Found on the real GNI tender pack:
     four documents converted, no manifest anywhere, and the error had no automated path out.
 
+    The pack's `_md/` may be an ANCESTOR rather than the parent: the skill's documented
+    convention is `_md/<NN_topic>/<slug>.md`, and requiring the parent to be `_md` itself
+    meant the row was silently never written on the documented path — while stdout claimed
+    it was (mini GNI e2e, 2026-07-29). Returns True when a row was written.
+
     Row format matches what rule_manifest_complete greps for: the .md name in backticks.
     """
     pack = pathlib.Path(out_path).parent
+    while pack.name != "_md" and pack.parent != pack:
+        pack = pack.parent
     if pack.name != "_md":
-        return
+        return False
     readme = pack / "README.md"
     row = (f"- `{os.path.basename(out_path)}` — converted from "
            f"`{os.path.basename(src)}` ({_dt.date.today().isoformat()})")
@@ -1002,7 +1030,7 @@ def update_manifest(out_path, src):
             "One row per converted document: which source file it came from and when. "
             "Written by convert_source.py on each conversion; keep rows in sync on renames.\n\n"
             + row + "\n", encoding="utf-8")
-        return
+        return True
     text = readme.read_text(encoding="utf-8", errors="replace")
     name = os.path.basename(out_path)
     if f"`{name}`" in text:                      # re-conversion: refresh the row, don't duplicate
@@ -1010,6 +1038,7 @@ def update_manifest(out_path, src):
     else:
         text = text.rstrip("\n") + "\n" + row + "\n"
     readme.write_text(text, encoding="utf-8")
+    return True
 
 
 def main():
@@ -1086,11 +1115,13 @@ def main():
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(body)
-    update_manifest(out_path, src)
+    wrote_row = update_manifest(out_path, src)
     print(f"Wrote {out_path}")
     print(f"md5(source) = {md5(src)}")
+    note = ("(the manifest row was written)" if wrote_row
+            else "(output is outside a `_md/` pack — no manifest row to write)")
     print("Next: triage extracted images, OCR any [uncertain] ones inline "
-          "(the manifest row was written), then run `eng-update-canonical`.")
+          f"{note}, then run `eng-update-canonical`.")
     return 0
 
 

@@ -1136,6 +1136,39 @@ def converter_tests():
     cs.update_manifest(str(plain), str(src))
     checks.append(("ignores non-pack output", not (plain.parent / "README.md").exists()))
 
+    # 5. The documented convention is `_md/<NN_topic>/<slug>.md` — the topic subfolder is the
+    # skill's own instruction, so the row must land in the pack's `_md/README.md`, not vanish
+    # because the parent is `01_rft` rather than `_md`. Mini GNI e2e, 2026-07-29: the row was
+    # never written on the documented path while stdout claimed it was.
+    topic = pack / "01_rft"
+    topic.mkdir()
+    slugged = topic / "rft_main.md"
+    slugged.write_text("# RFT", encoding="utf-8")
+    wrote = cs.update_manifest(str(slugged), str(src))
+    text = (pack / "README.md").read_text(encoding="utf-8")
+    checks.append(("topic-subfolder output still writes the pack manifest",
+                   wrote and "`rft_main.md`" in text))
+    checks.append(("non-pack output reports not-written", cs.update_manifest(str(plain), str(src)) is False))
+
+    # 6. And the scan must then honour that row: a slugged md with a manifest alias is NOT
+    # "waiting to be ingested" — without the alias the report cries wolf on every conversion
+    # that followed the documented convention.
+    ing_root = pathlib.Path(tempfile.mkdtemp(prefix="engos-ing-"))
+    rec = ing_root / "01_pursuit/x-001/1_received"
+    (rec / "_md/01_rft").mkdir(parents=True)
+    (rec / "26-002 - Some Tender.docx").write_text("fake", encoding="utf-8")
+    (rec / "_md/01_rft/rft_main.md").write_text("# md", encoding="utf-8")
+    to_ingest, _, _, _ = cs.scan(ing_root)
+    checks.append(("slugged md without a manifest row still reports as waiting",
+                   any(p.name == "26-002 - Some Tender.docx" for _, p in to_ingest)))
+    (rec / "_md/README.md").write_text(
+        "# Conversion manifest\n\n"
+        "- `rft_main.md` — converted from `26-002 - Some Tender.docx` (2026-07-29)\n",
+        encoding="utf-8")
+    to_ingest2, _, _, _ = cs.scan(ing_root)
+    checks.append(("manifest alias clears the converted document",
+                   not any(p.name == "26-002 - Some Tender.docx" for _, p in to_ingest2)))
+
     for name, ok in checks:
         print(f"  {'✓' if ok else '✗'} converter:{name}")
     manifest_ok = all(ok for _, ok in checks)
