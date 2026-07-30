@@ -1,6 +1,6 @@
 ---
 name: eng-ingest-source
-description: Use when a new client- or research-supplied document (pdf, docx, pptx/ppsx, xlsx, csv, png/screenshot) arrives from the client, when the user says "ingest this doc", "convert this deck to markdown", "add this to the reference pack", or "a new source came in".
+description: Use when a new client- or research-supplied document (pdf, docx, pptx/ppsx, xlsx, csv, png/screenshot, txt/md — e.g. meeting notes or a transcript) arrives from the client, when the user says "ingest this doc", "convert this deck to markdown", "add this to the reference pack", or "a new source came in".
 ---
 
 # Ingesting sources
@@ -62,7 +62,9 @@ native clause anchor (`## 2.1 Timetable` → `## §2.1 Timetable`). Only unnumbe
 the synthetic `§Section N` fallback. Cite the native clause wherever it exists; page/section
 fallbacks are for documents whose author supplied no stable numbering.
 Handles pdf/pptx/docx/xlsx/csv/image with per-unit anchors (`## Page N:` pdf · `## Slide N:` pptx ·
-`## Sheet:` xlsx · `## Section N:` docx). It walks grouped shapes and pulls speaker notes, and it
+`## Sheet:` xlsx · `## Section N:` docx), and txt/md — meeting notes, transcripts — with one
+`## ¶N` anchor per blank-line-separated block (md keeps its own headings, numbered as above).
+It walks grouped shapes and pulls speaker notes, and it
 auto-drops images that are decorative by construction (repeated across units, or under 6KB),
 reporting the counts. If a library is missing it prints a `pip install` line for that format.
 
@@ -108,7 +110,11 @@ topic → notes`. If it's a new topic, create the `NN_topic/` folder + a manifes
 images kept / OCR'd / dropped, and any new open questions spotted. Then point to `eng-update-canonical`.
 
 ## Edge cases
-- **Multi-file pack:** loop — one MD per file, never merge.
+- **Multi-file pack / whole folder:** one MD per file, never merge. A directory of sources
+  (e.g. a meetings folder) converts in one pass — point the script at the directory and give
+  `--out` a directory; the source layout is mirrored, unsupported types are skipped, and one
+  failure doesn't stop the batch:
+  `python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <source_dir> --out "$PACK/_md/<NN_topic>"`
 - **Our own analysis** is not a source — keep as-is and flag; don't ingest into `_sources/` at all
   (it belongs in a work tree: `00_research/1_analysis/`, `01_pursuit/<ENG-ID>/2_analysis/`,
   or `02_delivery/_shared/`).

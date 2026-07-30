@@ -1299,6 +1299,101 @@ def converter_tests():
     print("✓ native-clause anchor tests pass" if anchors_ok
           else "✗ native-clause anchor tests FAILING")
 
+    # ── plain-text / markdown sources ───────────────────────────────────────────
+    # Meeting notes and transcripts arrive as .txt/.md; the converter must anchor them without
+    # inventing structure (txt: one ¶N per blank-line block) or rewriting content (md:
+    # passthrough + heading anchors only).
+    txt = root / "meeting_notes.txt"
+    txt.write_text("Alice: kick-off agreed, scope is phase 1 only.\nBob: timeline is 6 weeks.\n"
+                   "\nAction: Alice to circulate the data ask by Friday.\n", encoding="utf-8")
+    txt_md, txt_err = cs.convert_text(str(txt), str(root / "images"), str(root))
+    text_checks = [
+        ("txt converts without error", txt_err is None and txt_md is not None),
+        ("txt anchors one per blank-line block",
+         "## ¶1" in txt_md and "## ¶2" in txt_md and "## ¶3" not in txt_md),
+        ("txt body is byte-faithful",
+         "Alice: kick-off agreed, scope is phase 1 only.\nBob: timeline is 6 weeks." in txt_md),
+        ("txt provenance header present", "**md5:**" in txt_md and "**Paragraphs:** 2" in txt_md),
+    ]
+    # Teams/Zoom-style transcript: one utterance per line, no blank lines. Anchoring the whole
+    # meeting as ¶1 is useless for citation — fall back to one anchor per line (speaker turn).
+    tr = root / "transcript.txt"
+    tr.write_text("\n".join(f"[2026-05-22T11:39:05] Speaker {i % 3}: utterance {i}"
+                            for i in range(1, 21)) + "\n", encoding="utf-8")
+    tr_md, tr_err = cs.convert_text(str(tr), str(root / "images"), str(root))
+    text_checks += [
+        ("transcript converts without error", tr_err is None and tr_md is not None),
+        ("transcript anchored per utterance, not one block",
+         "## ¶20" in tr_md and "## ¶21" not in tr_md),
+        ("transcript body byte-faithful", "Speaker 0: utterance 15" in tr_md),
+    ]
+    mdsrc = root / "research_note.md"
+    mdsrc.write_text("# Findings\n\n## 2.1 Refresh cadence\n\nBody text.\n\n"
+                     "![chart](images/chart.png)\n", encoding="utf-8")
+    md_md, md_err = cs.convert_text(str(mdsrc), str(root / "images"), str(root))
+    text_checks += [
+        ("md converts without error", md_err is None and md_md is not None),
+        ("md passthrough keeps body", "Body text." in md_md),
+        ("md native clause anchored", "## §2.1 Refresh cadence" in md_md),
+        ("md synthetic anchor on unnumbered heading", "# Section 1: Findings" in md_md),
+        ("md relative image kept, not dropped", "![chart](images/chart.png)" in md_md),
+        ("md relative image counted in header", "1 relative link(s) kept" in md_md),
+    ]
+    # A .md source with no --out defaults the output onto the source itself — the guard in
+    # main() must refuse and leave the original untouched.
+    guard = subprocess.run(
+        [sys.executable, str(PLUGIN / "skills/eng-os/scripts/convert_source.py"), str(mdsrc)],
+        capture_output=True, text=True)
+    text_checks += [
+        ("md source with no --out is refused",
+         guard.returncode == 2 and "overwrite the source" in guard.stderr),
+        ("refused conversion leaves the source untouched",
+         mdsrc.read_text(encoding="utf-8").startswith("# Findings")),
+    ]
+    for name, ok in text_checks:
+        print(f"  {'✓' if ok else '✗'} text:{name}")
+    text_ok = all(ok for _, ok in text_checks)
+    print("✓ txt/md conversion tests pass" if text_ok
+          else "✗ txt/md conversion tests FAILING")
+
+    # ── batch directory conversion ──────────────────────────────────────────────
+    # A directory of sources (e.g. a meetings folder) converts in one pass: layout mirrored,
+    # one MD per file, unsupported types skipped, one failure doesn't stop the batch.
+    bsrc = root / "meetings"
+    (bsrc / "sub").mkdir(parents=True)
+    (bsrc / "a.txt").write_text("note a\n\nsecond block\n", encoding="utf-8")
+    (bsrc / "b.md").write_text("# B\n\ntext\n", encoding="utf-8")
+    (bsrc / "sub" / "c.txt").write_text("note c\n", encoding="utf-8")
+    (bsrc / "d.xyz").write_text("unsupported\n", encoding="utf-8")
+    (bsrc / "README.md").write_text("# folder notes\n", encoding="utf-8")
+    bout = root / "_md"
+    rc = cs.convert_tree(str(bsrc), str(bout))
+    batch_checks = [
+        ("batch returns 0 when nothing failed", rc == 0),
+        ("batch converts txt", (bout / "a.md").exists()),
+        ("batch converts md", (bout / "b.md").exists()),
+        ("batch mirrors subdirectory layout", (bout / "sub" / "c.md").exists()),
+        ("batch skips unsupported types", not (bout / "d.md").exists()),
+        ("batch skips folder README furniture",
+         "folder notes" not in (bout / "README.md").read_text(encoding="utf-8")),
+        ("batch writes manifest rows",
+         "`a.md`" in (bout / "README.md").read_text(encoding="utf-8")),
+    ]
+    # Output dir = source dir: a .md source would map onto itself — must fail that file,
+    # leave it untouched, and still convert the rest.
+    rc2 = cs.convert_tree(str(bsrc), str(bsrc))
+    batch_checks += [
+        ("batch onto itself returns 1", rc2 == 1),
+        ("self-mapping md source left untouched",
+         (bsrc / "b.md").read_text(encoding="utf-8") == "# B\n\ntext\n"),
+        ("other files still converted when one fails", (bsrc / "a.md").exists()),
+    ]
+    for name, ok in batch_checks:
+        print(f"  {'✓' if ok else '✗'} batch:{name}")
+    batch_ok = all(ok for _, ok in batch_checks)
+    print("✓ batch conversion tests pass" if batch_ok
+          else "✗ batch conversion tests FAILING")
+
     # ── image collector: only bytes-provable decoration is dropped ────────────
     # Found on the real AIB deck: a 93KB architecture diagram shown on two consecutive
     # slides was auto-deleted as "template furniture" because ANY repeat died. Now only a
@@ -2171,8 +2266,8 @@ Sized from the buyer's own volumetrics: 18 loads, 3 environments. Reconciliation
     print("✓ companion invocation-name tests pass" if inv_ok
           else "✗ companion invocation-name tests FAILING")
 
-    return (0 if manifest_ok and scan_ok and anchors_ok and img_ok and contract_ok
-            and wb_ok and inv_ok else 1)
+    return (0 if manifest_ok and scan_ok and anchors_ok and text_ok and batch_ok
+            and img_ok and contract_ok and wb_ok and inv_ok else 1)
 
 
 
