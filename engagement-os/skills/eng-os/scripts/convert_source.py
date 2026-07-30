@@ -23,7 +23,7 @@ whole-file converter cannot give.
 
 What this script owns is the PACKAGING the pack's discipline depends on and no general converter
 provides: the provenance header (source path, md5, unit counts), the citable anchor per unit,
-image extraction to disk with decorative auto-drop, and one uniform interface across six formats.
+image extraction to disk with decorative auto-drop, and one uniform interface across seven formats.
 Each output names its extractor, and a fallback says plainly what it lost.
 
 Still reach for the matching SKILL, per document, when the script's own output falls short:
@@ -31,8 +31,10 @@ tracked changes, comments, chart data labels, or a scanned PDF needing real OCR.
 
 Usage:
     python convert_source.py <source_path> [--out <md_path>] [--images-dir <dir>]
+    python convert_source.py <source_dir> --out <md_dir>     # batch: every supported file
+                                                             # under the dir, layout mirrored
 
-Supported: .pdf .pptx .ppsx .docx .xlsx .csv .png .jpg .jpeg .html .htm
+Supported: .pdf .pptx .ppsx .docx .xlsx .csv .png .jpg .jpeg .html .htm .txt .md
 Dependencies are imported lazily; a missing one degrades that format with a clear message
 rather than crashing. Install as needed: pip install pymupdf python-pptx python-docx openpyxl
 (PEP-668/Homebrew Python: add --user --break-system-packages, or use a venv.)
@@ -851,6 +853,42 @@ def convert_html(src, images_dir, link_base=None):
     return header(src, f"> **Sections:** {n}  \n{note}> **Extractor:** {extractor}  ") + body, None
 
 
+def convert_text(src, images_dir, link_base=None):
+    """A plain-text or markdown source — meeting notes, transcripts, saved notes.
+
+    A .md is already the pack's own format, so conversion is a passthrough: the body is
+    byte-faithful and `number_headings` adds the citable anchors, exactly as for HTML. A .txt
+    has no headings to anchor on, so it gets one `## ¶N` anchor per blank-line-separated block —
+    for prose notes that is the natural citation unit, and unlike a page number it survives any
+    reformatting of the original. A transcript-style .txt (one utterance per line, no blank
+    lines) is anchored per line instead — one anchor per speaker turn, matching the pack's
+    transcript line-range citation convention.
+
+    Nothing is extracted and nothing is dropped: text carries no embedded images. A .md's
+    relative image links are KEPT and counted in the header — they resolve against the source
+    file's directory, not this one's; dropping them would lose information, and rewriting them
+    would alter content (the dead-link problem convert_html solves by dropping).
+    """
+    with open(src, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    if src.lower().endswith(".md"):
+        body, n = number_headings(text, "Section")
+        rel = len(re.findall(r"!\[[^\]]*\]\((?!https?://|data:)[^)]+\)", body))
+        note = (f"> **Images:** {rel} relative link(s) kept — resolve against the source's "
+                f"directory  \n" if rel else "")
+        return (header(src, f"> **Sections:** {n}  \n{note}> **Extractor:** markdown "
+                            f"passthrough  ") + body), None
+    blocks = [b.strip("\n") for b in re.split(r"\n\s*\n", text) if b.strip()]
+    # A real transcript (Teams/Zoom export) is one utterance per line with NO blank lines —
+    # block-splitting yields a single ¶1 holding the whole meeting, which is useless as a
+    # citation unit (the pack cites transcripts by line-range). Fall back to per-line anchors.
+    if len(blocks) == 1 and blocks[0].count("\n") >= 10:
+        blocks = [ln for ln in blocks[0].splitlines() if ln.strip()]
+    body = "\n\n".join(f"## ¶{i}\n\n{b}" for i, b in enumerate(blocks, 1))
+    return (header(src, f"> **Paragraphs:** {len(blocks)}  \n> **Extractor:** plain text "
+                        f"(paragraph anchors)  ") + body + "\n"), None
+
+
 def convert_image(src, images_dir, link_base=None):
     rel = os.path.relpath(src, link_base or os.path.dirname(images_dir)) if images_dir else src
     body = header(src) + (
@@ -865,6 +903,7 @@ DISPATCH = {
     ".docx": convert_docx, ".xlsx": convert_xlsx, ".csv": convert_csv,
     ".png": convert_image, ".jpg": convert_image, ".jpeg": convert_image,
     ".html": convert_html, ".htm": convert_html,
+    ".txt": convert_text, ".md": convert_text,
 }
 
 
@@ -1041,6 +1080,56 @@ def update_manifest(out_path, src):
     return True
 
 
+def convert_tree(src_dir, out_dir):
+    """Batch-convert every supported file under src_dir into out_dir, mirroring the layout.
+
+    One MD per file, never merged (the skill's multi-file rule). Serial on purpose: each
+    conversion upserts a row in the pack's shared README manifest, and parallel workers would
+    race on that file. Text formats convert in milliseconds; if a batch of heavy PDFs ever
+    makes serial hurt, parallelise the conversions and serialise the manifest writes instead.
+    A file that fails does not stop the batch — it is reported and the rest carry on.
+    """
+    src_dir, out_dir = pathlib.Path(src_dir), pathlib.Path(out_dir)
+    converted, failed, skipped = [], [], []
+    for path in sorted(src_dir.rglob("*")):
+        if not path.is_file() or path.name.startswith("."):
+            continue
+        if path.name == "README.md":
+            continue                                # folder furniture, not a source (same as scan)
+        if "_md" in path.relative_to(src_dir).parts:
+            continue                                # never eat our own output layer
+        fn = DISPATCH.get(path.suffix.lower())
+        if not fn:
+            skipped.append(path)
+            continue
+        rel = path.relative_to(src_dir)
+        out_path = out_dir / rel.parent / (path.stem + ".md")
+        if out_path.resolve() == path.resolve():
+            failed.append((path, "output would overwrite the source — choose another --out dir"))
+            continue
+        images_dir = out_dir / "images"
+        os.makedirs(images_dir, exist_ok=True)
+        body, err = fn(str(path), str(images_dir), str(out_path.parent))
+        if err:
+            failed.append((path, err))
+            continue
+        os.makedirs(out_path.parent, exist_ok=True)
+        out_path.write_text(body, encoding="utf-8")
+        update_manifest(str(out_path), str(path))
+        converted.append(out_path)
+        print(f"  converted  {rel}")
+    for path, err in failed:
+        print(f"  FAILED     {path.relative_to(src_dir)} — {err}", file=sys.stderr)
+    for path in skipped:
+        print(f"  skipped    {path.relative_to(src_dir)} (unsupported type)")
+    print(f"Batch: {len(converted)} converted, {len(failed)} failed, "
+          f"{len(skipped)} skipped → {out_dir}")
+    if converted:
+        print("Next: triage extracted images, OCR any [uncertain] ones inline, "
+              "then run `eng-update-canonical`.")
+    return 1 if failed else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("source", nargs="?",
@@ -1098,6 +1187,12 @@ def main():
     if not os.path.exists(src):
         print(f"ERROR: source not found: {src}", file=sys.stderr)
         return 2
+    if os.path.isdir(src):
+        if not args.out:
+            print("ERROR: converting a directory needs --out <dir> for the markdown tree",
+                  file=sys.stderr)
+            return 2
+        return convert_tree(src, os.path.abspath(args.out))
     ext = os.path.splitext(src)[1].lower()
     fn = DISPATCH.get(ext)
     if not fn:
@@ -1105,6 +1200,12 @@ def main():
         return 2
 
     out_path = os.path.abspath(args.out) if args.out else os.path.splitext(src)[0] + ".md"
+    if out_path == src:
+        # A .md source's default output IS the source — writing it would destroy the original,
+        # which the pack's first rule forbids. Reachable since .md became convertible.
+        print(f"ERROR: default output would overwrite the source — pass --out explicitly: {src}",
+              file=sys.stderr)
+        return 2
     images_dir = os.path.abspath(args.images_dir) if args.images_dir else os.path.join(os.path.dirname(out_path), "images")
     os.makedirs(images_dir, exist_ok=True)
 
