@@ -27,10 +27,13 @@ Example:
 import argparse
 import datetime as _dt
 import os
+import shutil
+import shutil
 import re
 import sys
 
 TEMPLATES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "templates")
+PANEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "panel")
 
 # Placeholder conventions: DIRS/FILES *path* strings use single-brace tokens ({ENG_ID},
 # {CLIENT_LOWER}) resolved by expand_path() below; template *body* text uses double-brace tokens
@@ -283,6 +286,48 @@ def write_file(path, content):
     return True
 
 
+
+
+def plant_panel(root: str) -> int:
+    """Copy Panel Framework into the project, from the bundled copy in this plugin.
+
+    The old pattern was "print a line telling the user to run /panel-init" and plant nothing —
+    which worked only while a global panel-framework was installed. The framework now lives in
+    `skills/eng-os/panel/` inside this plugin, and an engagement repo gets it at scaffold time:
+    the 33 roles, the config, and the four panel skills. Idempotent — existing files are kept,
+    so project overrides are not clobbered.
+    """
+    roles_src = os.path.join(PANEL_DIR, "roles")
+    if not os.path.isdir(roles_src):
+        print("  NOTE: .claude/agents/ — panel/roles/ is missing from the pack")
+        return 0
+    agents = os.path.join(root, ".claude", "agents")
+    os.makedirs(agents, exist_ok=True)
+    planted = 0
+    for name in sorted(os.listdir(roles_src)):
+        if not name.endswith(".md"):
+            continue
+        dest = os.path.join(agents, name)
+        if os.path.exists(dest):
+            continue
+        shutil.copy2(os.path.join(roles_src, name), dest)
+        planted += 1
+    config_src = os.path.join(PANEL_DIR, "panel-config.default.yaml")
+    config_dest = os.path.join(root, ".claude", "panel-config.yaml")
+    if os.path.isfile(config_src) and not os.path.exists(config_dest):
+        shutil.copy2(config_src, config_dest)
+    skills_src = os.path.join(PANEL_DIR, "skills")
+    skills_dest = os.path.join(root, ".claude", "skills")
+    if os.path.isdir(skills_src):
+        for name in sorted(os.listdir(skills_src)):
+            src = os.path.join(skills_src, name)
+            if not os.path.isdir(src):
+                continue
+            shutil.copytree(src, os.path.join(skills_dest, name), dirs_exist_ok=True)
+    print(f"  Panel framework: {planted} roles planted into .claude/agents/")
+    return planted
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", required=True, help="destination directory for the engagement repo")
@@ -357,6 +402,7 @@ def main():
     print("Files:")
     made = 0
     claude_md_skipped = False
+    plant_panel(root)
     for tmpl, dest, extra in files:
         tmpl_path = os.path.join(TEMPLATES, tmpl)
         try:
