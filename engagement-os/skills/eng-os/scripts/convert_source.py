@@ -1018,7 +1018,37 @@ def scan(root):
                 if rel in primaries or rel not in indexed:
                     where = asset.parent.relative_to(root)
                     to_convert.append((str(where), asset))
+        # Originals indexed BY REFERENCE (eng-index-assets: absolute path in the row's
+        # `Original (path)` cell, only the markdown copied in) live outside the repo, so the
+        # walk above never sees them. Ask the same question of each: is there markdown, and
+        # is it newer than the original? A donor deck revised in place leaves the md stale.
+        for original in referenced_originals(index_text):
+            if not original.is_file():
+                continue
+            md = md_by_stem.get(original.stem.lower())
+            if original.stem.lower() not in converted or (
+                    md and md.stat().st_mtime < original.stat().st_mtime):
+                to_convert.append((str(original.parent), original))
     return to_ingest, to_index, to_convert, to_reindex
+
+
+def referenced_originals(index_text):
+    """Absolute paths in the `Original (path)` column of every firm_assets.md table."""
+    out, col = [], None
+    for line in index_text.splitlines():
+        if not line.lstrip().startswith("|"):
+            col = None
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        heads = [c.lower() for c in cells]
+        if "original (path)" in heads:
+            col = heads.index("original (path)")
+        elif col is not None and col < len(cells) and re.match(r"A-\d{3}\b", cells[0]):
+            cell = cells[col]
+            # `/abs/path` · sha256 … — the backticked form; a bare path up to the first ` · `
+            paths = re.findall(r"`(/[^`]+)`", cell) or [cell.split(" · ")[0].strip()]
+            out += [pathlib.Path(p) for p in paths if p.startswith("/")]
+    return out
 
 
 def manifest_aliases(md_dir):

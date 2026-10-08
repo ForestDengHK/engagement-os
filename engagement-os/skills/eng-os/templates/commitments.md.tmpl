@@ -1,0 +1,40 @@
+# Commitments register — {{CLIENT}} {{ENG_ID}}
+
+> Every unknown the response touches, classified once, before any section body is written. A
+> section states the row's Value in prose, copied verbatim, and cites the row as `[C-nn]` on its
+> Traceability line only. Parallel writers copy from here, so the response states each commitment
+> one way. Change a value HERE, then `/eng-sync` — never in the sections. Method:
+> `bid-response.md` §"Unknowns triage".
+
+**Updated:** {{DATE}}
+
+## Classes
+
+| Class | What it covers | The row records |
+|---|---|---|
+| `D` our decision | The bid team's call: commercial levers, SLAs, process timings, contract positions, wording, named people already proposed in project files, delivery locations from known offices | The decision (Value) and its basis |
+| `R` public fact | Anything a public source settles — closed by `eng-bid-research` | The question (Basis) and the interim wording (Value) |
+| `X` firm-only input | Client consent to name a client; whether a certificate or letter is actually held; internal headcounts; registrations; individual availability | The client-facing fallback wording (Value) that stands if the input never arrives, and what the firm must confirm (Basis) |
+
+**Status:** `decided` — our call, not yet approved · `pending` — sent for approval · `approved` ·
+`rejected` — the approver said no; Value must change · `changed` — Value edited, not yet synced ·
+`confirmed` — an X input arrived and the Value is now fact.
+
+**Columns.** `Value` is the exact string the response states. `Applied value` is the string
+currently in the listed sections — leave it empty; `/eng-sync` fills it on the first sync and
+rewrites `Applied value` → `Value` in the sections whenever the two differ. `Sections` = comma-
+separated section file names; `Slides` = optional slide numbers.
+
+## Register
+
+| ID | Topic | Class | Value | Applied value | Basis | Approver | Status | Sections | Slides |
+|---|---|---|---|---|---|---|---|---|---|
+| C-01 | <e.g. hypercare period> | D | <the exact words the sections use, e.g. "four weeks of hypercare after each go-live"> | | <why — e.g. estimate S-07; the buyer's §x support window> | <bid lead> | decided | <01_exec_summary.md, 08_mobilisation.md> | <slide no.> |
+| C-02 | <e.g. buyer's current platform> | R | <interim wording the sections use until the fact closes> | | <the question; closes via BR-nnn> | — | pending | <04_approach.md> | |
+| C-03 | <e.g. ISO 27001 certificate held> | X | <fallback wording that stands if never confirmed> | | <what the firm must confirm, and where it would come from> | <Risk & Legal> | pending | <11_security.md> | |
+
+## Consistency
+
+`/eng-sync` (or `sync_commitments.py <root> check`) proves every listed section states its row's
+value verbatim, and `eng-check` warns on drift. The sign-off sheet (`signoff_sheet.md` + `.xlsx`)
+is generated from this register — never edited by hand.

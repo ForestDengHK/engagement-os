@@ -19,6 +19,11 @@ estimating the same sentence three different ways on three different days — an
 survives is whichever one was written down last. Building the scope table takes less time than
 reconciling three guesses.
 
+**Panel / framework tenders have no single scope** — the buyer publishes a role catalogue and
+asks for rates, not a priced project. There the prerequisite is the role catalogue, the location
+tiers and any discount or rate-hold rule from the RFP; the S-ID table does not apply (see the
+two shapes below).
+
 Also read before starting: `bid_reuse_analysis.md` if it exists (a prior lump sum is the cheapest
 sanity check available) and `01_pursuit/_shared/firm_assets.md` for the rate card.
 
@@ -36,6 +41,19 @@ words each, and an empty tab named `BasisOfEstimate` made a missing basis of est
 ```
 workbook (source of truth)  ──  eng-estimate refresh  ─►  markdown snapshot (generated, read-only)
 ```
+
+## Two shapes — decide which before building anything
+
+| Shape | When it applies | What the workbook prices |
+|---|---|---|
+| **project** (default) | The buyer describes ONE piece of work — a scope, deliverables, a term — and asks for its price | Effort per S-ID, schedule, P50/P80, cost base, price-vs-marks decision table |
+| **panel** | A framework, panel or call-off tender: a role catalogue × seniority × location, rates to hold, maybe a discount schedule and one worked example — no single scope | Rate card (bands × location tiers, each rate = base × tier index), role catalogue, discount schedule, assumptions, and ONE worked ROM at P50/P80 with contingency and a not-to-exceed ceiling |
+
+A panel tender priced as a project invents a scope the buyer never published, then defends days
+nobody asked for. Record the shape and why in the Basis of Estimate. The tender's **currency,
+term and cost marks** are parameters set from the RFP — not this pack's defaults (€, 26 weeks,
+300 marks); **marks = 0** means the tender publishes no price formula, and no price-vs-marks
+table is built. The seed's parameters table carries all of them.
 
 ## Conversation contract
 
@@ -113,7 +131,9 @@ changes (SOW items instead of S-IDs); write it next to the artefact it prices.
 
 ```
 Estimation Progress:
-- [ ] 1. Basis of estimate — volumetrics, assumptions, exclusions, constraints
+- [ ] 0. Shape + parameters — project or panel; currency, term, cost marks (0 = no price
+        formula), ceiling headroom for a panel ROM — each from the RFP
+- [ ] 1. Basis of estimate — the shape chosen, volumetrics, assumptions, exclusions, constraints
 - [ ] 2. Second technique FIRST, from a different data source — then reconcile out loud
 - [ ] 2b. Outside view — reference class; if no dataset exists, label it judgement
 - [ ] 3. Effort model: S-ID × activity × role/grade × days, three-point where uncertain
@@ -174,6 +194,12 @@ And keep the two uncertainties apart: **execution** variance (P80 − P50, handl
 days) versus **scope** variance (the assumption scenarios, handled with assumptions and exclusions
 in the contract). The second is routinely several times the first — which is the most decision-useful
 thing the estimate produces, and it disappears the moment they are merged.
+
+**Panel shape — steps 3–9 collapse into the rate card and one worked ROM.** Build the card
+from bands and location-tier indices (one base rate per band; every tier rate is a formula), map
+each catalogue role to a band, write the discount schedule and the assumptions the rates rest on,
+then price ONE representative engagement off the card at P50/P80. The ceiling quoted for it is
+net P50 × (1 + headroom); the workbook flags a ceiling that does not cover net P80.
 
 **Step 9 — compute the formula, then stop.** Where the buyer publishes `marks = lowest ÷ ours ×
 max` (cap the ratio at 1), price converts to marks arithmetically. Build the decision table and

@@ -8,6 +8,7 @@ walked back to a real, verifiable source.
 - When to research
 - Depth and breadth — both are required
 - The two research streams
+- Required sweeps: network client stories and the buyer's agenda
 - Source discipline & tagging
 - The zero-error / verification rule
 - Output: the sourced research log
@@ -18,7 +19,8 @@ walked back to a real, verifiable source.
 Research is driven by the **materials-needed list** from `rfp-analysis.md` Step 7 — specifically
 the "we research" column and every matrix `gap`. Don't research at large; research to close named
 gaps and to arm the high-weight win-themes with proof. Each research task names the Req ID(s) /
-win-theme it serves.
+win-theme it serves. Every `R` row in `3_drafting/commitments.md` is a research task too: the
+row carries the question and the interim wording the response uses until the row closes.
 
 ## Depth and breadth — both are required
 
@@ -43,6 +45,36 @@ Plan the research as a checklist of gaps, then work each to a cited answer or an
 
 Keep the two visibly separate — an external market claim and an internal credential are different
 kinds of evidence and are challenged differently.
+
+## Required sweeps: network client stories and the buyer's agenda
+
+Two sweeps run on every bid, whatever the gap list says.
+
+**1. Firm network client stories in the buyer's sector.** Search the firm's public client-story
+pages, its alliance pages (cloud and data vendors publish joint client stories) and the press.
+Per story, capture:
+
+| Field | Record |
+|---|---|
+| Client, as named publicly | the exact name the story uses |
+| Member firm | which member firm delivered it |
+| Year | publication or go-live year |
+| Scope | what was delivered |
+| Platform | the technology named |
+| Measurable outcome | the figure the story states, or "none stated" |
+| URL | the page, with access date |
+
+Log each as a `[T3:OWN]` row with its source tier noted (firm page · alliance page · press). These
+rows are reference candidates for `eng-bid-respond`'s rubric alongside the indexed firm assets.
+On the worked example references were picked from what was on disk — a GenAI proof of concept,
+an undated warehouse migration, a utility assessment — for an automotive buyer scoring
+"automotive/manufacturing relevance"; an hour's public sweep then found network client stories
+for three automotive and manufacturing clients.
+
+**2. The buyer's next-12-months agenda.** Filings, separations and spin-offs, segment changes,
+CEO letters, job ads. Each finding is a logged row; together they feed the response's "our
+understanding" slide, so the response speaks to what the buyer is about to do, not only to the
+RFP text.
 
 ## Source discipline & tagging
 

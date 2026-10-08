@@ -9,9 +9,32 @@ A folder answers *"what do we have"*. A bid needs *"what proves this requirement
 still valid"* — and the second question is where bids are lost, because the answer is usually
 found under deadline by someone who assumed it existed.
 
-Output: `01_pursuit/_shared/firm_assets.md`. The material itself lives in
-`01_pursuit/_shared/<kind>/` — what belongs there versus in `_sources/` is decided by where the
-document came from; the folder's own `README.md` states the rule.
+Output: `01_pursuit/_shared/firm_assets.md`. What belongs in `_shared/` versus in `_sources/` is
+decided by where the document came from; the folder's own `README.md` states the rule.
+
+## Storage: index originals by reference, copy only the markdown
+
+Donor material — case studies, CVs, decks from other pursuits — usually already lives somewhere
+(another engagement repo, a synced SharePoint folder). **Do not copy the original into this
+repo.** Index it by reference: its **absolute path**, its **size**, and its **sha256** (first 12
+hex characters are enough to notice it changed) go into the row's `Original (path)` and `Size`
+columns. Only the converted markdown is written into the repo, at
+`01_pursuit/_shared/_md/<kind>/<stem>.md` — that is the working text every step below reads.
+
+Copying every donor binary in is how one pursuit put 387 MB of decks into git with no ignore rule.
+The markdown is what a bid cites; the original is evidence, and evidence can stay where it is.
+
+**Keep a copy only when the user asks** ("keep a copy", "bring it into the repo") — then it goes
+in `01_pursuit/_shared/<kind>/`, and the scaffolder-planted `.gitignore` already keeps binaries
+there out of git (the `_md/` layer stays tracked). Record the copy's relative path in the Asset
+cell and keep the original's path in `Original (path)`.
+
+```bash
+# the three reference facts for one original
+f="/abs/path/to/Case Study.pdf"
+stat -f %z "$f" 2>/dev/null || stat -c %s "$f"     # size in bytes
+shasum -a 256 "$f" | cut -c1-12                     # sha256, first 12
+```
 
 ## If missing
 No `_shared/` tree yet → run `eng-scaffold --mode pursuit` first. No assets yet → write the
@@ -30,15 +53,19 @@ that a redraft must preserve.
 ## Workflow
 
 ```
-- [ ] 0. CONVERT first. Every asset under `_shared/` that lacks markdown gets one, into
-        `_shared/_md/`, via `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py`
+- [ ] 0. CONVERT first. Every asset — referenced original or kept copy — that lacks markdown
+        gets one, into `_shared/_md/<kind>/`, via
+        `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/convert_source.py <original> --out
+        01_pursuit/_shared/_md/<kind>/<stem>.md` (the original is read in place, never copied)
         (bulk, deterministic — the same converter the sources ingest uses). Analysis and
         page-level citation read the md layer; the binary stays as the evidence. Reading
         binaries ad-hoc is what the pack forbids everywhere else — "analysing from the raw
         PDF is how citations get invented" applies to our own case studies exactly as much
         as to the RFP. (`convert_source.py --scan` reports unconverted assets as
-        `to CONVERT`.) Files the converter can't handle (a drawio diagram, a helper script)
-        stay original-only — note them in §1b.
+        `to CONVERT` — for kept copies under `_shared/`; a referenced original outside the
+        repo is not scanned, so convert it in the same sitting you index it.) Files the
+        converter can't handle (a drawio diagram, a helper script) stay original-only — note
+        them in §1b.
 - [ ] 0b. TRIAGE the figures that conversion extracted, before reading anything for step 2.
         Our own case studies are mostly decks, and a deck's argument is in its diagrams — the
         target architecture, the migration waves, the team shape. Those arrive as `[uncertain]`

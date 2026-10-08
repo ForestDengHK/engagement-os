@@ -73,18 +73,30 @@ never re-extract from the binaries. Originals are evidence (untouched), not work
 
 <!-- The reusable folder skeleton (tree) + one-line purpose per top-level dir.
      See the eng-os directory-conventions reference for the canonical tree. -->
+- `_sources/` — material given to us or found by us, by bucket (`_sources/README.md`) · `_pm/` — RAID, decisions, engagement log · `panel/` — panel outputs · `references/` — compliance and delivery references
+<!--IF:research-->
+- `00_research/` — the research assignment: analysis and output
+<!--/IF:research-->
+<!--IF:pursuit-->
+- `01_pursuit/` — `_shared/` our reusable assets (markdown; originals by reference) · `{{ENG_ID}}/` this tender, received → contract
+<!--/IF:pursuit-->
+<!--IF:delivery-->
+- `02_delivery/` — mobilisation → discovery → assessment → target architecture → roadmap
+<!--/IF:delivery-->
 
 ## Engagement Progress (live — update here)
 
-<!-- Compact skim only. Full narrative → _pm/engagement_log.md. Update on phase/week milestones. -->
+<!-- Compact skim only. Full narrative → _pm/engagement_log.md. Update on phase/week milestones.
+     Keep "Next deadline" as an ISO date: brief-me reads dates from this file, not from the log. -->
 **Phase:** {{PHASE}}
 **Sessions held:** <compact list>
 **Owed:** <compact list of open threads>
+**Next deadline:** YYYY-MM-DD — <what>
 
 ## Key Contacts
 
-<!-- Client side + our side; full roster → .claude/project-context.md. -->
+Client side and our side → `.claude/project-context.md` → **Stakeholder Map** (the one roster; not repeated here).
 
 ## Panel Framework (if used)
 
-<!-- One line + slash-command list; full docs → .claude/framework-docs/. -->
+Roles and settings → `.claude/panel-config.yaml`; if it is absent, run `/panel-init`.

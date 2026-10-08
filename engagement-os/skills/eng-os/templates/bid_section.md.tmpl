@@ -18,9 +18,10 @@ response_form: prose      # HOW the buyer expects this answer to arrive — chec
                          #                             and their wording exactly
                          #   prose                     they gave a response box and a page limit; the
                          #                             answer is our document, identified in that box
-depends_on: []            # e.g. [estimation.xlsx, S-01]; only load-bearing extra dependencies
+depends_on: [commitments.md]  # + e.g. estimation.xlsx, S-01; only load-bearing extra dependencies
 status: draft            # draft → reviewed-r1 → reviewed-r2 → approved
                          # send-back states: revise-r1/r2 · blocked-r1/r2 (blocked = needs external input)
+# blocked_on: "<the external input and who owes it>"   # REQUIRED when status is blocked-rN
 ---
 
 <!-- THE CONTRACT: references/section-contract.md is the single definition of every
@@ -37,9 +38,21 @@ status: draft            # draft → reviewed-r1 → reviewed-r2 → approved
 > scored as a whole can carry one argument. Getting this wrong is the most expensive structural
 > mistake available, and it is stated in the RFT.>
 
+> **Internal note (stripped at render).** Sign-off: none
+
+<!-- REQUIRED SLOT — keep it even when empty ("Sign-off: none"). It is the ONLY place in this file
+     a VERIFY marker may live: replace "none" with one marker per item still owed, written
+     "owner: detail" (the form is in references/section-contract.md), each matching an X row
+     (or an approval-pending D row) in commitments.md. The body states the row's value or
+     fallback wording instead of the marker. -->
+
 <Answer the question the buyer asked, in the order they asked it. If they enumerate required
 elements, use their enumeration — an evaluator scoring against a checklist should not have to
 hunt for the items.
+
+State every commitment's value in prose — the decided value, interim wording or fallback wording
+— copied verbatim from the "Value" column of `commitments.md`. No
+VERIFY markers and no ids in body text.
 
 Before defaulting to prose, run the visual opportunity pass from eng-bid-respond: mappings,
 sequences, trade-offs, ownership, architecture and roadmaps often score more clearly as a
@@ -52,7 +65,7 @@ pass/fail questionnaire into a nicer table makes the evaluator hunt for each ans
 non-compliance is a common auto-reject. The structure is in the ingested RFT markdown under
 `1_received/_md/` — lift it from there.>
 
-![<caption>](../figures/F-0x_<name>.png)
+![<caption>](../../figures/F-0x_<name>.png)
 *Figure N — <what it shows, not what it is called>.*
 
 **Figure source.** `F-0x_<name>.html` is the editable master; `F-0x_<name>.pptx` is the
@@ -62,7 +75,8 @@ stripped at render — internal filenames must never reach an evaluator inside a
 ---
 
 **Traceability.** <Every claim above → `[RFP §x]` for a requirement, `A-nnn` for a firm asset,
-or a closed row in `bid_research_log.md`. A claim with none of these is cut before review.>
+a closed row in `bid_research_log.md`, or `[C-nn]` for each commitment the prose states. A claim
+with none of these is cut before review.>
 
 ## Review log
 

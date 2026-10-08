@@ -63,15 +63,24 @@ converter written here would be a worse pandoc.
         default to `--paper a4`; use `--paper letter` only when the recipient requires it.
         A buyer-supplied reference document controls its own paper size. Re-check the
         PAGE COUNT the build prints against the budgets — a word estimate is an estimate.
-- [ ] 5. DECK, first build: --to deck-manifest --audience "..." --decision "...", then
-        invoke the `presentation-builder` skill with the manifest. Audience and decision
-        are recorded IN the manifest so the handoff survives being re-run from the file.
+- [ ] 5. DECK, first build: --to deck-manifest --audience "..." --decision "..." — the script
+        writes `figure_policy: native` and the `html_master` paths into the manifest — and
+        invoke the `presentation-builder` skill with the manifest. Audience, decision
+        and figure_policy are recorded IN the manifest so the handoff survives being re-run
+        from the file. `figure_policy: native` means: every figure is drawn on its slide as
+        native shapes / connectors / tables from its spec — the HTML master is the design
+        reference, not the artefact; a picture is allowed only for a photograph or a
+        screenshot. Fonts: the template's theme fonts (verify_deck.py warns on any font
+        that is neither standard nor embedded). Commitments: a slide states a commitment by calling `commitments.value('C-nn')` from `skills/eng-os/scripts/commitments.py` in the build script;
+        the deck-drift check in `/eng-sync` proves every value on a slide equals the register.
 - [ ] 5b. DECK, correcting an issued one: do NOT rebuild it. Write the running order
         down, splice the redrawn slides in via the `pptx` skill, keep every other slide
         untouched → references/deck-assembly.md (in eng-os).
 - [ ] 6. Gate the package, then verify the artefact — not the log:
         python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/verify_deck.py <deck.pptx> \
           --expect <slide count you intended>
+        plus the picture count on slide layers (references/deck-assembly.md in eng-os) —
+        report every picture with its slide number; each must be a photo or screenshot.
         Then open the file: every figure present, every internal marking gone.
 ```
 
@@ -177,9 +186,10 @@ embedded).
 
 ## Guardrails
 
-- **Every figure keeps an editable path.** The manifest carries each figure's `.html` source and
-  its one-slide editable `.pptx` beside the `.png`, so a reviewer corrects the figure instead of
-  describing the correction in prose. The analyse report flags any figure that has only a PNG.
+- **Every figure keeps an editable path.** In a deck the figure is native shapes on its slide, so
+  the slide itself is the editable artefact. In a document the figure is a PNG whose `.html`
+  source sits beside it, so a reviewer corrects the figure instead of describing the correction
+  in prose. The analyse report flags any figure that has only a PNG.
 - Never render from sections that are still being argued about. Rendering early makes the format
   the subject and the content an afterthought.
 - Re-render rather than editing the output. The markdown and the figure HTML are the masters;

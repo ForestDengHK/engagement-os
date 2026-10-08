@@ -33,6 +33,18 @@ Usage:
     python3 build_estimate_workbook.py <estimation.md> --reseed         # discard workbook edits
     python3 build_estimate_workbook.py --blank --out estimation.xlsx    # starter, no markdown yet
     python3 build_estimate_workbook.py <estimation.md> --check          # arithmetic audit only
+    python3 build_estimate_workbook.py <estimation.md> --shape panel --currency USD \
+        --term-weeks 14 --marks 0 --ceiling-pct 15                      # rate-card panel tender
+
+Two shapes. `project` (default) prices one scoped piece of work: effort, schedule, cost base, and
+the price-vs-marks decision. `panel` prices what a framework / panel tender actually buys — a rate
+card (bands x location tiers), a role catalogue, a discount schedule, the assumptions, and ONE
+worked ROM showing the method on a representative engagement. A panel tender priced as a project
+invents a scope the buyer never published.
+
+Currency, term, marks, shape and ceiling come from the seed's `<!--table:parameters-->` block;
+a CLI flag overrides the seed; the defaults (€, 26 weeks, 300 marks, project, 15%) apply last.
+`--marks 0` means the tender has no price formula: the price->marks block is not built.
 
 Requires openpyxl (pip install openpyxl).
 """
@@ -121,7 +133,9 @@ def parse_narrative(md):
         # "## BasisOfEstimate". Accept both, or round-tripping quietly drops the judgement.
         accept = tuple(prefixes) + (sheet,)
         for n, (i, title) in enumerate(heads):
-            if not any(title.startswith(pref) for pref in accept):
+            # case-insensitive: "## 1. Basis of Estimate" is the same section, and a miss here
+            # is silent — the topic just reads OWED in the workbook
+            if not any(title.lower().startswith(pref.lower()) for pref in accept):
                 continue
             end = heads[n + 1][0] if n + 1 < len(heads) else len(lines)
             for raw in lines[i + 1:end]:
@@ -248,6 +262,87 @@ def parse_tables(md):
     return found
 
 
+#: Defaults when neither the seed's parameters block nor a CLI flag says otherwise. They are the
+#: values this builder always used — which is exactly why they cannot stay constants: a USD
+#: rate-card panel with no price formula got €, a 26-week term and 300 marks.
+DEFAULTS = {"shape": "project", "currency": "€", "term_weeks": 26, "marks": 300, "ceiling_pct": 15}
+CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "€": "€", "$": "$", "£": "£"}
+PANEL_KINDS = ("bands", "tiers", "roles", "discounts", "rom", "assumptions")
+
+
+def currency_symbol(cur):
+    """ISO code or symbol → what the headers and number formats show (USD → $)."""
+    cur = (cur or DEFAULTS["currency"]).strip()
+    return CURRENCY_SYMBOLS.get(cur.upper(), cur)
+
+
+def money_format(sym):
+    # a one-character symbol goes straight into the format; a code (CHF) must be quoted
+    return f"{sym}#,##0" if len(sym) == 1 else f'"{sym} "#,##0'
+
+
+def marked_rows(md, kind):
+    """Cleaned cells of the table under `<!--table:KIND-->` — same marker rule as parse_tables:
+    the table must follow the marker with only blank lines between, or nothing is read."""
+    lines = md.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        m = _MARKER.match(line)
+        if not m or m.group(1) != kind:
+            continue
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        if j >= len(lines) or not lines[j].strip().startswith("|"):
+            continue                                    # drifted marker: nothing, not a guess
+        for row in lines[j + 2:]:
+            if not row.strip().startswith("|"):
+                break
+            out.append([re.sub(r"[*`]", "", c).strip() for c in _cells(row)])
+    return out
+
+
+def parse_parameters(md):
+    """The seed's parameters block → {name: value}, only for names it actually sets."""
+    out = {}
+    for r in marked_rows(md, "parameters"):
+        if len(r) < 2 or not r[1]:
+            continue
+        key = re.sub(r"[^a-z_]", "", r[0].lower().replace(" ", "_").replace("-", "_"))
+        if key in ("shape", "currency"):
+            out[key] = r[1].split()[0].lower() if key == "shape" else r[1].split()[0]
+        elif key in ("term_weeks", "marks", "ceiling_pct") and _num(r[1]) is not None:
+            out[key] = _num(r[1])
+    return out
+
+
+def _fraction(v):
+    """'70%', '70' and '0.7' all mean 0.7 — an index or a discount above 1.5 is a percentage."""
+    return None if v is None else (v / 100 if v > 1.5 else v)
+
+
+def parse_panel(md):
+    """The panel-shape tables. Each kind falls back to placeholder rows in build_panel()."""
+    raw = {k: marked_rows(md, k) for k in PANEL_KINDS}
+    num = _num
+    return {
+        "bands": [(r[0], num(r[1]), r[2] if len(r) > 2 else "")
+                  for r in raw["bands"] if len(r) >= 2 and r[0] and num(r[1]) is not None],
+        "tiers": [(r[0], _fraction(num(r[1])), r[2] if len(r) > 2 else "")
+                  for r in raw["tiers"] if len(r) >= 2 and r[0] and num(r[1]) is not None],
+        "roles": [(r[0], r[1], r[2] if len(r) > 2 else "")
+                  for r in raw["roles"] if len(r) >= 2 and r[0]],
+        "discounts": [(num(r[0]), _fraction(num(r[1])), r[2] if len(r) > 2 else "")
+                      for r in raw["discounts"]
+                      if len(r) >= 2 and None not in (num(r[0]), num(r[1]))],
+        "rom": [(r[0], r[1], num(r[2]), num(r[3]), num(r[4]), r[5] if len(r) > 5 else "")
+                for r in raw["rom"] if len(r) >= 5 and r[0]
+                and None not in (num(r[2]), num(r[3]), num(r[4]))],
+        "assumptions": [(r[0], r[1], r[2] if len(r) > 2 else "")
+                        for r in raw["assumptions"] if len(r) >= 2 and r[1]],
+    }
+
+
 # ── workbook construction ──────────────────────────────────────────────────────
 
 def _style(ws, row, ncols, fill=None, bold=False, header=False):
@@ -290,7 +385,8 @@ def enforce_conventions(wb):
                         n in v for n in ("ratecard", "P50", "P80", "blended_rate", "rho",
                                          "nonlabour", "conf", "term_days", "low_", "max_marks",
                                          "sigma_cells", "pert_mean", "sum_", "costbase",
-                                         "contingency_days", "scope_exposure", "rate_status")
+                                         "contingency_days", "scope_exposure", "rate_status",
+                                         "pnl_", "disc_", "rom_", "ceiling_pct", "term_weeks")
                     ) else BLACK
                     cell.font = Font(name=FONT, size=10, bold=bool(f and f.bold), color=colour)
                 elif is_yellow or (v is not None and not isinstance(v, str)):
@@ -312,11 +408,15 @@ def _named(wb, name, sheet, ref):
     wb.defined_names.add(DefinedName(name, attr_text=f"'{sheet}'!{ref}"))
 
 
-def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€"):
+def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€",
+          term_weeks=26, marks=300):
     from openpyxl import Workbook
 
-    eur = f"{currency}#,##0"     # the number format follows the engagement's currency,
-                                 # not the tender this builder was first tested on
+    currency = currency_symbol(currency)
+    eur = money_format(currency)  # the number format follows the engagement's currency,
+                                  # not the tender this builder was first tested on
+    term_weeks = int(term_weeks)
+    priced = bool(marks)          # marks 0 = the tender has no price formula: no price→marks
     wb = Workbook()
     narrative = narrative or {}
     eff = data["effort"] or [(f"S-{i:02d}", "<activity>", 0, 0, 0, "") for i in range(1, 4)]
@@ -373,7 +473,10 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
     _widths(ws, [42, 16, 62])
     ws.append(["Input", "Value", "Note"]); _style(ws, 1, 3, header=True)
     inputs = [
-        ("Working days in term", 126, "After public holidays. Drives implied FTE.", "term_days"),
+        # 126 working days per 26 weeks after public holidays — pro-rated, not re-typed, when
+        # the term differs
+        ("Working days in term", round(term_weeks * 126 / 26),
+         "After public holidays. Drives implied FTE.", "term_days"),
         ("Correlation assumption (rho)", rho,
          "0 = independent (textbook PERT, usually too tight) · 0.5 = partially correlated "
          "(professional-services default) · 1 = fully correlated", "rho"),
@@ -383,12 +486,16 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
          "YOUR assumption — left empty so a sample number can never ship as a real one.", "low_a"),
         ("Assumed lowest competitor bid — mid", None, "", "low_b"),
         ("Assumed lowest competitor bid — high", None, "", "low_c"),
-        ("Cost marks available", 300, "From the buyer's evaluation table.", "max_marks"),
-        ("Term (weeks)", 26, "Contract duration. The schedule may not end after it.", "term_weeks"),
+        ("Cost marks available", marks, "From the buyer's evaluation table.", "max_marks"),
+        ("Term (weeks)", term_weeks, "Contract duration. The schedule may not end after it.",
+         "term_weeks"),
         ("Working days per week", 5, "Duration = effort / (people x this x utilisation).", "days_per_week"),
         ("Project start date", __import__("datetime").date.today(),
          "Week 1 Monday. Every date on Schedule is derived from it.", "start_date"),
     ]
+    if not priced:
+        # no price formula → no marks input and no competitor range to score against
+        inputs = [i for i in inputs if i[3] not in ("max_marks", "low_a", "low_b", "low_c")]
     # Row numbers are tracked explicitly rather than inferred from len(). Mixing ws.append()
     # with ws.cell(row=N) moves openpyxl's internal cursor in a way that is easy to get wrong,
     # and the first version did: the `nonlabour` named range landed one row short of the SUM,
@@ -441,7 +548,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
             value="Set to ACTUAL only when these are the firm's real published rates. "
                   "While it reads PLACEHOLDER, no price computed here may be committed.")
     _named(wb, "rate_status", "RateCard", "$B$2")
-    for c, h in enumerate(("Grade", "Cost rate / day €", "Sell rate / day €",
+    for c, h in enumerate(("Grade", f"Cost rate / day {currency}", f"Sell rate / day {currency}",
                            "Effective date", "Source"), 1):
         ws.cell(row=4, column=c, value=h)
     _style(ws, 4, 5, header=True)
@@ -635,7 +742,7 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
         ("Peak staffing is deliverable",
          '=TEXT(MAX(Gantt!$B$4:$AA$4),"0.0")&" FTE peak vs "&TEXT(Range!$B$12,"0.0")'
          '&" average — the named team has to cover the peak, not the average"',
-         "Averaging a 26-week engagement hides the week nobody is available."),
+         f"Averaging a {term_weeks}-week engagement hides the week nobody is available."),
     ]
     for k, (label, formula, why) in enumerate(checks):
         rr = srow + 3 + k
@@ -658,6 +765,9 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
         ("G3", 24, "recommendation, roadmap and cost accepted", "D3-D5"),
         ("G4", 26, "final acceptance", "D6"),
     ]
+    if not data.get("milestones") and term_weeks != 26:
+        # placeholder gates sit at the same fractions of whatever the term is
+        miles = [(g, max(1, round(w * term_weeks / 26)), d, x) for g, w, d, x in miles]
     mfirst = mrow + 1
     for k, (gate, wk, decides, deliv) in enumerate(miles):
         rr = mfirst + k
@@ -815,7 +925,8 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
     # ── Cost ──────────────────────────────────────────────────────────────────
     ws = wb.create_sheet("Cost")
     _widths(ws, [42, 18, 18, 56])
-    ws.append(["Line", "at P50 €", "at P80 €", "Note"]); _style(ws, 1, 4, header=True)
+    ws.append(["Line", f"at P50 {currency}", f"at P80 {currency}", "Note"])
+    _style(ws, 1, 4, header=True)
     ws.append(["Labour", "=P50*blended_rate", "=P80*blended_rate", "Days x blended cost rate"])
     ws.append(["Non-labour + certain costs", "=nonlabour", "=nonlabour", "From Inputs"])
     ws.append(["COST BASE", "=B2+B3", "=C2+C3", "Margin is NOT set here — pricing is a human decision"])
@@ -831,19 +942,23 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
 
     # ── Decision ──────────────────────────────────────────────────────────────
     ws = wb.create_sheet("Decision")
-    _widths(ws, [18, 18, 18, 18, 14, 18, 30])
-    ws.append(["Candidate price", "Marks if lowest = low", "if mid", "if high",
-               "Margin vs P50", "Margin €", "Flag"])
-    _style(ws, 1, 7, header=True)
+    marks_cols = 3 if priced else 0
+    _widths(ws, [18] + [18] * marks_cols + [14, 18, 30])
+    ws.append(["Candidate price"]
+              + (["Marks if lowest = low", "if mid", "if high"] if priced else [])
+              + ["Margin vs P50", f"Margin {currency}", "Flag"])
+    _style(ws, 1, 4 + marks_cols, header=True)
+    from openpyxl.utils import get_column_letter as _col
+    m_pct, m_abs, m_flag = (_col(2 + marks_cols + k) for k in range(3))
     for i in range(2, 8):
         # IFERROR as well as the blank guard: the blank test stops an empty row, but a reviewer
         # typing 0 into a candidate-price cell would still divide by zero and spray #DIV/0!
         # across the row they are in the middle of filling in.
-        ws.append([
-            None,
+        ws.append([None] + ([
             f"=IFERROR(IF(A{i}=\"\",\"\",MIN(low_a/A{i},1)*max_marks),\"\")",
             f"=IFERROR(IF(A{i}=\"\",\"\",MIN(low_b/A{i},1)*max_marks),\"\")",
             f"=IFERROR(IF(A{i}=\"\",\"\",MIN(low_c/A{i},1)*max_marks),\"\")",
+        ] if priced else []) + [
             f"=IFERROR(IF(A{i}=\"\",\"\",(A{i}-costbase_P50)/A{i}),\"\")",
             f"=IF(A{i}=\"\",\"\",A{i}-costbase_P50)",
             f'=IF(A{i}="","",IF(A{i}<costbase_P50,"UNDER COST BASE",'
@@ -851,16 +966,19 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
             f'IF(A{i}-costbase_P50<scope_exposure_eur,"margin < excluded scope exposure","")))) ',
         ])
         _style(ws, i, 1, fill=INPUT_FILL)
-        for c in ("B", "C", "D", "E", "F", "G"):
-            ws[f"{c}{i}"].fill = __import__("openpyxl").styles.PatternFill("solid", fgColor=DERIVED_FILL)
-        for c in ("B", "C", "D"):
+        for k in range(2, 5 + marks_cols):
+            ws.cell(row=i, column=k).fill = \
+                __import__("openpyxl").styles.PatternFill("solid", fgColor=DERIVED_FILL)
+        for c in ("B", "C", "D")[:marks_cols]:
             ws[f"{c}{i}"].number_format = "0.0"
-        ws[f"E{i}"].number_format = PCT
-        ws[f"F{i}"].number_format = eur
+        ws[f"{m_pct}{i}"].number_format = PCT
+        ws[f"{m_abs}{i}"].number_format = eur
     ws.append([])
     for k, line in enumerate([
         "Type candidate prices into column A. Everything else is a formula.",
-        "Marks formula caps the ratio at 1: below the lowest bid you score full marks, not more.",
+        "Marks formula caps the ratio at 1: below the lowest bid you score full marks, not more."
+        if priced else "This tender has no price formula (marks = 0) — price is not converted to "
+                       "marks here; margin and the flags still apply.",
         "",
         "THIS SHEET DELIBERATELY RECOMMENDS NOTHING. Pricing weighs client appetite, competitive",
         "position and risk tolerance that this model does not contain. Record the decision, once",
@@ -869,15 +987,29 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
         ws.cell(row=9 + k, column=1, value=line)
     ws.cell(row=12, column=1).font = __import__("openpyxl").styles.Font(bold=True)
 
-    # ── Judgement ─────────────────────────────────────────────────────────────
-    # The judgement the numbers rest on, in the same file as the numbers — one row per topic.
-    # As eight separate tabs this was 8 of 21 worksheets holding four words each, and an empty
-    # tab named `BasisOfEstimate` reads as "there is one" rather than "this is owed".
+    write_judgement(wb, narrative)
+
+    # Tab order follows the model's flow, so a reviewer reads it in the order it computes.
+    order_sheets(wb)
+
+    enforce_conventions(wb)
+    present_schedule(wb, term_weeks)
+    wb.save(out_path)
+    return {k: len(v) for k, v in data.items()}
+
+
+def write_judgement(wb, narrative):
+    """The judgement the numbers rest on, in the same file as the numbers — one row per topic.
+
+    As eight separate tabs this was 8 of 21 worksheets holding four words each, and an empty
+    tab named `BasisOfEstimate` reads as "there is one" rather than "this is owed". Shared by
+    both shapes: a rate card rests on a basis of estimate exactly as a project price does.
+    """
+    from openpyxl.styles import Alignment as _Al
     ws = wb.create_sheet(JUDGEMENT_SHEET)
     _widths(ws, [26, 10, 120])
     ws.append(["Topic", "State", "What it says"])
     _style(ws, 1, 3, header=True)
-    from openpyxl.styles import Alignment as _Al
     r = 1
     for sheet, _prefixes in NARRATIVE_SHEETS:
         body = [ln for ln in (narrative.get(sheet) or [])
@@ -898,18 +1030,232 @@ def build(data, rho, out_path, zero_rates=False, narrative=None, currency="€")
                "number without an argument. Write the row, not a separate document."])
     _style(ws, last + 2, 2, fill=DERIVED_FILL, bold=True)
 
-    # Tab order follows the model's flow, so a reviewer reads it in the order it computes.
-    order_sheets(wb)
 
+def build_panel(panel, rho, out_path, zero_rates=False, narrative=None, currency="€",
+                term_weeks=26, ceiling_pct=15):
+    """The panel / framework shape: a rate card and a method, not a priced project.
+
+    A panel tender buys the right to call people off at known rates. What it evaluates is the
+    rate card (bands x location tiers), which roles sit in which band, the discount schedule, the
+    assumptions the rates rest on, and usually one worked example of the method. There is no
+    single scope to put O/M/P days against — so the effort/schedule/cost-base chain of the
+    project shape would price a project the buyer never described. The worked ROM is the one
+    place a range belongs: one representative engagement at P50/P80, with the not-to-exceed
+    ceiling the response would quote for it.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter as col
+
+    currency = currency_symbol(currency)
+    money = money_format(currency)
+    narrative = narrative or {}
+    bands = panel.get("bands") or [(f"<band {i}>", 0, "") for i in range(1, 4)]
+    tiers = panel.get("tiers") or [("<tier 1 — e.g. onshore>", 1.0, ""),
+                                   ("<tier 2>", 1.0, ""), ("<tier 3>", 1.0, "")]
+    roles = panel.get("roles") or [("<role>", bands[0][0], "")]
+    discounts = panel.get("discounts") or [(0, 0, "no discount below the first threshold")]
+    rom = panel.get("rom") or [(roles[0][0], tiers[0][0], 0, 0, 0, "")]
+    assumptions = panel.get("assumptions") or [("PA1", "<assumption the rates rest on>", "")]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "README"
+    _widths(ws, [110])
+    for r, line in enumerate([
+        "ESTIMATION MODEL — panel / rate-card shape, live formulas",
+        "",
+        "Yellow cells with blue text are INPUTS. Black formulas calculate locally; green formulas link sheets.",
+        "",
+        "Sheet            What it does",
+        "Inputs           Correlation, confidence level, ceiling headroom, worked-ROM duration. Start here.",
+        "RateCard         Day rate per band x location tier = base rate x tier index. The submitted card.",
+        "RoleCatalogue    Each role the buyer may call off, the band it sits in, and what it does.",
+        "Discounts        Volume discount schedule: the discount applies from each spend threshold up.",
+        "Assumptions      The conditions the rates and the worked ROM rest on — state them in the response.",
+        "WorkedROM        ONE representative engagement priced off the card: P50 / P80, contingency,",
+        "                 the discount, and the not-to-exceed ceiling.",
+        "Judgement        The reasoning the numbers rest on. One row per topic; blank rows say OWED.",
+        "",
+        "A panel tender prices a rate card and a method, not a project. The worked ROM shows the",
+        "method on one example; it is not a commitment to that scope.",
+        "",
+        "This workbook does not nominate rates or a discount. It supplies the tradeoff; the partner decides.",
+    ], 1):
+        ws.cell(row=r, column=1, value=line)
+    ws.cell(row=1, column=1).font = Font(bold=True, size=13)
+
+    # ── Inputs ────────────────────────────────────────────────────────────────
+    ws = wb.create_sheet("Inputs")
+    _widths(ws, [42, 16, 62])
+    ws.append(["Input", "Value", "Note"]); _style(ws, 1, 3, header=True)
+    for row, (label, val, note, nm) in enumerate([
+        ("Correlation assumption (rho)", rho,
+         "0 = independent · 0.5 = partially correlated (default) · 1 = fully correlated", "rho"),
+        ("Confidence level for the commitment number", 0.80, "0.80 = P80.", "conf"),
+        ("Ceiling headroom over P50 (net)", ceiling_pct / 100,
+         "Not-to-exceed = net P50 x (1 + this). Checked against net P80 on WorkedROM.",
+         "ceiling_pct"),
+        ("Worked ROM duration (weeks)", int(term_weeks), "Drives the implied FTE only.",
+         "term_weeks"),
+        ("Working days per week", 5, "", "days_per_week"),
+    ], 2):
+        ws.cell(row=row, column=1, value=label)
+        ws.cell(row=row, column=2, value=val)
+        ws.cell(row=row, column=3, value=note)
+        _style(ws, row, 2, fill=INPUT_FILL)
+        _named(wb, nm, "Inputs", f"$B${row}")
+    ws["B4"].number_format = PCT
+
+    # ── RateCard: bands x tiers ───────────────────────────────────────────────
+    ws = wb.create_sheet("RateCard")
+    nt = len(tiers)
+    last_tier = col(2 + nt)
+    _widths(ws, [30, 18] + [16] * nt + [44])
+    ws.cell(row=1, column=1, value="RATE CARD — day rate = band base rate x location-tier index")
+    ws.cell(row=1, column=1).font = Font(bold=True, size=12)
+    ws.cell(row=2, column=1, value="Status")
+    ws.cell(row=2, column=2, value="PLACEHOLDER")
+    _style(ws, 2, 2, fill=INPUT_FILL, bold=True)
+    ws.cell(row=2, column=3, value="Set to ACTUAL only when these are the firm's real rates.")
+    _named(wb, "rate_status", "RateCard", "$B$2")
+    for c, h in enumerate(["Band", f"Base rate / day {currency}"] + [t[0] for t in tiers]
+                          + ["Description"], 1):
+        ws.cell(row=4, column=c, value=h)
+    _style(ws, 4, 3 + nt, header=True)
+    ws.cell(row=5, column=1, value="Location index →")
+    for k, (_t, idx, _n) in enumerate(tiers):
+        ws.cell(row=5, column=3 + k, value=idx).number_format = "0.00"
+    ws.cell(row=5, column=3 + nt, value="Tier rate = base x this index")
+    b_first = 6
+    for i, (band, base, desc) in enumerate(bands, b_first):
+        ws.cell(row=i, column=1, value=band)
+        ws.cell(row=i, column=2, value=0 if zero_rates else base).number_format = money
+        for k in range(nt):
+            c = col(3 + k)
+            ws.cell(row=i, column=3 + k, value=f"=$B{i}*{c}$5").number_format = money
+        ws.cell(row=i, column=3 + nt, value=desc)
+        _style(ws, i, 2, fill=INPUT_FILL)
+    b_last = b_first + len(bands) - 1
+    _named(wb, "pnl_bands", "RateCard", f"$A${b_first}:$A${b_last}")
+    _named(wb, "pnl_tiers", "RateCard", f"$C$4:${last_tier}$4")
+    _named(wb, "pnl_grid", "RateCard", f"$C${b_first}:${last_tier}${b_last}")
+
+    # ── RoleCatalogue ─────────────────────────────────────────────────────────
+    ws = wb.create_sheet("RoleCatalogue")
+    _widths(ws, [34, 16, 56, 20, 24])
+    ws.append(["Role", "Band", "What they do", f"Rate at {tiers[0][0]}", "Check"])
+    _style(ws, 1, 5, header=True)
+    for i, (role, band, desc) in enumerate(roles, 2):
+        ws.append([role, band, desc,
+                   f"=IFERROR(INDEX(pnl_grid,MATCH(B{i},pnl_bands,0),1),0)",
+                   f'=IF(COUNTIF(pnl_bands,B{i})=0,"BAND NOT ON RATE CARD","")'])
+        _style(ws, i, 2, fill=INPUT_FILL)
+        ws[f"D{i}"].number_format = money
+    r_last = len(roles) + 1
+    _named(wb, "pnl_roles", "RoleCatalogue", f"$A$2:$A${r_last}")
+    _named(wb, "pnl_role_band", "RoleCatalogue", f"$B$2:$B${r_last}")
+
+    # ── Discounts ─────────────────────────────────────────────────────────────
+    ws = wb.create_sheet("Discounts")
+    _widths(ws, [24, 12, 60])
+    ws.append([f"From spend {currency}", "Discount", "Basis"])
+    _style(ws, 1, 3, header=True)
+    for i, (frm, pct, basis) in enumerate(sorted(discounts, key=lambda d: d[0]), 2):
+        ws.append([frm, pct, basis])
+        _style(ws, i, 2, fill=INPUT_FILL)
+        ws[f"A{i}"].number_format = money
+        ws[f"B{i}"].number_format = PCT
+    d_last = len(discounts) + 1
+    _named(wb, "disc_from", "Discounts", f"$A$2:$A${d_last}")
+    _named(wb, "disc_pct", "Discounts", f"$B$2:$B${d_last}")
+    ws.cell(row=d_last + 2, column=1,
+            value="Thresholds ascending, the first at 0. A value takes the discount of the "
+                  "highest threshold not above it.")
+
+    # ── Assumptions ───────────────────────────────────────────────────────────
+    ws = wb.create_sheet("Assumptions")
+    _widths(ws, [10, 70, 40])
+    ws.append(["ID", "Assumption", "Basis / source"])
+    _style(ws, 1, 3, header=True)
+    for a in assumptions:
+        ws.append(list(a))
+    ws.cell(row=len(assumptions) + 3, column=1,
+            value="Every assumption here is a condition of the rates — it belongs in the response, "
+                  "not only in this workbook.")
+
+    # ── WorkedROM ─────────────────────────────────────────────────────────────
+    ws = wb.create_sheet("WorkedROM")
+    _widths(ws, [30, 14, 16, 7, 7, 7, 11, 9, 14, 16, 14, 30])
+    ws.append(["Role", "Band", "Tier", "O", "M", "P", "Expected d", "sigma d",
+               f"Day rate {currency}", f"Value at expected {currency}", f"sigma {currency}", "Note"])
+    _style(ws, 1, 12, header=True)
+    for i, (role, tier, o, m, p, note) in enumerate(rom, 2):
+        ws.append([role, f'=IFERROR(INDEX(pnl_role_band,MATCH(A{i},pnl_roles,0)),"")', tier,
+                   o, m, p, f"=(D{i}+4*E{i}+F{i})/6", f"=(F{i}-D{i})/6",
+                   f"=IFERROR(INDEX(pnl_grid,MATCH(B{i},pnl_bands,0),MATCH(C{i},pnl_tiers,0)),0)",
+                   f"=G{i}*I{i}", f"=H{i}*I{i}", note])
+        for c in ("A", "C", "D", "E", "F"):
+            ws[f"{c}{i}"].fill = __import__("openpyxl").styles.PatternFill("solid", fgColor=INPUT_FILL)
+        for c in ("G", "H"):
+            ws[f"{c}{i}"].number_format = "0.0"
+        for c in ("I", "J", "K"):
+            ws[f"{c}{i}"].number_format = money
+    w_last = len(rom) + 1
+    tot = w_last + 1
+    ws.append(["TOTAL", "", "", f"=SUM(D2:D{w_last})", f"=SUM(E2:E{w_last})",
+               f"=SUM(F2:F{w_last})", f"=SUM(G2:G{w_last})", f"=SUM(H2:H{w_last})", "",
+               f"=SUM(J2:J{w_last})", f"=SUM(K2:K{w_last})", ""])
+    _style(ws, tot, 12, fill=DERIVED_FILL, bold=True)
+    ws[f"J{tot}"].number_format = money
+    s0 = tot + 2
+    summary = [
+        ("Days at P50 (PERT mean)", f"=G{tot}", "0.0", None, ""),
+        ("sigma if independent", f"=SQRT(SUMSQ(K2:K{w_last}))", money, None,
+         "Value terms: each line's sigma days x its day rate."),
+        ("sigma if fully correlated", f"=SUM(K2:K{w_last})", money, None, ""),
+        ("sigma used (rho from Inputs)", f"=IFERROR(SQRT(B{s0 + 1}^2+rho*(B{s0 + 2}^2-B{s0 + 1}^2)),0)",
+         money, None, ""),
+        ("z for the confidence level", "=NORMSINV(conf)", "0.0000", None, ""),
+        ("P50 — gross value", f"=J{tot}", money, "rom_P50", "PERT mean at card rates."),
+        ("P80 — gross value", f"=B{s0 + 5}+B{s0 + 4}*B{s0 + 3}", money, "rom_P80", "P50 + z x sigma."),
+        ("Contingency (P80 − P50)", f"=B{s0 + 6}-B{s0 + 5}", money, None,
+         "Derived from the range, not hand-picked."),
+        ("Volume discount at P50", f"=IFERROR(LOOKUP(B{s0 + 5},disc_from,disc_pct),0)", PCT, None, ""),
+        ("P50 — net of discount", f"=B{s0 + 5}*(1-B{s0 + 8})", money, "rom_P50_net", ""),
+        ("Volume discount at P80", f"=IFERROR(LOOKUP(B{s0 + 6},disc_from,disc_pct),0)", PCT, None, ""),
+        ("P80 — net of discount", f"=B{s0 + 6}*(1-B{s0 + 10})", money, "rom_P80_net", ""),
+        ("Not-to-exceed ceiling", f"=B{s0 + 9}*(1+ceiling_pct)", money, "rom_ceiling",
+         "Net P50 x (1 + ceiling headroom on Inputs)."),
+        ("Ceiling covers net P80?",
+         f'=IF(B{s0 + 12}>=B{s0 + 11},"OK","CEILING BELOW P80 — the cap does not cover the contingency")',
+         None, None, ""),
+        ("Implied FTE over the duration", f"=IFERROR(G{tot}/(term_weeks*days_per_week),0)", "0.0",
+         None, "Duration from Inputs."),
+        ("Rate card status", "=rate_status", None, None,
+         "ACTUAL required before any figure here is quoted."),
+    ]
+    for k, (label, formula, fmt, name, note) in enumerate(summary):
+        rr = s0 + k
+        ws.cell(row=rr, column=1, value=label)
+        ws.cell(row=rr, column=2, value=formula)
+        ws.cell(row=rr, column=3, value=note)
+        _style(ws, rr, 2, fill=DERIVED_FILL, bold=bool(name))
+        if fmt:
+            ws.cell(row=rr, column=2).number_format = fmt
+        if name:
+            _named(wb, name, "WorkedROM", f"$B${rr}")
+
+    write_judgement(wb, narrative)
+    order_sheets(wb)
     enforce_conventions(wb)
-    present_schedule(wb)
     wb.save(out_path)
-    return {k: len(v) for k, v in data.items()}
+    return {k: len(v) for k, v in panel.items()}
 
 
 # ── arithmetic audit of the markdown itself ────────────────────────────────────
 
-def present_schedule(wb, weeks=26):
+def present_schedule(wb, weeks=None):
     """Presentation for the two schedule sheets — idempotent, values untouched.
 
     Shared by `build()` and `upgrade()` because a Gantt that prints across three pages, paints its
@@ -932,6 +1278,8 @@ def present_schedule(wb, weeks=26):
     if "Gantt" not in wb.sheetnames:
         return
     ws = wb["Gantt"]
+    if weeks is None:
+        weeks = ws.max_column - 1                  # the term the Gantt was built for
     ws.column_dimensions["A"].width = 52
     ws.page_setup.orientation = "landscape"
     ws.page_setup.fitToWidth = 1
@@ -962,7 +1310,8 @@ def present_schedule(wb, weeks=26):
     return
 
 
-SHEET_ORDER = ["README", "Inputs", "RateCard", "Effort", "OverlapAudit", "Range", "Schedule",
+SHEET_ORDER = ["README", "Inputs", "RateCard", "RoleCatalogue", "Discounts", "Assumptions",
+               "WorkedROM", "Effort", "OverlapAudit", "Range", "Schedule",
                "Gantt", "Grades", "ClientEffort", "ScopeVariance", "Cost", "Decision",
                "Judgement"]
 
@@ -1033,6 +1382,11 @@ def upgrade(xlsx_path):
     import openpyxl
     live = openpyxl.load_workbook(xlsx_path)          # formulas, not values
     consolidate_judgement(live)
+    if "WorkedROM" in live.sheetnames:
+        # panel shape: no Effort rows, so no Schedule/Gantt to derive — nothing to add
+        order_sheets(live)
+        live.save(xlsx_path)
+        return []
     missing = [name for name in ("Schedule", "Gantt") if name not in live.sheetnames]
     if not missing:
         # nothing to add, but presentation and print setup are still worth re-applying: they are
@@ -1150,9 +1504,11 @@ def export_markdown(xlsx_path, md_path):
         f = number_format or ""
         if "%" in f:
             return f"{value:.1%}"
-        m = re.match(r"^([^#0,\s])#,##0", f)         # any currency symbol, not just €
+        # any currency symbol, not just € — and as LibreOffice re-saves it: `$` comes back
+        # escaped (`\$#,##0`) and a code quoted (`"CHF "#,##0`), which rendered raw floats
+        m = re.match(r'^(?:\\(.)|"([^"]*)"|([^#0,\s"\\]))#,##0', f)
         if m:
-            return f"{m.group(1)}{value:,.0f}"
+            return f"{next(g for g in m.groups() if g is not None)}{value:,.0f}"
         if '"x"' in f:
             return f"{value:.1f}x"
         if "." in f:
@@ -1240,6 +1596,30 @@ def check(data, rho):
     return 0
 
 
+def seed_sections_lost(md_path, xlsx_path):
+    """Topics a hand-written seed has text for that the workbook's Judgement rows do not.
+
+    Empty when md_path is absent, is already a generated snapshot, or every topic made it.
+    """
+    if not os.path.exists(md_path) or not os.path.exists(xlsx_path):
+        return []
+    with open(md_path, encoding="utf-8", errors="replace") as f:
+        md = f.read()
+    if is_generated_snapshot(md):
+        return []
+    seeded = [k for k, v in parse_narrative(md).items() if any(ln.strip() for ln in v)]
+    if not seeded:
+        return []
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_path)
+    if JUDGEMENT_SHEET not in wb.sheetnames:
+        return seeded
+    held = {r[0].value: str(r[2].value or "") for r in wb[JUDGEMENT_SHEET].iter_rows(min_row=2)
+            if len(r) > 2}
+    return [k for k in seeded
+            if not held.get(k, "").strip() or held[k].startswith("<not yet written>")]
+
+
 def find_recalc():
     """Locate the `xlsx` skill's recalc.py. We do NOT reimplement recalculation.
 
@@ -1276,6 +1656,8 @@ def has_cached_values(xlsx_path):
     import openpyxl
     wb = openpyxl.load_workbook(xlsx_path, data_only=True)
     try:
+        if "WorkedROM" in wb.sheetnames:           # panel shape has no Effort sheet
+            return wb["WorkedROM"]["G2"].value is not None
         return wb["Effort"]["F2"].value is not None
     except (KeyError, TypeError):
         return False
@@ -1317,8 +1699,20 @@ def main():
     ap.add_argument("--blank", action="store_true", help="starter workbook, no markdown needed")
     ap.add_argument("--rho", type=float, default=0.5,
                     help="correlation assumption, 0–1 (default 0.5, the professional-services default)")
-    ap.add_argument("--currency", default="€",
-                    help="currency symbol for cost cells (default €; e.g. $, £)")
+    ap.add_argument("--currency",
+                    help="currency code or symbol for cost cells (default € unless the seed's "
+                         "parameters block sets one; e.g. USD, GBP, $)")
+    ap.add_argument("--term-weeks", type=float,
+                    help="contract term in weeks (default 26 unless the seed sets term_weeks)")
+    ap.add_argument("--marks", type=float,
+                    help="cost marks available (default 300); 0 = the tender has no price "
+                         "formula, and the price->marks block is not built")
+    ap.add_argument("--shape", choices=("project", "panel"),
+                    help="project (default): one priced scope · panel: rate card x location "
+                         "tiers, role catalogue, discounts, assumptions, one worked ROM")
+    ap.add_argument("--ceiling-pct", type=float,
+                    help="panel shape: not-to-exceed headroom over the worked ROM's net P50, "
+                         "in percent (default 15)")
     ap.add_argument("--zero-rates", action="store_true",
                     help="emit the rate card with every rate at 0 — use when no rate card exists "
                          "and a fabricated placeholder would be worse than a visible zero")
@@ -1354,6 +1748,7 @@ def main():
                  "or --to-md --out <workbook.xlsx> to export an existing one")
 
     data = {k: [] for k in TABLE_KINDS}
+    md = ""
     if args.markdown:
         if not os.path.exists(args.markdown):
             print(f"ERROR: not found: {args.markdown}", file=sys.stderr)
@@ -1379,6 +1774,12 @@ def main():
 
     out = args.out or (os.path.splitext(args.markdown)[0] + ".xlsx" if args.markdown
                        else "estimation.xlsx")
+    # seed parameters, then CLI flags over them, then the historical defaults
+    params = dict(DEFAULTS, **parse_parameters(md))
+    for key in DEFAULTS:
+        if getattr(args, key) is not None:
+            params[key] = getattr(args, key)
+    narrative = parse_narrative(md) if md else {}
 
     if args.to_md:
         if not os.path.exists(out):
@@ -1394,6 +1795,17 @@ def main():
                   "  The positional argument is the seed markdown, not the workbook — "
                   "use `--out estimation.xlsx --to-md`.", file=sys.stderr)
             return 2
+        lost = seed_sections_lost(md_out, out)
+        if lost:
+            # The field failure: a builder that dropped the seed's reasoning, then this export
+            # wrote "8 of 8 owed" over the seed that held all eight. A hand-written seed is
+            # only replaced by a snapshot that carries what it said.
+            print(f"ERROR: {os.path.basename(md_out)} is a hand-written seed whose reasoning is "
+                  f"not in the workbook's Judgement sheet: {', '.join(lost)}.\n"
+                  "  Exporting would overwrite that text with OWED rows. Carry it into the "
+                  "Judgement rows first (or re-seed the workbook from this file).",
+                  file=sys.stderr)
+            return 6
         # Export reads cached values. openpyxl leaves none behind, and neither does a hand edit
         # in Excel that was never reopened — so recalculate before reading, or the snapshot is
         # a page of blanks that looks like a successful export. And when recalculation is
@@ -1420,12 +1832,22 @@ def main():
               f"  · or discard workbook edits on purpose:  --reseed", file=sys.stderr)
         return 5
     try:
-        counts = build(data, args.rho, out, args.zero_rates, currency=args.currency)
+        if params["shape"] == "panel":
+            counts = build_panel(parse_panel(md), args.rho, out, args.zero_rates,
+                                 narrative=narrative, currency=params["currency"],
+                                 term_weeks=params["term_weeks"],
+                                 ceiling_pct=params["ceiling_pct"])
+        else:
+            counts = build(data, args.rho, out, args.zero_rates, narrative=narrative,
+                           currency=params["currency"], term_weeks=params["term_weeks"],
+                           marks=params["marks"])
     except ImportError:
         print("ERROR: openpyxl not installed — run: pip install openpyxl "
               "(PEP-668: add --user --break-system-packages)", file=sys.stderr)
         return 3
-    print(f"Wrote {out}")
+    print(f"Wrote {out}  (shape: {params['shape']})")
+    written = sum(1 for v in narrative.values() if any(ln.strip() for ln in v))
+    print(f"  judgement {written} of {len(NARRATIVE_SHEETS)} topic(s) carried from the seed")
     for k, n in counts.items():
         print(f"  {k:9s} {n} row(s)" + ("   ← empty, using placeholders" if not n else ""))
     clean = True if args.no_recalc else recalculate(out)

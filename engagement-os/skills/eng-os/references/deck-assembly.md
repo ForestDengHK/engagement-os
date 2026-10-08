@@ -8,6 +8,7 @@ and the gate at the end of it. It does not cover storyline (`presentation-builde
 
 ## Contents
 - Who owns which step
+- Figure policy: native
 - The round trip
 - Splice, don't rebuild
 - The gate: what verify_deck checks, and why only these
@@ -25,6 +26,20 @@ and the gate at the end of it. It does not cover storyline (`presentation-builde
 
 Every one-off `merge_v22.py` / `assemble_v34.py` in an engagement repo is a re-implementation of
 row 3. Write the running order down, hand the copying to `pptx`, and keep the judgement here.
+
+## Figure policy: native
+
+The deck manifest handed to `presentation-builder` carries `figure_policy: native`
+(`eng-render` step 5). Under it:
+
+- **Every figure is native PowerPoint** — shapes, chevrons, lanes, connectors and native tables,
+  drawn with python-pptx from the figure's spec and grouped so it moves as one
+  (`designing-figures` `references/render-pipeline.md` §7). The HTML master is the design
+  reference, not the artefact.
+- **A picture is allowed only for a photograph or a screenshot.**
+- **Fonts:** the template's theme fonts; `verify_deck.py` warns (`font-not-embedded`) on any
+  font that is neither standard Office nor embedded.
+- A redrawn slide spliced into an issued deck follows the same policy.
 
 ## The round trip
 
@@ -45,6 +60,9 @@ row 3. Write the running order down, hand the copying to `pptx`, and keep the ju
 The failure this prevents is not a bad deck — it is a deck that never gets assembled. Corrected
 slides sit beside the deck as loose fragments, the issued version stays live, and the correction
 silently expires. **A redraw is not done until it is spliced, verified, and indexed.**
+
+**Commitments on slides.** A slide states a commitment by calling `commitments.value('C-nn')` from `skills/eng-os/scripts/commitments.py` in the build script; the deck-drift check in `/eng-sync` proves every value on a slide equals the register. Put the slide numbers in the row's `Slides`
+column — a row without them is not checked against the deck.
 
 ## Splice, don't rebuild
 
@@ -82,6 +100,18 @@ build log — only in the package:
 Plus the mechanical ones a splice gets wrong: `slide-count`, `broken-media-ref` (a figure
 whose image did not come across — PowerPoint draws an empty box), `empty-slide`, and
 `no-text-on-slide`.
+
+**Picture count on slide layers** — part of the gate under `figure_policy: native`.
+`flattened-slide` only catches a full-bleed picture with no text; a figure PNG pasted beside a
+title passes it. So count every `<p:pic>` on the slides (layouts and masters excluded) and
+report each with its slide number:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/verify_deck.py --figures native deck.pptx
+```
+
+Empty output = pass. Every line printed must be a photograph or a screenshot; anything else is
+a figure to redraw natively.
 
 **What it deliberately does not check.** Text overflow within a shape cannot be decided from the
 XML — it needs rendered pixels, which `designing-figures`' render-verification pass already owns.

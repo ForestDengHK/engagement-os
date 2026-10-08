@@ -57,6 +57,13 @@ start, and never as a gate on work the user can still do.
                                 bucket leak, flattened client deck)
           - fix before review  (warnings that will cost marks or trust)
           - informational
+        Two lines always get named when they appear:
+          - `commitment-drift` (a section no longer states its commitments-register value, or a
+            Value was edited and not synced) → `/eng-sync`; `commitment-rejected-unresolved` at
+            the freeze → the approver's "no" still needs a new Value
+          - `info [score-gaps]` from `2_analysis/score_gap_register.md`: open `rewrite` gaps are
+            **blocking the next evaluator round** (ours to fix now); open `firm input` gaps are
+            **owed** — list them with the sign-off sheet's items, by owner
         Name the file and the fix for each. A finding nobody can act on is noise.
 - [ ] 5. If nothing is blocking, say so plainly and name what was checked. "Clean" without
         a list of what ran is indistinguishable from "I didn't run anything".

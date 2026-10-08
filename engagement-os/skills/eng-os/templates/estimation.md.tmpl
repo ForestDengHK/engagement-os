@@ -13,7 +13,21 @@
 **Payment profile:** <milestones> `[RFP §x]`
 **Estimate stage (cone of uncertainty):** <pre-award, from tender prose / post-discovery / definitive> — <the honest accuracy band at this stage>
 
+**Parameters** *(read when the workbook is first built — set them from the tender, not from habit)*
+
+<!--table:parameters-->
+| Parameter | Value | Note |
+|---|---|---|
+| shape | project | `project` = one priced scope · `panel` = a rate card and a method (framework / panel / call-off tender with no single scope) |
+| currency | EUR | ISO code or symbol — the tender's pricing currency `[RFP §x]` |
+| term_weeks | 26 | contract term in weeks `[RFP §x]` |
+| marks | 300 | cost marks in the buyer's evaluation table; **0 = no price formula** (no price-vs-marks table is built) |
+| ceiling_pct | 15 | panel shape only: not-to-exceed headroom over the worked ROM's net P50, in percent |
+
 ## 1. Basis of estimate
+
+**Shape:** <project / panel> — <why: one priced scope, or a rate card + method because the buyer
+publishes no single scope to price> `[RFP §x]`
 
 **Volumetric baseline** *(from `rfp_analysis.md` §3 — the counts this model multiplies by)*
 
@@ -169,6 +183,42 @@ touching another cell. Keep the grade names identical on both sides.
 **Grade pyramid:** <split> — <deliverable AND affordable AND scoreable against a Personnel
 criterion? An all-senior model prices itself out; a junior-heavy one fails the CV section it is
 being marked on, and cannot be quietly rebalanced later under a named-personnel clause.>
+
+## 3p. Panel shape only — rate card and method
+
+*(Delete this section for a `project` shape; for a `panel` shape it replaces §3a–3e. A panel
+tender prices a rate card and a method, not a project — the one range lives in the worked ROM.)*
+
+<!--table:bands-->
+| Band | Base rate / day | Description |
+|---|---|---|
+| <band> | 0 | <seniority it covers> |
+
+<!--table:tiers-->
+| Tier | Index | Note |
+|---|---|---|
+| <onshore> | 100% | base rate applies |
+| <nearshore / offshore> | <n>% | <basis for the index> |
+
+<!--table:roles-->
+| Role | Band | What they do |
+|---|---|---|
+| <role from the buyer's catalogue> | <band> | |
+
+<!--table:discounts-->
+| From spend | Discount | Basis |
+|---|---|---|
+| 0 | 0% | list rates |
+
+<!--table:rom-->
+| Role | Tier | O | M | P | Note |
+|---|---|---|---|---|---|
+| <role> | <tier> | | | | <the representative engagement this ROM prices> |
+
+<!--table:assumptions-->
+| ID | Assumption | Basis |
+|---|---|---|
+| PA1 | <condition the rates rest on — travel, rate hold, minimum call-off> | `[RFP §x]` |
 
 ## 4. Client-side effort
 <!-- Their hours, by group. Required outright by some RFPs; on a fixed price it is the biggest

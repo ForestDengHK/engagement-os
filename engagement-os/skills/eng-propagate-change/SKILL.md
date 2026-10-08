@@ -70,6 +70,11 @@ use the namespaced form — `eng-check companions` prints it for this machine.
 - `rfp_analysis.md` / compliance R-ID change →
   `Skill(engagement-os:eng-rfp-analyze)`, then only the sections whose `answers_reqs` or
   `depends_on` intersect the change.
+- `3_drafting/commitments.md` change (a Value edited, an approval or rejection arrived) →
+  the deterministic part is `sync_commitments.py apply` (via `/eng-sync`): it rewrites the old
+  string to the new one in each listed section body and reopens reviewed sections. This skill
+  handles the rest — an argument that no longer holds around the new value, a paraphrase the
+  verbatim swap could not find (reported as drift), slides that restate it, and the re-review.
 - A-ID change → `Skill(engagement-os:eng-index-assets)`.
 - BR research-row change → `Skill(engagement-os:eng-bid-research)`.
 - Response section or its dependency changed →
@@ -91,7 +96,8 @@ Existing section frontmatter already provides most of the graph:
 - `figures: [F-nn]` → figure sources/exports
 - body references such as `log #3` → `BR-003`
 - `depends_on: [...]` → additional load-bearing dependencies, especially
-  `estimation.xlsx`, S-IDs, or a named analysis file
+  `estimation.xlsx`, S-IDs, `commitments.md`, or a named analysis file. `commitments.md` is
+  load-bearing for every section a row lists in its Sections column
 
 Do not add `depends_on` for decorative context. It means: changing this dependency invalidates
 the section's existing review.

@@ -486,9 +486,10 @@ CASES = [
                 _sub(t, MATRIX, "| met |", "| open |")),
      set(), {"mandatory-open"}, set()),
 
-    # ── mandatory items are pass/fail from the moment a section enters review ──
+    # ── mandatory items are pass/fail from the moment a section is approved ──
     # They used to stay warnings until a package was FROZEN — the last mechanical gate,
     # exactly when there is no time left. On the real pack: 46 open mandatories, 0 errors.
+    # (Escalating at `reviewed-r1` overshot: tests/test_lint_render_fixes.py holds that side.)
     ("mandatory-open-escalates-once-a-section-is-reviewed",
      lambda t: (_approve_section(t), _sub(t, MATRIX, "| met |", "| open |")),
      {"mandatory-open"}, set(), set()),
@@ -1255,6 +1256,35 @@ def converter_tests():
          "team_structure/create_pptx.js" not in reindex3_rel),
         ("an unindexed asset is only to_index, never to_reindex",
          "case_studies/others/Quals.pdf" not in reindex3_rel),
+    ]
+    # Originals indexed BY REFERENCE (absolute path in `Original (path)`) are never under
+    # _shared/, so the walk above cannot see them; only their markdown is in the repo.
+    ref_root = pathlib.Path(tempfile.mkdtemp(prefix="engos-scan-ref-"))
+    donor = pathlib.Path(tempfile.mkdtemp(prefix="engos-donor-"))
+    (donor / "Fresh Case.pdf").write_text("a", encoding="utf-8")
+    (donor / "Stale Case.pdf").write_text("b", encoding="utf-8")
+    (donor / "Never Converted.docx").write_text("c", encoding="utf-8")
+    ref_shared = ref_root / "01_pursuit/_shared"
+    (ref_shared / "_md/case_studies").mkdir(parents=True)
+    (ref_shared / "_md/case_studies/Fresh Case.md").write_text("# md", encoding="utf-8")
+    (ref_shared / "_md/case_studies/Stale Case.md").write_text("# md", encoding="utf-8")
+    (ref_shared / "firm_assets.md").write_text(
+        "# Firm assets\n\n"
+        "| ID | Asset | Original (path) | Size |\n|---|---|---|---|\n"
+        f"| A-001 | `_md/case_studies/Fresh Case.md` | `{donor / 'Fresh Case.pdf'}` · sha256 0a1b | 1 |\n"
+        f"| A-002 | `_md/case_studies/Stale Case.md` | `{donor / 'Stale Case.pdf'}` · sha256 2c3d | 1 |\n"
+        f"| A-003 | — | `{donor / 'Never Converted.docx'}` | 1 |\n",
+        encoding="utf-8")
+    _os.utime(ref_shared / "_md/case_studies/Stale Case.md", (1, 1))   # md older than original
+    _, _, ref_convert, _ = cs.scan(ref_root)
+    ref_names = {p.name for _, p in ref_convert}
+    scan_checks += [
+        ("a by-reference original with no markdown is to_convert",
+         "Never Converted.docx" in ref_names),
+        ("a by-reference original newer than its markdown is to_convert",
+         "Stale Case.pdf" in ref_names),
+        ("a by-reference original with fresh markdown is not reported",
+         "Fresh Case.pdf" not in ref_names),
     ]
     for name, ok in scan_checks:
         print(f"  {'✓' if ok else '✗'} scanner:{name}")

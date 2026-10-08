@@ -24,8 +24,9 @@ in the same commit; a contract defined in two places is already two contracts.
 | `figures` | `[F-nn, …]` this section uses | lint — every id must exist in `figures/` and be referenced in the body |
 | `evidence` | `[A-nnn, …]` firm assets relied on | lint — every id must exist in `firm_assets.md` |
 | `response_form` | `buyer-form: <their file>` · `buyer-structure` · `prose` — how the buyer expects THIS answer to arrive | lint — a clause with answer boxes may not be answered as free prose; a buyer-form must name its file |
-| `depends_on` | Additional load-bearing inputs such as `estimation.xlsx`, `S-nn`, or a named analysis file | `eng-propagate-change` — a changed dependency invalidates this section's review |
+| `depends_on` | Additional load-bearing inputs such as `commitments.md`, `estimation.xlsx`, `S-nn`, or a named analysis file. A section that cites any `[C-nn]` lists `commitments.md` | `eng-propagate-change` — a changed dependency invalidates this section's review |
 | `status` | Lifecycle state (below) | lint + the render gate |
+| `blocked_on` | Optional string: the external input that unblocks the section, and who owes it. Required when `status` is `blocked-rN` | lint — a `blocked-rN` section without it is an error |
 
 A field with **no machine consumer is documentation**. Do not let it look enforced —
 a field that appears checked but isn't is worse than no field (it reads as verified).
@@ -45,7 +46,7 @@ Happy path: `draft → reviewed-r1 → reviewed-r2 → approved`
 | `draft` | Being written; no review round has run |
 | `reviewed-r1` / `reviewed-r2` | Round R1/R2 passed with no required changes |
 | `revise-r1` / `revise-r2` | Round R1/R2 sent it back; changes owed |
-| `blocked-r1` / `blocked-r2` | Round R1/R2 found something only an external input resolves (a date, a name, a fact) |
+| `blocked-r1` / `blocked-r2` | Round R1/R2 found something only an external input resolves (a date, a name, a fact); `blocked_on` names it |
 | `approved` | R2 (experienced human) done; freezable |
 
 Client-deliverable sections (delivery phase) use the plainer set:
@@ -78,6 +79,11 @@ a page. The estimate is a warning device; the build's printed PAGE COUNT is the 
 
 ## Scaffolding markers (stripped at render, under `bid`/`deliverable` only)
 
+- `> **Internal note (stripped at render).** Sign-off: …` — one per section, REQUIRED, present
+  even when empty (`Sign-off: none`). It lists what the section still owes as
+  `[⚠VERIFY — owner: detail]` items, each matching a `commitments.md` row. It is the only place
+  in a section file a `[⚠VERIFY]` may appear.
+
 - `> **…**` blockquotes — scoring notes and reuse notes. Under the strict profiles a
   blockquote IS scaffolding by definition; never put real content (a quotation, a
   callout that must ship) in one. Every stripped run is reported on stderr.
@@ -89,14 +95,24 @@ a page. The estimate is a warning device; the build's printed PAGE COUNT is the 
 - `## Review log` section — one row per round: `| Round | Reviewer / lens | Date | Verdict | What changed |`.
   Verdicts: `pass` / `revise` / `blocked`. The verdict column is located by its
   header name, not by position.
-- `[⚠VERIFY]` — an unresolved fact. Never stripped; the render gate blocks on it.
+- `[⚠VERIFY]` — an unresolved fact, inside the Internal note only. In body text the render gate
+  blocks on it.
 
-## Figures: the three-artefact rule
+## Body text: values, no markers, no ids
 
-Every figure exists as three siblings in `3_drafting/figures/`:
-`F-nn_<name>.html` (the master — edit this) · `F-nn_<name>.png` (goes in the document) ·
-`F-nn_<name>.pptx` (one editable slide — a reviewer corrects the figure instead of
-describing the correction). Sections reference the png: `![caption](../figures/F-nn_<name>.png)`. The caption itself is
+Body text is everything outside the scaffolding above. It states each commitment's value in
+words, copied verbatim from `commitments.md`, and carries no `[⚠VERIFY]` and no internal id
+(`R-`, `A-`, `BR-`, `C-`). Ids go on the `**Traceability.**` line; open items go in the Internal
+note.
+
+## Figures: the editable-figure rule
+
+Every figure lives in `3_drafting/figures/` as `F-nn_<name>.png` (goes in the document), and
+it must be editable — a reviewer corrects the figure instead of describing the correction. A
+figure is editable if it is drawn natively in the deck or has an editable companion (`.html`
+master or `.pptx`). Sections reference the png: `![caption](../../figures/F-nn_<name>.png)` from
+a volume directory (`sections/v1/`), `![caption](../figures/F-nn_<name>.png)` only from a flat
+`sections/`. The caption itself is
 client-facing text only — the editable-companion pointer belongs on the `**Figure source.**`
 scaffolding line below it.
 Design belongs to the `designing-figures` skill; the pipeline and export to its
@@ -107,10 +123,12 @@ an error (pandoc degrades it to alt text — the document builds and the figure 
 
 `R-nnn` requirement (compliance matrix) · `A-nnn` firm asset (`firm_assets.md`) ·
 `F-nn` figure · `BR-nnn` research row (`bid_research_log.md`, cited in a body as `BR-003`
-or `log #3`). Ids are allocated in their owning register and only there.
+or `log #3`) · `C-nn` commitment (`3_drafting/commitments.md`, cited as `[C-nn]` on the
+Traceability line only). Ids are allocated in their owning register and only there.
 
 **Authored shorthand is not delivered shorthand.** Write `[RFP §3.3]`, `A-014`, `BR-005` and
-`[⚠VERIFY — what would close it]` in the source: that is what makes traceability checkable. The
+`[C-07]` in the source, and `[⚠VERIFY — owner: detail]` in the Internal note: that is what makes
+traceability checkable. The
 render normalises them for the recipient — clause refs into the buyer's own vocabulary, unresolved
 facts into a neutral `[TBD]`, internal ids **deleted**. Because deletion is the only possible
 rendering of an id, a body sentence must not depend on one: put the id on the `**Traceability.**`
