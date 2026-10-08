@@ -143,6 +143,7 @@ Take either, both, or neither — see §4 for modes.
 | `eng-maintain-memory` | Keep CLAUDE.md / project-context / DELIVERABLES / cross-session memory lean (anti-rot) | Milestones; recurring corrections |
 | `eng-check` | Run the mechanical readiness gates and report blockers without silently fixing them | Mid-flight or before freeze |
 | `eng-render` | Turn reviewed markdown into the required Word/PDF/deck artefact and verify the assembled output | Content is approved and must become the delivered file |
+| `eng-email` | Put written markdown on the clipboard as Outlook-ready rich text, tables and all | Something written has to go out as the body of an email |
 
 **Six load-bearing principles** (when a choice conflicts with one, the principle wins):
 1. Source → derived separation — originals are never edited; every derivative traces back by path + page.
@@ -217,6 +218,7 @@ can also be called by name when you'd rather not rely on the trigger firing.
 | `/eng-index-assets` | Registering what firm-held evidence actually proves |
 | `/eng-check` | Running the mechanical gates without changing the content |
 | `/eng-render` | Rendering reviewed content into the required submission file |
+| `/eng-email` | Getting written markdown into an email body with its formatting intact |
 
 Plugin skills are namespaced `engagement-os:eng-<name>`; the bare `/eng-<name>` form works when
 it's unambiguous. **Arguments are plain text, not flags** — write it however you'd say it

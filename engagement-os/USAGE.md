@@ -267,6 +267,7 @@ deliverable ends up built on unvalidated findings.
 | Scope grew | `/eng-upgrade` → carry on | approve the handoff + re-baseline |
 | Is it ready | `/eng-check` — any time, not just before shipping | decide what to do about each finding |
 | Ship the file | `/eng-render <dir>` — standalone, any directory | decide document vs deck, and clear the gates |
+| Email it instead of shipping a file | `/eng-email <file.md>` — standalone, any markdown | press Cmd+V into the message, and send it |
 | Fix an issued deck | `/eng-render` → splice the redrawn slides → `/eng-check` | say which slides are wrong; the rest do not move |
 | Reviewer edited a file | `/engagement-os:eng-propagate-change` | approve only the judgement changes it reopens |
 

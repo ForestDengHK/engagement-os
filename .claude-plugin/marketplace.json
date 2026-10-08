@@ -1,12 +1,12 @@
 {
   "name": "engagement-os",
-  "version": "1.27.0",
+  "version": "1.28.0",
   "description": "Engagement OS — a composable operating system for document-heavy consulting engagements: research-only, bid-only, delivery-only, or both",
   "owner": {
     "name": "Forest Deng",
     "email": "forest.jinying.denghk@outlook.com"
   },
-  "allowCrossMarketplaceDependenciesOn": ["panel-framework", "anthropic-agent-skills"],
+  "allowCrossMarketplaceDependenciesOn": [],
   "plugins": [
     {
       "name": "engagement-os",
