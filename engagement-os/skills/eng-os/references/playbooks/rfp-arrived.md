@@ -76,6 +76,11 @@ alone; don't wait for the rest of the material to arrive.
    **in-window** against this tender's recency rule, and its permission constraints. This is
    what makes the gap list real: a requirement covered by an indexed, in-window asset is a
    **citation, not a gap**. Undated is unusable — recency rules are pass/fail.
+4c. **Unknowns triage → `commitments.md`** → `Skill(engagement-os:eng-bid-respond)` step 1b.
+   Every unknown is classified once in `3_drafting/commitments.md`: `D` decided by the bid team
+   (with its basis), `R` public fact (closed by `eng-bid-research`), `X` firm-only (with the
+   fallback wording that stands if the input never arrives). The `X` rows and the commercial or
+   contractual `D` rows become `3_drafting/signoff_sheet.md`.
 5. **Size it — invoke, do not merely mention, the plugin skill
    `engagement-os:eng-estimate` through the Skill tool.** (`Skill(engagement-os:eng-estimate)`;
    priced tenders — i.e. nearly all of them.) The S-ID table and indexed rate card become a
@@ -162,6 +167,11 @@ plants them, `eng_lint.py` enforces them, `eng-render` gates and strips by them.
 - **R1 — panel red-team** (`panel-review` if installed, else a manual evaluator / legal /
   finance / architect pass): *does this score?* Against the scoring note in the frontmatter,
   not against taste.
+- **R1b — buyer-evaluator scoring**: `/panel-review <sections dir> --as-evaluator`
+  (panel-framework). The client-sponsor role reads the whole response as the buyer's evaluator,
+  scores each published criterion 0–10 with one line each, gives the weighted total, and lists
+  the five changes that move the score most, marked 'needs firm input' or 'rewrite'. A response
+  ships only after the second scoring shows every 'rewrite' item applied.
 - **R2 — experienced human**: what only experience sees — the claim that will draw a question
   we cannot answer, the tone that reads wrong to this buyer, the omission a scorer will punish.
 
@@ -175,15 +185,16 @@ a finished document for the first time the night before submission.
 
 The output format is the *last* step, not a thing you build toward incrementally.
 
-1. **Check** → `Skill(engagement-os:eng-check)` in strict mode. It runs the gates and reports
+1. **Sign off** — the sign-off sheet is complete and every priority-1 item is confirmed.
+2. **Check** → `Skill(engagement-os:eng-check)` in strict mode. It runs the gates and reports
    what is blocking; nobody types a script path to reach them.
-2. **Render** → `Skill(engagement-os:eng-render)` with the `bid` profile, which refuses to build
+3. **Render** → `Skill(engagement-os:eng-render)` with the `bid` profile, which refuses to build
    unless every section is
    `reviewed-r2`/`approved` and no `[⚠VERIFY]` survives in body text, then strips the internal
    scaffolding and produces the buyer's required format (`verify_deck.py` if it is a deck).
-3. **Verify the rendered artefact**, not the build log: required pages/slides present, figures
+4. **Verify the rendered artefact**, not the build log: required pages/slides present, figures
    intact, internal markings gone, and the submitted pricing numbers agree with the workbook.
-4. **Freeze the exact verified submission package** to `4_final/`; record version + date. Do not
+5. **Freeze the exact verified submission package** to `4_final/`; record version + date. Do not
    freeze an intermediate markdown set and call it the submission.
 
 ## Stop gates

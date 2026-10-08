@@ -10,8 +10,9 @@ zero-fabrication — so every claim reaching the response can be walked back to 
 Method: `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/references/bid-research.md`.
 
 ## Driven by the analysis
-Research is scoped by the **materials-needed list** and every `gap` in `compliance_matrix.md`
-(from `eng-rfp-analyze`). Don't research at large — research to close named gaps and arm the
+Research is scoped by the **materials-needed list**, every `gap` in `compliance_matrix.md`
+(from `eng-rfp-analyze`), and every `R` row in `3_drafting/commitments.md` (from
+`eng-bid-respond`'s unknowns triage). Don't research at large — research to close named gaps and arm the
 high-weight win-themes. Each task names the Req ID / theme it serves. Log findings in
 `2_analysis/bid_research_log.md` (template in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`).
 
@@ -32,6 +33,13 @@ Bid Research Progress:
 - [ ] 2. External stream: search primary sources first; record exact https URL + locator,
         publication/version and access date
 - [ ] 3. Internal stream: firm-held case studies / CVs / past bids the user uploads → cite the doc
+- [ ] 3b. REQUIRED sweep — firm network client stories in the buyer's sector: the firm's public
+        client-story pages, alliance pages (cloud/data vendors) and press. Per story capture
+        client as named publicly · member firm · year · scope · platform · measurable outcome ·
+        URL; log each as a `[T3:OWN]` row with its source tier noted. These are reference
+        candidates for `eng-bid-respond`'s rubric, beside the indexed firm assets
+- [ ] 3c. REQUIRED sweep — the buyer's next-12-months agenda: filings, separations/spin-offs,
+        segment changes, CEO letters, job ads → logged rows that feed the "our understanding" slide
 - [ ] 4. One independently checkable claim per row; split compound claims; fact vs inference
 - [ ] 5. Anything unsourceable → [⚠VERIFY] with what would close it (do NOT let it become a claim)
 - [ ] 6. Time-sensitive facts use closed-time-sensitive + valid-as-of + recheck-by

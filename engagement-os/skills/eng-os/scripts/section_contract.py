@@ -39,6 +39,7 @@ FIELDS = {
     "response_form": "lint (the buyer's own answer structure must be used where they gave one)",
     "depends_on":   "eng-propagate-change (additional load-bearing dependencies)",
     "status":       "lint + render gate",
+    "blocked_on":   "lint (optional string; warns when status is blocked-rN and it names nothing)",
 }
 
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
@@ -46,15 +47,31 @@ FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 REQ_ID_RE = re.compile(r"\bR-\d{3}\b")
 ASSET_ID_RE = re.compile(r"\bA-\d{3}\b")
 FIG_ID_RE = re.compile(r"\bF-\d{2}\b")
-RESEARCH_ID_RE = re.compile(r"\bBR-\d{3}\b")
+#: A research row. A later research round numbers its own rows (`BR2-01`); matching only
+#: `BR-nnn` dropped a whole second round from the log silently. `RESEARCH_ID` is the bare
+#: pattern, for composing with other internal ids (prose check, render clean-up).
+RESEARCH_ID = r"BR\d*-\d{2,3}"
+RESEARCH_ID_RE = re.compile(rf"\b{RESEARCH_ID}\b")
 #: Figure FILES are named F-nn_<name>.ext — the id is followed by a word character,
 #: so \b never matches there; use this against filenames, FIG_ID_RE against prose.
 FIG_FILE_RE = re.compile(r"^(F-\d{2})_")
+
+
+def research_id(token):
+    """Canonical form of one RESEARCH_ID_RE match: `BR-1`→`BR-001`, `BR2-1`→`BR2-01`."""
+    rnd, num = re.fullmatch(r"BR(\d*)-(\d+)", token.upper()).groups()
+    return f"BR{int(rnd)}-{int(num):02d}" if rnd else f"BR-{int(num):03d}"
+
 
 #: An unresolved fact. The explanatory form `[⚠VERIFY — what would close it]` is the one
 #: the templates and every real pack actually write, so ANY matcher must accept it.
 #: Matching the bare literal `[⚠VERIFY]` let eight markers through a render gate for real.
 VERIFY_RE = re.compile(r"\[⚠VERIFY[^\]]*\]")
+
+#: The section's list of what it still owes: `> **Internal note (stripped at render).** Sign-off: …`
+#: — a blockquote whose FIRST line opens with this label, running over the `>` lines after it.
+#: It is the one place a `[⚠VERIFY — owner: detail]` belongs.
+INTERNAL_NOTE_RE = re.compile(r"^\s*>\s*\*\*Internal note", re.I)
 
 #: A review-log round label. Rounds ITERATE — R1 sends a section back, the author fixes it,
 #: R1 runs again — and the contract says one row per pass, so the label carries a suffix

@@ -154,7 +154,7 @@ def section_record(root, path):
         | list_value(meta.get("depends_on", ""))
     )
     dependencies |= {f"BR-{int(n):03d}" for n in re.findall(r"\blog\s*#\s*(\d+)\b", body, re.I)}
-    dependencies |= set(sc.RESEARCH_ID_RE.findall(body))
+    dependencies |= {sc.research_id(i) for i in sc.RESEARCH_ID_RE.findall(body)}
     verdict = sc.latest_verdict(text)
     return {
         "content_sha256": sha256_bytes(canonical_section_text(text).encode("utf-8")),
@@ -189,9 +189,11 @@ def numbered_row_id(cell, prefix):
     The template plants bare numbers; every human and every other register in the pack
     writes the prefixed id. Accepting only one of the two forms made a ten-row research log
     read as zero rows — no error, just an entity set that was silently empty, so a changed
-    research claim invalidated nothing.
+    research claim invalidated nothing. A later research round's `BR2-01` is its own row.
     """
     cell = cell.strip().strip("`*")
+    if prefix == "BR" and sc.RESEARCH_ID_RE.fullmatch(cell.upper()):
+        return sc.research_id(cell)
     m = re.fullmatch(rf"{prefix}-?0*(\d{{1,3}})", cell, re.I) or re.fullmatch(r"#?(\d{1,3})", cell)
     return f"{prefix}-{int(m.group(1)):03d}" if m else None
 

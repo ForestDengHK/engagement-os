@@ -337,6 +337,31 @@ def case_research_row_ids_in_either_form():
     assert len(matches) == 1 and "BR-001" in " ".join(matches[0]["reasons"])
 
 
+def case_round_two_research_rows_route():
+    """A second research round's `BR2-01` row is an entity, and a section citing it is affected.
+
+    Row ids were read only as `BR-nnn`/bare numbers, so a whole second round tracked as zero
+    entities and a changed BR2 claim invalidated nothing.
+    """
+    items = tree()
+    items["01_pursuit/27-010/2_analysis/bid_research_log.md"] = (
+        "| # | Serves | Claim | Status |\n|---|---|---|---|\n"
+        "| BR-001 | R-001 | Benchmark is 12 weeks | closed |\n"
+        "| BR2-01 | R-002 | Second-round benchmark is 9 weeks | closed |\n")
+    items["01_pursuit/27-010/3_drafting/sections/s1.md"] = section(
+        "Pricing", "R-001", "A-001", "estimation.xlsx",
+        "Our P50 is €100, benchmarked per BR2-01.")
+    root = build(items)
+    ci.checkpoint(root)
+    assert "BR2-01" in json.loads((root / "_pm/change_impact_state.json").read_text()
+                                  )["entities"]["research"], "BR2 row not tracked"
+    mutate_text(root, "01_pursuit/27-010/2_analysis/bid_research_log.md",
+                "is 9 weeks", "is 11 weeks")
+    report = ci.scan(root)
+    matches = [x for x in report["affected_sections"] if x["path"].endswith("s1.md")]
+    assert len(matches) == 1 and "BR2-01" in " ".join(matches[0]["reasons"])
+
+
 def case_invalidation_keeps_the_round_it_observed():
     """A `reviewed-r1` section sent back goes to `revise-r1`, logged as an R1 row.
 
@@ -537,6 +562,7 @@ CASES = [
     ("strict lint blocks pending impact", case_lint_blocks_pending),
     ("CLI emits JSON and refuses unsafe checkpoint", case_cli_contract),
     ("research rows route in either id form", case_research_row_ids_in_either_form),
+    ("second-round BR2 research rows route", case_round_two_research_rows_route),
     ("invalidation keeps the round it observed", case_invalidation_keeps_the_round_it_observed),
     ("regenerated figure exports are not re-nagged", case_regenerated_exports_are_not_renagged),
     ("change row lands above rounds that never ran", case_change_row_lands_above_unrun_rounds),

@@ -6,7 +6,7 @@
 > *Evidence* column can name a specific file instead of saying "case studies", and so a claim's
 > **expiry** is visible before it fails a mandatory requirement.
 
-**Updated:** {{DATE}} · **Asset root:** `01_pursuit/_shared/`
+**Updated:** {{DATE}} · **Asset root:** `01_pursuit/_shared/` (markdown; originals by reference)
 
 ## Why an index and not just a folder
 
@@ -17,15 +17,17 @@ Each row below carries the date and the constraint, so the check is a lookup rat
 
 ## 1. Index
 
-**How to read a row.** The Asset cell names the ORIGINAL (the identity — that is what the
-scanner and the evidence chain key on). The working text is its markdown at
-`01_pursuit/_shared/_md/<same stem>.md` — **read the md first**; go back to the original only
-to verify something the md leaves uncertain. The scanner enforces that every convertible primary asset has
-its md (`to CONVERT`); formats that do not convert (.xlsm, .drawio) stay original-only, and the row says so.
+**How to read a row.** Originals are indexed **by reference, not copied**: `Original (path)`
+holds the original's absolute path and its sha256 (first 12), `Size` its size — so a changed or
+moved original is noticed. The Asset cell names what is IN this repo: the markdown at
+`_md/<kind>/<stem>.md` — **read the md first**; go back to the original only to verify something
+the md leaves uncertain. Only when a copy was asked for does the Asset cell name the kept copy
+(`<kind>/<file>`), which the scanner then checks has its md (`to CONVERT`). Formats that do not
+convert (.xlsm, .drawio) stay original-only, and the row says so.
 
-| ID | Asset | Category | What it proves | Dated | In-window? | Constraints | Used for |
-|---|---|---|---|---|---|---|---|
-| A-001 | `case_studies/<file>` | methodology / case study / CV / credential / diagram / financial | <the specific claim it can back, not the title> | <YYYY-MM> | <vs this RFP's recency rule> | <client permission? anonymised? NDA?> | R-0xx |
+| ID | Asset | Original (path) | Size | Category | What it proves | Dated | In-window? | Constraints | Used for |
+|---|---|---|---|---|---|---|---|---|---|
+| A-001 | `_md/case_studies/<stem>.md` | `/abs/path/to/<file>` · sha256 `<12 hex>` | <n.n MB> | methodology / case study / CV / credential / diagram / financial | <the specific claim it can back, not the title> | <YYYY-MM> | <vs this RFP's recency rule> | <client permission? anonymised? NDA?> | R-0xx |
 
 Paths are relative to `01_pursuit/_shared/` — `approaches/` · `case_studies/` · `cvs/` ·
 `credentials/` · `diagrams/` · `finance/`. What belongs there versus in `_sources/` is decided

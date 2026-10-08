@@ -19,6 +19,16 @@ any bid, and that is decided by origin, not subject.
 data, it needs that client's permission before it appears in a bid — record the permission in
 the `Constraint` column of `firm_assets.md`, and anonymise if permission is not held.
 
+## Originals stay where they are — only the markdown comes in
+
+Our material usually already lives somewhere else (another pursuit's repo, a synced SharePoint
+folder). **The original is indexed by reference, not copied**: `firm_assets.md` records its
+absolute path, size and hash, and only the converted markdown is written here, under `_md/`.
+Copying every original in is how one pursuit put 387 MB of decks into git.
+
+A copy goes into a `<kind>/` folder below **only when someone asks to keep one** — and the
+repo's `.gitignore` already keeps binaries in these folders out of git, while `_md/` stays tracked.
+
 ## The folders
 
 | Folder | Holds |
@@ -31,7 +41,7 @@ the `Constraint` column of `firm_assets.md`, and anonymise if permission is not 
 | `finance/` | rate cards, pricing models, commercial templates |
 | `contracts_ref/` | signed SoWs / contracts cited as delivery evidence — confidential, citation-permission tracked per row in the index |
 | `team_structure/` | bid-specific org charts and team-shape figures for this pursuit |
-| `_md/` | markdown conversions of any of the above, when a document is cited often enough to be worth converting (`eng-ingest-source --out`) |
+| `_md/` | the markdown of every indexed asset, by kind — the working text, and the only part of an asset that is committed |
 
 A kind that fits none of these gets a new folder — don't force it into the nearest one.
 
@@ -41,5 +51,5 @@ A kind that fits none of these gets a new folder — don't force it into the nea
 answers *"what do we have"*; a bid needs *"what proves this requirement, and is it still
 valid"* — recency rules make an undated asset unusable no matter how good it is.
 
-**Every file added here gets a row in `firm_assets.md` in the same sitting.** An asset nobody
-indexed is an asset nobody will find under deadline.
+**Every asset — referenced or copied — gets a row in `firm_assets.md` in the same sitting.** An
+asset nobody indexed is an asset nobody will find under deadline.

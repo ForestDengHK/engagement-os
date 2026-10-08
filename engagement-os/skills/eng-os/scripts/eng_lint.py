@@ -13,10 +13,12 @@ references/section-contract.md with its machine form in section_contract.py — 
 never re-declared here.
 
 Usage:
-    python3 eng_lint.py [repo-root] [--strict] [--list]
+    python3 eng_lint.py [repo-root] [--strict] [--list] [--scope all|sections]
 
     --strict   treat warnings as failures too (use before shipping)
     --list     print the rule registry and exit (docs point here instead of enumerating)
+    --scope    `sections` shows only 3_drafting/ and 2_analysis/ findings; the exit status
+               still counts every finding (default: all)
 
 Exit: 0 clean · 1 errors found · 2 repo doesn't look like an engagement repo
 """
@@ -30,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import section_contract as sc
 import change_impact as ci
 import figure_contract as fc
+import sync_commitments as scm
 
 EVIDENCE_TAGS = {"[Observed]", "[Reported]", "[Assumed]", "[RFP]"}
 TEXT_EXT = {".md", ".txt"}
@@ -37,13 +40,16 @@ TEXT_EXT = {".md", ".txt"}
 
 class Report:
     def __init__(self):
-        self.errors, self.warns, self.checks = [], [], 0
+        self.errors, self.warns, self.infos, self.checks = [], [], [], 0
 
     def error(self, rule, where, msg):
         self.errors.append((rule, where, msg))
 
     def warn(self, rule, where, msg):
         self.warns.append((rule, where, msg))
+
+    def info(self, rule, where, msg):
+        self.infos.append((rule, where, msg))
 
     def ran(self):
         self.checks += 1
@@ -227,6 +233,10 @@ def rule_verify_open_in_draft(root, r):
     rule_verify_not_shipped only looks at frozen artefacts, so the count stayed invisible
     until the response was already frozen — the one moment it is most expensive to learn.
     A marker is legitimate in a draft; an UNKNOWN NUMBER of them is not.
+
+    Markers inside the Internal note are the contract's sign-off list, stripped at render, and
+    are counted apart (`verify-internal`): reported as open body text, they made every correctly
+    written section read as if its prose carried unresolved facts.
     """
     secs = section_files(root)
     if not secs:
@@ -234,11 +244,17 @@ def rule_verify_open_in_draft(root, r):
     r.ran()
     for p in secs:
         meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
+        note, body = internal_note_split(body)
+        where = str(p.relative_to(root))
+        k = len(sc.VERIFY_RE.findall(note))
+        if k:
+            r.warn("verify-internal", where,
+                   f"{k}x [⚠VERIFY] in the Internal note — sign-off items still owed (stripped "
+                   "at render); close each before the section is approved")
         n = len(sc.VERIFY_RE.findall(body))
         if not n:
             continue
         status = meta.get("status", "")
-        where = str(p.relative_to(root))
         if status in ("approved", "reviewed-r2", "issued"):
             r.error("verify-in-shippable", where,
                     f"{n}x unresolved [⚠VERIFY] in a section marked '{status}' — the render "
@@ -249,6 +265,22 @@ def rule_verify_open_in_draft(root, r):
                    "before this section can ship")
 
 
+def internal_note_split(body):
+    """(the Internal-note blockquotes, the rest of the body) — see sc.INTERNAL_NOTE_RE."""
+    note, rest = [], []
+    lines = body.splitlines()
+    i = 0
+    while i < len(lines):
+        if sc.INTERNAL_NOTE_RE.match(lines[i]):
+            while i < len(lines) and lines[i].lstrip().startswith(">"):
+                note.append(lines[i])
+                i += 1
+            continue
+        rest.append(lines[i])
+        i += 1
+    return "\n".join(note), "\n".join(rest)
+
+
 def research_log_rows_for(log):
     """Parse ONE pursuit's bid research log into {BR-nnn: status-word}.
 
@@ -256,18 +288,33 @@ def research_log_rows_for(log):
     id the rest of the pack uses (`BR-001`) — both are accepted here and in
     change_impact.py, because a register whose ids the tooling cannot read is a register
     the tooling silently ignores.
+
+    The status is read from the column HEADED `Status`, never by position: a real log added
+    `Use in response` after it, and reading the last column reported every cited row —
+    closed ones included — as open. A table with no such header falls back to the last column.
     """
     rows = {}
-    for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.lstrip().startswith("|") or re.match(r"^\s*\|?[\s:|-]+\|", line):
+    lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+    sep = re.compile(r"^\s*\|?[\s:|-]+\|")
+    status_col = None
+    for n, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            status_col = None                 # a table ends at its first non-row line
+            continue
+        if sep.match(line):
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if n + 1 < len(lines) and sep.match(lines[n + 1]):      # this table's header row
+            status_col = next((k for k, c in enumerate(cells)
+                               if re.match(r"status\b", c.strip("*` ").lower())), None)
+            continue
         if len(cells) < 2:
             continue
+        col = status_col if status_col is not None and status_col < len(cells) else -1
         key = research_row_id(cells[0])
-        if not key or "<" in cells[-1]:
+        if not key or "<" in cells[col]:
             continue                          # planted template row
-        rows[key] = cells[-1].lower()
+        rows[key] = cells[col].lower()
     return rows
 
 
@@ -323,12 +370,15 @@ def form_fill_state(path):
 
 
 def research_row_id(cell):
-    """`BR-001`, `br-1`, `#3` and `3` all name the same row. Anything else is not a row id."""
+    """`BR-001`, `br-1`, `#3` and `3` all name the same row; a later research round's `BR2-01`
+    names its own row in that round. Anything else is not a row id."""
     cell = cell.strip().strip("`*")
-    m = sc.RESEARCH_ID_RE.search(cell.upper()) or re.fullmatch(r"BR-?(\d+)", cell, re.I)
+    m = sc.RESEARCH_ID_RE.search(cell.upper())
     if m:
-        digits = re.search(r"(\d+)", m.group(0))
-        return f"BR-{int(digits.group(1)):03d}"
+        return sc.research_id(m.group(0))
+    m = re.fullmatch(r"BR-?(\d+)", cell, re.I)
+    if m:
+        return f"BR-{int(m.group(1)):03d}"
     m = re.fullmatch(r"#?(\d{1,3})", cell)
     return f"BR-{int(m.group(1)):03d}" if m else None
 
@@ -560,7 +610,7 @@ def rule_internal_ids_in_prose(root, r):
     if not secs:
         return
     r.ran()
-    id_re = re.compile(r"\b(?:BR|A|R|S)-\d{2,3}\b")
+    id_re = re.compile(rf"\b(?:{sc.RESEARCH_ID}|(?:A|R|S)-\d{{2,3}})\b")
     for p in secs:
         _meta, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         body = re.split(r"^\*\*Traceability\.\*\*", body, maxsplit=1, flags=re.M)[0]
@@ -609,7 +659,7 @@ def rule_research_rows_closed(root, r):
             continue
         _, body = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
         where = str(p.relative_to(root))
-        cited = set(sc.RESEARCH_ID_RE.findall(body))
+        cited = {research_row_id(i) for i in sc.RESEARCH_ID_RE.findall(body)}
         cited |= {f"BR-{int(n):03d}" for n in re.findall(r"\blog\s*#\s*(\d+)\b", body, re.I)}
         for br in sorted(cited):
             if br not in rows:
@@ -800,7 +850,7 @@ def rule_solution_method_provenance(root, r):
                 if not cells or not re.fullmatch(r"\d+", cells[0]):
                     continue
                 value = cells[prov] if prov < len(cells) else ""
-                if not re.search(r"\b(?:A|BR)-\d{3}\b|https://\S+", value):
+                if not re.search(rf"\b(?:A-\d{{3}}|{sc.RESEARCH_ID})\b|https://\S+", value):
                     r.error("solution-method-unsourced", f"{path.relative_to(root)}:{line}",
                             "named best practice has no A-nnn, BR-nnn or exact primary URL")
             break
@@ -933,12 +983,14 @@ def rule_submission_format(root, r):
 
 
 def rule_mandatory_met(root, r):
-    """Every Mandatory compliance-matrix row must reach `met` — as an ERROR from the moment
-    any section of that pursuit enters review, not only at freeze.
+    """Every Mandatory compliance-matrix row must reach `met` — as an ERROR once any section of
+    that pursuit is `approved` or a response is frozen; a warning before that.
 
     A pass/fail item that stays a warning until the package is frozen is discovered exactly
     when there is no time to close it: on the real pack, 46 open mandatories reported as
-    '0 errors' for days. Freeze stays the hard gate; review-entry is the early one.
+    '0 errors' for days. Freeze stays the hard gate; approval is the early one. Escalating at
+    the first review round went too far the other way — 61 errors appeared the moment real
+    sections were marked `reviewed-r1`, which made an honest status cost a clean lint.
     """
     mats = matrix_paths(root)
     if not mats:
@@ -947,7 +999,7 @@ def rule_mandatory_met(root, r):
     for m in mats:
         eng = m.parent.parent
         frozen = bool(frozen_finals(eng))
-        gate = r.error if (frozen or pursuit_has_reviewed_sections(eng)) else r.warn
+        gate = r.error if (frozen or pursuit_has_approved_sections(eng)) else r.warn
         hmap, rows = matrix_table(root, m)
         if not rows:
             # not-started is normal early (a fresh scaffold plants only the template
@@ -968,18 +1020,18 @@ def rule_mandatory_met(root, r):
                      msg + (" — and a response is already frozen" if frozen else ""))
 
 
-#: Statuses in which a section has been through at least one review round. Mandatory items
-#: escalate from warning to error once ANY section of the pursuit reaches one of these.
-REVIEW_ATTAINED = {"reviewed-r1", "revise-r1", "reviewed-r2", "revise-r2", "approved"}
+#: Statuses at which open mandatory items escalate from warning to error, once ANY section of
+#: the pursuit reaches one. Review rounds are where open items are found, so they do not count.
+MANDATORY_ESCALATES_AT = {"approved"}
 
 
-def pursuit_has_reviewed_sections(eng):
+def pursuit_has_approved_sections(eng):
     sec_dir = eng / "3_drafting/sections"
     if not sec_dir.exists():
         return False
     for p in sec_dir.rglob("*.md"):
         meta, _ = sc.parse_frontmatter(p.read_text(encoding="utf-8", errors="replace"))
-        if (meta.get("status") or "").strip() in REVIEW_ATTAINED:
+        if (meta.get("status") or "").strip() in MANDATORY_ESCALATES_AT:
             return True
     return False
 
@@ -1226,6 +1278,19 @@ def rule_images_triaged(root, r):
         for p in content:
             text = p.read_text(encoding="utf-8", errors="replace")
             n = sum(1 for line in text.splitlines() if tag.match(line))
+            c = text.count(fc.CAPTION_STUB)
+            if p.relative_to(root).parts[:3] == ("01_pursuit", "_shared", "_md"):
+                # A converted donor asset (case study, CV, prior bid) is evidence held in
+                # reserve; its figures matter once a section cites it. Two warnings per file
+                # buried the section findings under 200+ images on the real pack — one line
+                # per file carries the same signal. One triage pass per image clears both
+                # the tag and its caption stubs, so the image count is the count.
+                if n or c:
+                    r.warn("images-untriaged", str(p.relative_to(root)),
+                           (f"{n} images untriaged" if n else
+                            f"{c} figure placement(s) still `[caption-needed]`")
+                           + " — donor asset, review only if cited")
+                continue
             if n:
                 r.warn("images-untriaged", str(p.relative_to(root)),
                        f"{n} extracted image(s) still `[uncertain]` — OCR them inline and retag "
@@ -1233,7 +1298,6 @@ def rule_images_triaged(root, r):
             # A placed figure with no caption is only half-ingested: the pixels arrived, what
             # the document said they mean did not. The converter writes the stub; leaving it is
             # the same silent-decay failure as leaving an image untriaged.
-            c = text.count(fc.CAPTION_STUB)
             if c:
                 r.warn("images-uncaptioned", str(p.relative_to(root)),
                        f"{c} placed figure(s) still `[caption-needed]` — write what each shows "
@@ -1478,6 +1542,13 @@ def rule_section_frontmatter(root, r):
         if not meta:
             continue                        # rule_section_budget already reports missing frontmatter
         where = str(p.relative_to(root))
+        # a blocked section must say what unblocks it and who owes it — the status alone tells
+        # a reader that something is missing, never what (the template's `<…>` is not a reason)
+        status, reason = (meta.get("status") or "").strip(), (meta.get("blocked_on") or "").strip()
+        if re.fullmatch(r"blocked-r\d+", status) and (not reason or reason.startswith("<")):
+            r.warn("blocked-on-missing", where,
+                   f"status '{status}' with no `blocked_on` — name the external input that "
+                   "unblocks this section and who owes it")
         # a section's R-nnn must exist in ITS OWN pursuit's matrix — pooled across
         # 01_pursuit/*/, one pursuit's register silently validated another's citations
         eng = pursuit_of(p)
@@ -1667,11 +1738,79 @@ def rule_figures_exist(root, r):
                             f"references '{ref}', which does not exist — the render will silently "
                             "drop it to alt text")
                     continue
-                for companion, why in ((".html", "editable source"), (".pptx", "editable one-slide export")):
-                    if not target.with_suffix(companion).exists():
-                        r.warn("figure-not-editable", str(p.relative_to(root)),
-                               f"'{target.name}' has no {companion} {why} — a reviewer who cannot "
-                               "edit sends the correction back as prose")
+                # the contract's editable-figure rule: an .html master OR a .pptx companion
+                if not any(target.with_suffix(c).exists() for c in (".html", ".pptx")):
+                    r.warn("figure-not-editable", str(p.relative_to(root)),
+                           f"'{target.name}' has no editable companion (.html/.pptx) — a reviewer "
+                           "who cannot edit sends the correction back as prose")
+
+
+def rule_commitment_drift(root, r):
+    """Every commitments-register value must be what its listed sections actually say.
+
+    The register is where a decision changes; a section that still states the old value, or a
+    row edited and never synced, ships two answers to one question. The check is
+    sync_commitments.py's own — imported, never re-implemented — so lint and `/eng-sync` agree.
+    """
+    for path in scm.register_paths(root):
+        r.ran()
+        where = str(path.relative_to(root))
+        try:
+            res = scm.check(scm.Register(path))
+        except ValueError as exc:
+            r.warn("commitment-drift", where, str(exc))
+            continue
+        for cid, name, msg in res["drift"]:
+            r.warn("commitment-drift", where,
+                   f"{cid} · {name} · {msg} — invoke `/engagement-os:eng-sync`")
+        for row in res["unsynced"]:
+            r.warn("commitment-drift", where,
+                   f"{row['id']} · Value \"{row['value']}\" not yet applied to its sections "
+                   "— invoke `/engagement-os:eng-sync`")
+
+
+def rule_commitment_rejected_unresolved(root, r):
+    """A frozen response must not carry a commitment its approver rejected.
+
+    Mid-flight a `rejected` row is normal — it is the approver's answer arriving. At the freeze
+    gate it means the response states a value someone with authority said no to.
+    """
+    for path in scm.register_paths(root):
+        if not frozen_finals(path.parents[1]):
+            continue
+        r.ran()
+        try:
+            res = scm.check(scm.Register(path))
+        except ValueError:
+            continue                                   # commitment-drift already reports it
+        for row in res["rejected"]:
+            r.error("commitment-rejected-unresolved", str(path.relative_to(root)),
+                    f"{row['id']} ({row.get('topic', '')}) was rejected and has no new Value, "
+                    "yet the response is frozen — set the new Value and run `/eng-sync`")
+
+
+def rule_score_gaps(root, r):
+    """Open evaluator score gaps: rewrites block the next evaluator round, firm inputs are owed.
+
+    Informational — the gap register is a work list, not a gate; it is reported so a check
+    names what stands between this draft and the next scoring run.
+    """
+    for path in sorted(root.glob("01_pursuit/*/2_analysis/score_gap_register.md")):
+        for headers, rows in markdown_tables(path):
+            tcol = next((i for i, h in enumerate(headers) if h.startswith("type")), None)
+            scol = next((i for i, h in enumerate(headers) if h.startswith("status")), None)
+            if tcol is None or scol is None or not any(h.startswith("gap") for h in headers):
+                continue
+            real = [c for _, c in rows if len(c) > max(tcol, scol) and c and "<" not in c[0]]
+            if not real:
+                continue
+            r.ran()
+            live = [c for c in real if c[scol].lower().startswith(("open", "in progress"))]
+            rewrite = sum("rewrite" in c[tcol].lower() for c in live)
+            firm = sum("firm" in c[tcol].lower() for c in live)
+            r.info("score-gaps", str(path.relative_to(root)),
+                   f"{rewrite} rewrite gap(s) blocking the next evaluator round · "
+                   f"{firm} firm-input gap(s) owed")
 
 
 RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
@@ -1689,8 +1828,13 @@ RULES = [rule_bucket_leak, rule_asset_refs_resolve, rule_section_frontmatter,
          rule_findings_conform, rule_live_index_resolves, rule_spine_filled,
          rule_conditional_analysis_artefacts, rule_estimate_snapshot_fresh,
          rule_change_impact_pending,
+         rule_commitment_drift, rule_commitment_rejected_unresolved, rule_score_gaps,
          rule_images_triaged, rule_images_accounted,
          rule_media_links_resolve, rule_manifest_complete, rule_pointer_table_resolves]
+
+
+#: `--scope sections`: the findings an author drafting the response acts on.
+SECTIONS_SCOPE_RE = re.compile(r"(?:^|/)(?:3_drafting|2_analysis)/")
 
 
 def main():
@@ -1699,6 +1843,9 @@ def main():
     ap.add_argument("root", nargs="?", default=".", help="engagement repo root (default: cwd)")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument("--list", action="store_true", help="print the rule registry and exit")
+    ap.add_argument("--scope", choices=["all", "sections"], default="all",
+                    help="'sections' reports only findings under 3_drafting/ and 2_analysis/ — "
+                         "a view: the exit status still counts every finding (default: all)")
     args = ap.parse_args()
 
     if args.list:
@@ -1716,11 +1863,24 @@ def main():
     for rule in RULES:
         rule(root, r)
 
-    for label, items in (("ERROR", r.errors), ("warn", r.warns)):
+    shown_errors, shown_warns, shown_infos = r.errors, r.warns, r.infos
+    if args.scope == "sections":
+        shown_errors = [f for f in r.errors if SECTIONS_SCOPE_RE.search(f[1])]
+        shown_warns = [f for f in r.warns if SECTIONS_SCOPE_RE.search(f[1])]
+        shown_infos = [f for f in r.infos if SECTIONS_SCOPE_RE.search(f[1])]
+
+    for label, items in (("ERROR", shown_errors), ("warn", shown_warns),
+                         ("info", shown_infos)):
         for kind, where, msg in items:
             print(f"  {label:5} [{kind}] {where}\n         {msg}")
 
-    print(f"\n{r.checks} rule(s) applicable · {len(r.errors)} error(s) · {len(r.warns)} warning(s)")
+    print(f"\n{r.checks} rule(s) applicable · {len(shown_errors)} error(s) · "
+          f"{len(shown_warns)} warning(s)")
+    hidden_e, hidden_w = len(r.errors) - len(shown_errors), len(r.warns) - len(shown_warns)
+    if hidden_e or hidden_w:
+        # a view must never read as a pass: say what it left out
+        print(f"  (--scope sections: {hidden_e} error(s) · {hidden_w} warning(s) outside "
+              "3_drafting/ and 2_analysis/ not shown)")
     if not r.errors and not r.warns:
         print("✓ clean")
     if r.errors or (args.strict and r.warns):

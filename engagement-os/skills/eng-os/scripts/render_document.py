@@ -26,6 +26,11 @@ It does NOT design figures (`designing-figures` owns that), build slides
     # a manifest for presentation-builder to work from
     python3 render_document.py --sections 3_drafting/sections --out _render \\
         --name volume2 --to deck-manifest
+
+    # an internal read-through at any status: scaffolding and ids out, open items shown as
+    # ⟦TO CONFIRM — owner⟧ and listed in <name>.placeholders.md
+    python3 render_document.py --sections 3_drafting/sections --out _render \\
+        --name volume2 --to docx --profile draft
 """
 from __future__ import annotations
 
@@ -73,6 +78,15 @@ PROFILES = {
         "strip": True,
         "why": "a client deliverable carries our name; unvalidated facts do not ship in it",
     },
+    # `strip: "draft"` is its own strip (draft_text): the named scaffolding goes, the authoring
+    # vocabulary stays, and an open marker becomes a visible placeholder instead of a blocker.
+    "draft": {
+        "shippable": None,             # any status — a read-through, never a submission
+        "block_markers": [],
+        "strip": "draft",
+        "why": "an internal read-through: scaffolding and internal ids stripped, open "
+               "markers shown as ⟦TO CONFIRM⟧ and listed in <name>.placeholders.md",
+    },
 }
 
 
@@ -86,7 +100,7 @@ def read_section(path):
     return sc.parse_frontmatter(raw)
 
 
-def discover(sec_dir, order=None):
+def discover(sec_dir, order=None, native=False):
     files = ([os.path.join(sec_dir, f.strip()) for f in order.split(",")] if order else
              sorted(os.path.join(sec_dir, f) for f in os.listdir(sec_dir) if f.endswith(".md")))
     out = []
@@ -96,13 +110,16 @@ def discover(sec_dir, order=None):
         for alt, ref in FIG_RE.findall(body):
             resolved = os.path.normpath(os.path.join(sec_dir, ref))
             remote = ref.startswith(("http://", "https://"))
+            stem = os.path.splitext(resolved)[0]
+            source = (not remote) and os.path.exists(stem + ".html")
             figures.append({
                 "alt": alt, "ref": ref, "path": resolved,
                 "exists": remote or os.path.exists(resolved),
-                # the editable sibling matters: a reviewer who cannot edit a figure
-                # sends the correction back as prose
-                "editable": (not remote) and os.path.exists(os.path.splitext(resolved)[0] + ".pptx"),
-                "source": (not remote) and os.path.exists(os.path.splitext(resolved)[0] + ".html"),
+                # editable matters: a reviewer who cannot edit a figure sends the correction
+                # back as prose. Editable = an .html master or .pptx companion, or a deck route,
+                # where the figure policy is native (every figure is redrawn on its slide).
+                "editable": native or source or ((not remote) and os.path.exists(stem + ".pptx")),
+                "source": source,
             })
         h1 = H1_RE.search(body)
         out.append({
@@ -154,9 +171,9 @@ CLIENT_SUBS = [
     (re.compile(r"\bpp\.(\d)"), r"pp. \1"),
     (re.compile(r"\bp\.(\d)"), r"p. \1"),
     # internal register ids have no client-facing form at all
-    (re.compile(r"\s*\((?:via\s+)?(?:[ABRSF]-\d{2,3}(?:\s*,\s*)?)+\)"), ""),
-    (re.compile(r"\s*(?:—\s*)?\bvia\s+(?:BR|A|R|S)-\d{2,3}\b"), ""),
-    (re.compile(r"\s*\b(?:BR|A|R|S)-\d{2,3}\b(?=[\s,;.)]|$)"), ""),
+    (re.compile(rf"\s*\((?:via\s+)?(?:(?:{sc.RESEARCH_ID}|[ABRSF]-\d{{2,3}})(?:\s*,\s*)?)+\)"), ""),
+    (re.compile(rf"\s*(?:—\s*)?\bvia\s+(?:{sc.RESEARCH_ID}|(?:A|R|S)-\d{{2,3}})\b"), ""),
+    (re.compile(rf"\s*\b(?:{sc.RESEARCH_ID}|(?:A|R|S)-\d{{2,3}})\b(?=[\s,;.)]|$)"), ""),
 ]
 
 
@@ -312,13 +329,13 @@ def client_text(body: str, buyer_label="RFP") -> str:
 SCAFFOLDING_QUOTE_RE = re.compile(r"^>\s*\*\*[^*]{3,60}\.\*\*")
 
 
-def strip_internal(body: str, scaffolding: bool = True):
+def strip_internal(body: str, scaffolding: bool = True, quote_re=SCAFFOLDING_QUOTE_RE):
     """Remove everything that exists to make the draft checkable, not to be read.
 
     Returns (text, n_scaffolding_quote_lines, n_content_quote_lines_kept). With
     scaffolding=False nothing is removed — the plain profile renders what is there,
     because the blockquote = scoring-note convention only holds for sections written
-    under the contract.
+    under the contract. `quote_re` says which blockquotes are scaffolding.
     """
     if not scaffolding:
         return body, 0, 0
@@ -330,7 +347,7 @@ def strip_internal(body: str, scaffolding: bool = True):
         # Scaffolding blockquotes carry a bold label (`> **Scoring note.** …`); only those are
         # stripped. An UNLABELED blockquote is content — a quoted regulation, the buyer's own
         # requirement restated — and stripping it silently deletes words from the submission.
-        if line.lstrip().startswith(">") and SCAFFOLDING_QUOTE_RE.match(line.lstrip()):
+        if line.lstrip().startswith(">") and quote_re.match(line.lstrip()):
             while i < len(lines) and (lines[i].lstrip().startswith(">") or not lines[i].strip()):
                 if not lines[i].strip() and i + 1 < len(lines) \
                         and not lines[i + 1].lstrip().startswith(">"):
@@ -370,6 +387,86 @@ def strip_internal(body: str, scaffolding: bool = True):
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n", n_quotes, n_kept
 
 
+#: The draft read-through strips the contract's notes to the writer and the reviewer; any
+#: other blockquote, labeled or not, stays as content.
+DRAFT_QUOTE_RE = re.compile(r"^>\s*\*\*(?:Scoring note|Writer brief|Internal note)", re.I)
+#: Internal register ids, deleted from draft body text (frontmatter never reaches the body).
+DRAFT_ID_RE = re.compile(rf"\b({sc.RESEARCH_ID}|A-\d{{3}}|CA-\d{{2}}|S-\d{{2}})\b")
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+#: A marker as written — bare, explained, or set in a code span; it may wrap across lines.
+DRAFT_VERIFY_RE = re.compile(r"`?\[⚠VERIFY([^\]]*)\]`?")
+
+
+def verify_owner_detail(inner):
+    """(owner, detail) from the text after `⚠VERIFY` in a marker.
+
+    The contract writes `— owner: detail`; real packs write `— owner: <name>: detail` or
+    `— owner: <name> — detail`; the explanatory form `— what would close it` names no owner.
+    """
+    text = re.sub(r"\s*\n\s*>?\s*", " ", inner).strip().lstrip("—–-: ").strip()
+    if not text:
+        return "", ""
+    m = re.match(r"owner\s*:\s*(.+)$", text, re.I)
+    if m:
+        parts = re.split(r":|\s*[—–]\s*", m.group(1), maxsplit=1)
+        return parts[0].strip(), (parts[1].strip() if len(parts) > 1 else "")
+    m = re.match(r"([^:]{1,60}):(?!//)\s*(.*)$", text)
+    if m:
+        return m.group(1).strip(), m.group(2).strip()
+    return "", text
+
+
+def draft_text(body: str):
+    """The draft read-through: (text, n_scaffolding_quote_lines, [(owner, detail)]).
+
+    Strips the Scoring note, Writer brief and Internal note blockquotes, the Traceability
+    paragraph, Figure source lines, HTML comments and the review log; deletes internal ids from
+    what is left; turns each remaining `[⚠VERIFY …]` into `⟦TO CONFIRM — owner⟧` (or
+    `⟦TO CONFIRM⟧`), so the gap reads as a gap, and returns them for the placeholder list.
+    """
+    text, n_quotes, _kept = strip_internal(HTML_COMMENT_RE.sub("", body), True, DRAFT_QUOTE_RE)
+    found = []
+
+    def placeholder(m):
+        owner, detail = verify_owner_detail(m.group(1))
+        found.append((owner, detail))
+        return f"⟦TO CONFIRM — {owner}⟧" if owner else "⟦TO CONFIRM⟧"
+
+    text = DRAFT_VERIFY_RE.sub(placeholder, text)
+    out = []
+    for line in text.splitlines():
+        if not line.lstrip().startswith("!["):            # an image link: the path is not prose
+            cut = DRAFT_ID_RE.sub("", line)
+            if cut != line:                               # tidy only what the deletion broke
+                cut = re.sub(r"\(\s*(?:[,;]\s*)*\)|\[\s*\]|``", "", cut)
+                cut = re.sub(r"\s+([,.;:)])", r"\1", cut)
+                cut = re.sub(r"[ \t]{2,}", " ", cut).rstrip()
+            line = cut
+        out.append(line)
+    return "\n".join(out) + ("\n" if text.endswith("\n") else ""), n_quotes, found
+
+
+def profile_strip(body: str, strip):
+    """The profile's strip, as (text, n_scaffolding_quote_lines, n_content_quote_lines_kept):
+    `strip_internal` for plain and the strict profiles, `draft_text` for the draft."""
+    if strip == "draft":
+        text, n_quotes, _found = draft_text(body)
+        return text, n_quotes, 0
+    return strip_internal(body, strip)
+
+
+def write_placeholders(out_dir, name, placeholders):
+    """<name>.placeholders.md — every marker the draft turned into a ⟦TO CONFIRM⟧, for its owner."""
+    path = os.path.join(out_dir, name + ".placeholders.md")
+    lines = [f"# {name} — open placeholders (draft)", "",
+             f"{len(placeholders)} marker(s) in body text, shown as ⟦TO CONFIRM⟧ in the draft. "
+             "Each line: section · owner · detail.", ""]
+    lines += [f"- {sec} · {owner or '—'} · {detail or '—'}" for sec, owner, detail in placeholders]
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return path
+
+
 # ---------------------------------------------------------------- gate
 
 def gate(sections, profile, override):
@@ -385,7 +482,7 @@ def gate(sections, profile, override):
                 blocking.append(f"{s['file']}: figure not found — {f['ref']}")
             elif not f["editable"]:
                 advisory.append(f"{s['file']}: {os.path.basename(f['ref'])} has no editable "
-                                f".pptx sibling — a reviewer cannot correct it")
+                                "companion (.html/.pptx) — a reviewer cannot correct it")
 
     if override:
         # --force is legitimate mid-flight (measuring the real page count of a section that
@@ -406,7 +503,7 @@ def gate(sections, profile, override):
                                 "section-contract vocabulary")
     for marker in pol["block_markers"]:
         for s in sections:
-            n = len(marker.findall(strip_internal(s["body"], pol["strip"])[0]))
+            n = len(marker.findall(profile_strip(s["body"], pol["strip"])[0]))
             if n:
                 blocking.append(f"{s['file']}: {n}x unresolved [⚠VERIFY] in body text")
     return blocking, advisory
@@ -417,7 +514,7 @@ def gate(sections, profile, override):
 def report(sections, strip=True):
     print(f"{'section':42s} {'status':13s} {'words':>6s}  {'figs':>4s}  page budget")
     for s in sections:
-        words = len(strip_internal(s["body"], strip)[0].split())
+        words = len(profile_strip(s["body"], strip)[0].split())
         figs = "".join("!" if not f["exists"] else ("e" if f["editable"] else "p")
                        for f in s["figures"]) or "—"
         print(f"{s['title'][:42]:42s} {s['status']:13s} {words:6d}  {figs:>4s}  {s['budget']}")
@@ -546,7 +643,7 @@ def main() -> int:
         print(f"not a directory: {sec_dir}", file=sys.stderr)
         return 1
 
-    sections = discover(sec_dir, args.order)
+    sections = discover(sec_dir, args.order, native=args.to == "deck-manifest")
     if not sections:
         print(f"no .md sections in {sec_dir}", file=sys.stderr)
         return 1
@@ -556,6 +653,11 @@ def main() -> int:
     blocking, advisory = gate(sections, args.profile, args.force)
     blocking_overridden = [a[len("FORCED past: "):] for a in advisory
                            if a.startswith("FORCED past: ")]
+
+    # the draft lists every marker it turns into a placeholder, so the count is known up front
+    placeholders = ([(s["file"], owner, detail) for s in sections
+                     for owner, detail in draft_text(s["body"])[2]]
+                    if pol["strip"] == "draft" else [])
 
     for a in advisory:
         print(f"  advisory: {a}")
@@ -570,8 +672,10 @@ def main() -> int:
             return 2
 
     if args.analyse:
-        print(f"\nprofile '{args.profile}': "
-              + ("WOULD BUILD" if not blocking else f"{len(blocking)} blocker(s)"))
+        verdict = "WOULD BUILD" if not blocking else f"{len(blocking)} blocker(s)"
+        if pol["strip"] == "draft" and not blocking:
+            verdict += f" (draft: {len(placeholders)} placeholders)"
+        print(f"\nprofile '{args.profile}': " + verdict)
         return 0
 
     if not args.out:
@@ -589,13 +693,15 @@ def main() -> int:
             # the handoff survives being re-run from the manifest alone.
             "audience": args.audience,
             "decision": args.decision,
+            # every figure is redrawn as native PowerPoint; the png and html are references
+            # (deck-assembly.md "Figure policy: native")
+            "figure_policy": "native",
             "sections": [{
                 "title": s["title"], "file": s["file"], "status": s["status"],
-                "body": strip_internal(s["body"], pol["strip"])[0],
-                "figures": [{"png": f["path"],
-                             "html_source": os.path.splitext(f["path"])[0] + ".html",
-                             "editable_pptx": os.path.splitext(f["path"])[0] + ".pptx",
-                             "caption": f["alt"]}
+                "body": profile_strip(s["body"], pol["strip"])[0],
+                "figures": [{"png": f["path"], "caption": f["alt"],
+                             **({"html_master": os.path.splitext(f["path"])[0] + ".html"}
+                                if f["source"] else {})}
                             for f in s["figures"] if f["exists"]],
             } for s in sections],
         }
@@ -603,6 +709,8 @@ def main() -> int:
         with open(mpath, "w", encoding="utf-8") as fh:
             json.dump(manifest, fh, indent=2, ensure_ascii=False)
         print(f"\nwrote {mpath}")
+        if pol["strip"] == "draft":
+            print(f"wrote {write_placeholders(out_dir, args.name, placeholders)}")
         print("Hand this to the `presentation-builder` skill. It owns storyline, action titles, "
               "figure specs (via `designing-figures`) and the editable export. A deck is not a "
               "reformat of a document — prose sized to a page budget overflows onto untitled "
@@ -614,8 +722,8 @@ def main() -> int:
     buyer_label = buyer_label_for(args.sections, args.buyer_label)
     parts, stripped_notes = [], []
     for s in sections:
-        text, n_quotes, n_kept = strip_internal(s["body"], pol["strip"])
-        if pol["strip"]:
+        text, n_quotes, n_kept = profile_strip(s["body"], pol["strip"])
+        if pol["strip"] is True:                  # the client-facing profiles, not the draft
             text = client_text(text, buyer_label)  # authoring shorthand → the reader's vocabulary
         text = balance_tables(text)               # column widths from content, in every profile
         if n_quotes:
@@ -659,6 +767,8 @@ def main() -> int:
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write(document_text)
     print(f"\nwrote {md_path}")
+    if pol["strip"] == "draft":
+        print(f"wrote {write_placeholders(out_dir, args.name, placeholders)}")
     if args.to == "md":
         return 0
 

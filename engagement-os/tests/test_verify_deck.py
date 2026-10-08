@@ -54,6 +54,15 @@ SMALL_PIC = slide(picture(cx=SW // 4, cy=SH // 4))
 EMPTY = slide("")
 
 
+def with_layout_picture(slides):
+    """A deck whose layout and master carry a picture (a logo) — chrome, not a figure."""
+    path = deck(slides)
+    with zipfile.ZipFile(path, "a") as z:
+        z.writestr("ppt/slideLayouts/slideLayout1.xml", slide(picture(cx=SW // 8, cy=SH // 8)))
+        z.writestr("ppt/slideMasters/slideMaster1.xml", slide(picture(cx=SW // 8, cy=SH // 8)))
+    return path
+
+
 def build(parts):
     """parts: {archive path: text}. Returns the written .pptx path."""
     out = pathlib.Path(tempfile.mkdtemp(prefix="engos-deck-")) / "deck.pptx"
@@ -122,6 +131,17 @@ CASES = [
      lambda: deck([NATIVE], rels={1: "../media/image1.png"}), [],
      {"broken-media-ref"}, set(), set()),
 
+    ("a picture on a slide is listed, a warning by default",
+     lambda: deck([NATIVE, PIC_WITH_TEXT]), [], set(), {"picture-on-slide"}, set()),
+
+    ("--figures native makes a picture on a slide an error",
+     lambda: deck([NATIVE, PIC_WITH_TEXT]), ["--figures", "native"],
+     {"picture-on-slide"}, set(), set()),
+
+    ("pictures on layouts and masters are not slide pictures",
+     lambda: with_layout_picture([NATIVE, NATIVE]), ["--figures", "native"],
+     set(), set(), {"picture-on-slide"}),
+
     ("figure relationship whose media IS in the package",
      lambda: deck([NATIVE], rels={1: "../media/image1.png"}, media=("image1.png",)),
      [], set(), set(), {"broken-media-ref"}),
@@ -161,7 +181,17 @@ def main():
     if not ok:
         fails.append("unreadable file")
 
-    total = len(CASES) + 1
+    # Each picture is reported with its slide number, so the fix can go straight to it.
+    _, _, out, _ = run(deck([NATIVE, PIC_WITH_TEXT, slide(picture() + picture()
+                                                         + textbox("two"))]), [])
+    hits = [l for l in out.splitlines() if "[picture-on-slide]" in l]
+    ok = (len(hits) == 3 and sum("slide 2" in l for l in hits) == 1
+          and sum("slide 3" in l for l in hits) == 2)
+    print(f"  {'✓' if ok else '✗'} every slide picture is listed with its slide number")
+    if not ok:
+        fails.append("picture-on-slide per picture")
+
+    total = len(CASES) + 2
     print(f"\n{total - len(fails)}/{total} cases pass")
     if fails:
         print(f"✗ FAILING: {fails}")

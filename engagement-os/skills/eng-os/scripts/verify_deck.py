@@ -23,7 +23,7 @@ a schema check cannot answer: is the deck a flattened picture-per-slide export, 
 standard nor embedded, did the splice land the right number of slides, did a figure's image
 actually come across. Two gates, two questions — not two implementations of one.
 
-    python3 verify_deck.py deck.pptx [--expect N] [--review-copy] [--strict]
+    python3 verify_deck.py deck.pptx [--expect N] [--review-copy] [--strict] [--figures native]
 
 Exit 0 clean · 1 findings (errors, or warnings under --strict) · 2 unreadable.
 """
@@ -48,6 +48,7 @@ EMBEDDED_RE = re.compile(r"<p:embeddedFont>.*?typeface=\"([^\"]+)\"", re.S)
 SLDSZ_RE = re.compile(r'<p:sldSz[^>]*cx="(\d+)"[^>]*cy="(\d+)"')
 TEXT_RE = re.compile(r"<a:t>(.*?)</a:t>", re.S)
 PIC_RE = re.compile(r"<p:pic>.*?</p:pic>", re.S)
+PIC_OPEN_RE = re.compile(r"<p:pic[ >]")
 SHAPE_RE = re.compile(r"<p:(sp|pic|graphicFrame|grpSp)[ >]")
 EXT_RE = re.compile(r'<a:ext cx="(\d+)" cy="(\d+)"')
 REL_TARGET_RE = re.compile(r'Target="([^"]+)"')
@@ -133,6 +134,19 @@ def rule_flattened(deck, r):
                 break
 
 
+def rule_pictures(deck, r, figures):
+    """Every picture on a slide layer, by slide number — under `figure_policy: native` a figure
+    is native shapes, and `flattened-slide` misses a figure PNG pasted beside a title.
+    Layouts and masters (a logo in the chrome) are not read."""
+    report = r.error if figures == "native" else r.warn
+    for name, xml in deck.slides:
+        n = len(PIC_OPEN_RE.findall(xml))
+        for i in range(1, n + 1):
+            report("picture-on-slide", f"{deck.path.name} {label(name)}",
+                   f"picture {i} of {n} — a figure must be native shapes; a picture is allowed "
+                   "only for a photograph or a screenshot (deck-assembly.md, Figure policy)")
+
+
 def rule_editable_text(deck, r):
     """Every slide carries text a reviewer can edit."""
     for name, xml in deck.slides:
@@ -192,6 +206,8 @@ def main():
     ap.add_argument("--review-copy", action="store_true",
                     help="this file is an internal review artefact, not the client deck")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
+    ap.add_argument("--figures", choices=["native"],
+                    help="the deck's figure policy; `native` makes every slide picture an error")
     args = ap.parse_args()
 
     path = pathlib.Path(args.deck)
@@ -205,6 +221,7 @@ def main():
     rule_slide_count(deck, r, args.expect)
     for rule in RULES[1:]:
         rule(deck, r)
+    rule_pictures(deck, r, args.figures)
 
     for lvl, items in (("ERROR", r.errors), ("warn", r.warns)):
         for kind, where, msg in items:

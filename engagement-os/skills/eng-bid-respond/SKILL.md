@@ -15,8 +15,10 @@ every requirement is extracted into `compliance_matrix.md`, and the
 evidence is indexed — **not** that the rows are `met`. Rows close *because* the response answers
 them; waiting for a closed matrix would mean never starting. Draft in
 `01_pursuit/<ENG-ID>/3_drafting/`; freeze to `4_final/`. Start the section map from
-`bid_response_outline.md.tmpl`, and each section file from `bid_section.md.tmpl` — both in
-`${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
+`bid_response_outline.md.tmpl`, each section file from `bid_section.md.tmpl`, the commitments
+register from `commitments.md.tmpl`, the sign-off sheet from `signoff_sheet.md.tmpl`, and plant
+`2_analysis/score_gap_register.md` from `score_gap_register.md.tmpl` (every evaluator-scoring
+round records its score and gaps there) — all in `${CLAUDE_PLUGIN_ROOT}/skills/eng-os/templates/`.
 
 **If missing:** no matrix → `Skill(engagement-os:eng-rfp-analyze)`; no research
 log → `Skill(engagement-os:eng-bid-research)`. A claim with no cited row cannot survive the traceability gate — lint errors on
@@ -41,6 +43,57 @@ Bid Response Progress:
         accepted terms are not prose questions; inventing a section for them makes the matrix lie.
         A requirement the RFT scores in two places names its primary section and its second one.
         Lint errors if a row appears nowhere at all
+- [ ] 1b. UNKNOWNS TRIAGE → `3_drafting/commitments.md`, before any section body is written.
+        Every unknown gets one row, classified once, in the columns
+        `| ID | Topic | Class | Value | Applied value | Basis | Approver | Status | Sections | Slides |`
+        (Value = the exact string the response states; Applied value = what the listed
+        sections say now, empty until the first sync; Status decided · pending · approved ·
+        rejected · changed · confirmed):
+          D  decided — the bid team's call: commercial levers, SLAs, process timings, contract
+             positions, wording, named people already proposed in project files, delivery
+             locations from known offices. The row records the decision and its basis
+          R  public fact — closed by `Skill(engagement-os:eng-bid-research)`. The row records
+             the question and the interim wording
+          X  firm-only — client consent to name a client, whether a certificate or letter is
+             actually held, internal headcounts, registrations, individual availability. The
+             row records the client-facing fallback wording that stands if the input never
+             arrives
+        Then generate `3_drafting/signoff_sheet.md` + `.xlsx` with `/eng-sync export` (the X rows
+        and the D rows that change a commercial or contractual position); priority 1 = blocks
+        submission. From here on **`/eng-sync` is how a change flows**: edit the Value (or read
+        the approvers' workbook back with `/eng-sync import <xlsx>`) and it rewrites the listed
+        sections, reopens reviewed ones, regenerates the sheet and rebuilds the deck — never
+        edit a commitment in a section by hand
+        A `D` row awaiting an approver is `status: pending`, and its marker sits in the Internal
+        note of every section that states the value; once approved it becomes `decided` and the
+        marker is removed. An `X` row is priority 1 when the fallback wording would weaken a
+        scored claim (a reference, a certification, a named person), priority 2 when the
+        fallback is neutral, priority 3 when it only affects an appendix. "Decisions to approve"
+        includes every `D` row that states a price, a discount, a hold/indexation term, a
+        liability or acceptance position, an SLA or lead time, or a named person; escalation
+        paths and process descriptions are not included
+- [ ] 1c. REFERENCE SELECTION — candidates are the indexed firm assets plus the network client
+        stories `eng-bid-research` logged. Score every candidate 0–2 on five axes
+        (when the buyer's published criterion names a sector, the sector axis counts double,
+        0/2/4, so the maximum is 12):
+          sector     closeness to the buyer's sector: same 2 · adjacent 1 · other 0
+                     same = the buyer's own industry as the RFP names it (e.g. automotive
+                     supplier → automotive OEMs, tier suppliers, commercial vehicles);
+                     adjacent = discrete manufacturing or the buyer's direct customers/suppliers;
+                     other = everything else
+          delivery   production 2 (the client runs it today, including a platform that is
+                     live) · platform build 1 (built, not evidenced as running) ·
+                     assessment, PoC or design 0
+          recency    ≤2 yrs 2 · ≤4 yrs 1 · older or undated 0
+          outcome    measurable outcome stated 2 · qualitative outcome 1 · none 0
+          nameable   public story or consent held 2 · consent requested (an X row) 1 · neither 0
+        Pick the top three by total; break ties on the buyer's stated scoring words. When the buyer
+        scores sector relevance, at least two of the three are same or adjacent; if the
+        candidates cannot satisfy that, the outline records the gap and `eng-bid-research`'s
+        network-story sweep runs again before the section is drafted. Record the
+        scored table under `## Reference selection` in `bid_response_outline.md`. A network
+        credential is cited as "<firm> network client story, published with the client's
+        agreement"; the delivering member firm is named in the sign-off sheet
 - [ ] 2. One MD per section, **one directory per volume** — `3_drafting/sections/v1/`, `v2/`, `v3/`
         — from bid_section.md.tmpl; frontmatter carries marks, scoring basis, page budget, reqs
         answered, figures, evidence. Each volume renders into its own file, which is how the
@@ -104,13 +157,19 @@ Bid Response Progress:
         visual relationship must not silently default to walls of text
 - [ ] 3. Draft each section: answer in the buyer's own order; compliance first, exceptions plain;
         build its figures alongside it with the `designing-figures` skill — archetype from the
-        message, never a default row of boxes. Three artefacts per figure from ONE html source:
-        .html (edit here) + .png (2x, goes in the document) + .pptx (one slide, native shapes,
-        so a reviewer can correct it). A figure bound for an A4 *document* keeps the skill's
+        message, never a default row of boxes. Every figure must be editable (the section
+        contract's editable-figure rule): for a document, .html (the editable master) + .png (2x,
+        goes in the document), with a one-slide native .pptx as an optional companion; in a deck
+        the figure is drawn natively on its slide, no picture. A figure bound for an A4 *document* keeps the skill's
         canvas and grid but drops slide furniture that the document already provides — the
         section heading and the markdown caption. The editable-master pointer goes on the
         `**Figure source.**` line, never in the caption: the strip removes that line, and a
-        caption naming `F-01_x.html` ships our internal filenames to the evaluator
+        caption naming `F-01_x.html` ships our internal filenames to the evaluator.
+        **State every commitment's value in prose**, copied verbatim from the `Value` column
+        of `commitments.md`; its `[C-nn]` goes on the Traceability line
+        only. Parallel writers copy the same string, so the response states each commitment one
+        way; a writer who needs a commitment with no row adds the row first. What is still owed
+        goes in the section's Internal note: `Sign-off: [⚠VERIFY — owner: detail]`
 - [ ] 4. Weave the 3–5 win-themes at the high-weight criteria, each backed by a cited log row or
         an indexed firm asset (A-nnn)
 - [ ] 4b. EVIDENCE UTILISATION — reverse-check every A-nnn / BR-nnn declared in a section's
@@ -120,15 +179,21 @@ Bid Response Progress:
         adapted to this buyer, and what it changes in the proposed work. Incorporate it materially
         or remove it from the section; bibliography-only references are false differentiation
 - [ ] 5. Traceability: every claim → [RFP §x] / A-nnn / a `closed` research-log row (`BR-nnn`);
-        kill any [⚠VERIFY]. Lint reports a section resting on an `open` row and counts every
+        body text carries no [⚠VERIFY] — an open item is a `commitments.md` row whose value or
+        fallback wording the body states, with its marker in the Internal note. Lint reports a section resting on an `open` row and counts every
         unresolved marker while you draft — not for the first time at the freeze. Reconcile the
         matrix after drafting: an honest caveat is not fulfilment. If the buyer asks for an
         outcome, KPI/SLA, credential, signature or referee and the source does not hold it, keep
         `Gap type = proof` and status `partial`/`gap`; never mark it `met` merely because the
         section admits the evidence is absent
+- [ ] 5b. CONSISTENCY SWEEP, before review — `/eng-sync` (its `check` proves every listed
+        section states its row's value verbatim). Then grep each row's key phrase across the
+        sections for any statement of it the row does not list (`grep -rn "hypercare"
+        3_drafting/sections/`); add the file to the row's Sections, or correct it to the register
 - [ ] 6. REVIEW ROUNDS per section, logged in the section's own table:
-        R1 panel red-team (does it score?) → R2 experienced human (what only experience sees)
-        → R3 final read (cross-section consistency, format, no [⚠VERIFY] left)
+        R1 panel red-team (does it score?) → R1b buyer-evaluator scoring of the whole response
+        (`playbooks/rfp-arrived.md`) → R2 experienced human (what only experience sees)
+        → R3 final read (cross-section consistency, format, no [⚠VERIFY] in body text)
 - [ ] 7. Run the strict mechanical gate → `Skill(engagement-os:eng-check)` in strict mode.
 - [ ] 8. ONLY AFTER IT PASSES, render → `Skill(engagement-os:eng-render)` with the bid profile.
         It strips internal scaffolding and re-checks page counts. Do not assemble by hand here.
@@ -208,21 +273,23 @@ carries its own log, because sections finish at different times.
   or is it only named in the bibliography/traceability?).
 - **R2 — experienced human.** What only experience sees: a claim that won't survive a client
   conversation, a promise delivery cannot staff, a tone wrong for this buyer.
-- **R3 — final read.** Cross-section consistency, format compliance, nothing left `[⚠VERIFY]`.
+- **R3 — final read.** Cross-section consistency, format compliance, no `[⚠VERIFY]` in body text.
 
 **Do not collapse R1 and R2** — they fail differently. R1 is structural and can be reasoned about
 from the RFT; R2 is judgement and cannot.
 
 ## Guardrails
-- No unsupported claim, no fabricated credential — ever. Anything `[⚠VERIFY]` is cut or closed first.
+- No unsupported claim, no fabricated credential — ever. An unknown is a `commitments.md` row; the
+  body states its decided value or its fallback wording, and its marker lives in the Internal note.
 - Every mandatory requirement is `met`; exceptions stated openly with rationale.
 - Never edit a submitted volume in place — a post-submission change is a new dated version.
 - **Never ship a figure as only a flat image.** Review rounds produce figure corrections; a
-  reviewer who cannot edit sends the change back as prose. Every figure gets its editable
-  one-slide PPTX alongside the PNG, both generated from the same HTML.
-- **Look at both outputs.** Round-trip the PPTX back to an image and check the shape count — a
-  one-slide export with 1-2 shapes is a screenshot in a wrapper, not an editable figure. Text that
-  fits in HTML can clip as a PowerPoint shape.
+  reviewer who cannot edit sends the change back as prose. In a document every figure keeps its
+  editable companion (the `.html` master, or a `.pptx`) beside the PNG; in a deck it is drawn
+  natively on the slide (`figure_policy: native`).
+- **Look at every output.** If a `.pptx` companion or a native deck figure exists, round-trip it
+  to an image and check the shape count — 1-2 shapes is a screenshot in a wrapper, not an editable
+  figure. Text that fits in HTML can clip as a PowerPoint shape.
 - **A figure passes only in the final medium.** Inspect the PNG inside the rendered A4 document,
   not only at 1920×1080. If labels require zooming, redesign or use a table/prose. If the figure
   merely repeats the paragraph without making a relationship visible, remove it.

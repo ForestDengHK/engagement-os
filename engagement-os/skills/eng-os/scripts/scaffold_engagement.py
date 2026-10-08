@@ -274,6 +274,46 @@ def substitute(text, ctx):
     return text
 
 
+#: Planted at the repo root (appended if a .gitignore exists). Originals are evidence, not
+#: working text: firm assets are indexed by reference and only their markdown is committed, so
+#: binaries under _shared/ and _sources/ stay out of git while every `_md/` layer stays in.
+#: Without it, indexing one pursuit's donor decks put 387 MB of binaries into the repo.
+#: (gitignore has no brace expansion — one line per extension.)
+GITIGNORE_MARK = "# engagement-os: binaries stay out of git — originals are evidence, the _md/ layer is the working text"
+GITIGNORE_LINES = (
+    [f"01_pursuit/_shared/**/*.{ext}" for ext in ("pptx", "docx", "pdf", "xlsx", "xlsm", "png", "jpg")]
+    + ["!01_pursuit/_shared/_md/**"]
+    + [f"_sources/**/*.{ext}" for ext in ("pdf", "docx", "pptx", "xlsx")]
+    + ["!_sources/**/_md/**", "**/_render/slides_png*/", "**/__pycache__/"]
+)
+
+
+def plant_gitignore(root):
+    """Write the binary-exclusion block into <root>/.gitignore, appending once if it exists."""
+    path = os.path.join(root, ".gitignore")
+    existing = ""
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            existing = f.read()
+        if GITIGNORE_MARK in existing:
+            print(f"  skip (exists): {path} (engagement-os block present)")
+            return False
+    block = "\n".join([GITIGNORE_MARK] + GITIGNORE_LINES) + "\n"
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(("\n" if existing and not existing.endswith("\n") else "")
+                + ("\n" if existing else "") + block)
+    print(f"  {'appended' if existing else 'wrote'}: {path}")
+    return True
+
+
+def memory_slug(root):
+    """The harness's auto-memory directory name for a project root: the absolute path with
+    every character outside [A-Za-z0-9] replaced by '-'. Replacing only '/' put MEMORY.md in
+    `-Users-party-projects-acme_it_ps` while the harness reads `-Users-party-projects-acme-it-ps`.
+    """
+    return re.sub(r"[^A-Za-z0-9]", "-", root)
+
+
 def write_file(path, content):
     """Write content, never clobbering an existing file."""
     if os.path.exists(path):
@@ -403,6 +443,7 @@ def main():
     made = 0
     claude_md_skipped = False
     plant_panel(root)
+    plant_gitignore(root)
     for tmpl, dest, extra in files:
         tmpl_path = os.path.join(TEMPLATES, tmpl)
         try:
@@ -419,7 +460,7 @@ def main():
             claude_md_skipped = True
 
     # Best-effort cross-session memory index in the Claude Code auto-memory dir.
-    slug = root.replace("/", "-")
+    slug = memory_slug(root)
     mem_dir = os.path.expanduser(f"~/.claude/projects/{slug}/memory")
     try:
         mem_tmpl = os.path.join(TEMPLATES, "MEMORY.md.tmpl")

@@ -250,6 +250,7 @@ or drop the claim.
 | `/engagement-os:eng-estimate` + “size this tender” · “update the rate card” · “refresh the estimate” | Directly invokes the plugin skill; it creates or updates `estimation.xlsx`, invokes `xlsx` for spreadsheet work and verification, and refreshes the generated snapshot |
 | `/engagement-os:eng-propagate-change` + “I changed this file” · “what does this affect?” | Detects changed R/S/A/BR/F dependencies, refreshes safe derivatives through their owning skills, reopens affected review, and preserves frozen versions |
 | `/eng-check` | run every mechanical gate that applies and report what is blocking |
+| `/eng-sync` | a decision or approval changed in `commitments.md` — rewrite the sections, regenerate the sign-off sheet, rebuild and verify the deck; `export` / `import <xlsx>` for the approvers' round trip |
 
 Default to the chain commands. A stage run in isolation skips the gates — that's how a
 deliverable ends up built on unvalidated findings.

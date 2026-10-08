@@ -5,6 +5,7 @@ bottom-up, cited, cross-checked, and honest about its own error bar.
 
 ## Contents
 - Where estimation sits, and its one hard precondition
+- Two shapes: a priced project, or a rate card and a method
 - The doctrine
 - Step 1 — basis of estimate
 - Step 2 — pick two techniques, and make them actually independent
@@ -40,6 +41,32 @@ it takes less time than reconciling three guesses.
 
 The same method serves a delivery-side change request or a phase-2 proposal; only the input
 document changes (SOW scope items instead of RFP S-IDs).
+
+## Two shapes: a priced project, or a rate card and a method
+
+Not every tender buys a project. A **framework, panel or call-off** tender buys the right to call
+people off later: it publishes a role catalogue, seniority levels and delivery locations, asks for
+day rates (often held for a period, often with a volume discount), and at most one worked example
+of how a call-off would be priced. There is no scope to decompose into S-IDs, no schedule, and
+often no price formula at all.
+
+| | **project** shape (default) | **panel** shape |
+|---|---|---|
+| Applies when | one scoped piece of work is described and priced | a rate card and a method are evaluated, not a scope |
+| Precondition | S-ID table with effort drivers | role catalogue, location tiers, rate-hold / discount rules |
+| Sheets | Effort · OverlapAudit · Range · Schedule · Gantt · Grades · ClientEffort · ScopeVariance · Cost · Decision | RateCard (bands × location tiers, rate = base × index) · RoleCatalogue · Discounts · Assumptions · WorkedROM |
+| The range | P50/P80 over the whole scope | P50/P80 over ONE representative engagement, plus a not-to-exceed ceiling |
+| Price vs marks | where the buyer publishes a formula | usually none — marks = 0 |
+
+Pricing a panel tender as a project manufactures a scope the buyer never wrote and then defends
+days nobody asked for; pricing a project as a rate card hides the effort the price must cover.
+**The shape chosen is stated in the Basis of Estimate**, with the RFP clause that decides it.
+
+Both shapes share the parameters that used to be constants: **currency**, **term (weeks)** and
+**cost marks** come from the tender. Marks = 0 means "no price formula" — the decision table is
+built without its marks columns rather than scoring against an invented 300. In the worked ROM,
+the **ceiling** is net P50 × (1 + headroom, default 15%); it is checked against net P80, because a
+cap below the P80 is a cap that does not cover the contingency.
 
 ## The doctrine
 
@@ -80,6 +107,8 @@ document changes (SOW scope items instead of RFP S-IDs).
 
 What the estimate covers and what it assumes, written before any number. It is what makes the
 estimate re-baselineable when scope moves — and scope always moves.
+
+- **Shape:** project or panel, and the RFP clause that decides it (see *Two shapes* above).
 
 - **Scope baseline:** the S-ID list and the version/date of `rfp_analysis.md` it came from.
 - **Volumetric baseline:** the counts effort multiplies by, each cited. Uncited → `[⚠VERIFY]`.
