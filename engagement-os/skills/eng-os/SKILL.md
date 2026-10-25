@@ -13,6 +13,9 @@ This skill is the **map**. It explains the pipeline and points to the one skill 
 owns each stage. The deep conventions live in `references/`; the fill-in artefacts
 live in `templates/`; deterministic helpers live in `scripts/`.
 
+Tool names: `~~category` placeholders in prose (`~~email`, `~~document store`, …) are defined in
+[../../CONNECTORS.md](../../CONNECTORS.md).
+
 ## Two pipelines, composable — take only what the work needs
 
 The pursuit side and the delivery side are **independent**, and a standalone research assignment

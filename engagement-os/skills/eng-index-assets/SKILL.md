@@ -15,7 +15,7 @@ decided by where the document came from; the folder's own `README.md` states the
 ## Storage: index originals by reference, copy only the markdown
 
 Donor material — case studies, CVs, decks from other pursuits — usually already lives somewhere
-(another engagement repo, a synced SharePoint folder). **Do not copy the original into this
+(another engagement repo, a synced ~~document store folder). **Do not copy the original into this
 repo.** Index it by reference: its **absolute path**, its **size**, and its **sha256** (first 12
 hex characters are enough to notice it changed) go into the row's `Original (path)` and `Size`
 columns. Only the converted markdown is written into the repo, at
