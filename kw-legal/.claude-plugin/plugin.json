@@ -1,0 +1,10 @@
+{
+  "name": "kw-legal",
+  "version": "1.0.0",
+  "description": "First-pass legal triage for a supplier-side consulting practice, adapted from Anthropic's knowledge-work-plugins: NDA triage (GREEN/YELLOW/RED), contract review against a playbook, and compliance checks. Ships a DRAFT Irish-practice playbook; the firm's Risk & Legal / OGC function decides. No bundled MCP servers.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "license": "Apache-2.0"
+}

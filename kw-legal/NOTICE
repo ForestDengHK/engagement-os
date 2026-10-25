@@ -1,0 +1,10 @@
+kw-legal
+Copyright 2026 Forest Deng
+
+Contains material from anthropics/knowledge-work-plugins (commit 33d3dea), licensed under Apache-2.0. Modified:
+- Taken from legal/skills: triage-nda, review-contract, compliance-check. The other legal skills, the .mcp.json and CONNECTORS.md are not included.
+- Playbook lookup standardised to <project>/.claude/kw-legal.local.md, then ~/.claude/kw-legal.local.md (was legal.local.md); draft playbooks are reported as first-pass aids only.
+- Added templates/kw-legal.local.md, a DRAFT supplier-side playbook for an Irish consulting practice with NDA triage criteria aligned to it (new material, not from the source).
+- triage-nda / review-contract: playbook NDA criteria and routing override the generic defaults; playbook positions map to GREEN/YELLOW/RED tiers; reports go to an engagement repo's contracting folder; default side taken from the playbook.
+- compliance-check: applies the playbook's data-protection, AI-use and public-sector positions.
+- Removed CONNECTORS.md pointers; rewrote descriptions to lead with when to use them.

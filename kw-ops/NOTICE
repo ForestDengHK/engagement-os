@@ -1,0 +1,8 @@
+kw-ops
+Copyright 2026 Forest Deng
+
+Contains material from anthropics/knowledge-work-plugins (commit 33d3dea), licensed under Apache-2.0. Modified:
+- Taken from operations/skills: change-request, process-doc, risk-assessment, vendor-review. The other operations skills, the .mcp.json and CONNECTORS.md are not included. The operations plugin ships no LICENSE file of its own; the repository's Apache-2.0 licence applies.
+- All four: added engagement-os conventions — write into the engagement repo's established locations, update the existing RAID / decision / change registers in the project's own ID scheme instead of creating parallel files, cite sources with the engagement's T1/T2/T3 tags and [⚠VERIFY], log to _pm/engagement_log.md, and hand off to the owning engagement-os skill (eng-propagate-change, eng-estimate, eng-upgrade, eng-maintain-memory, eng-write-findings, eng-rfp-analyze, eng-check, eng-render).
+- Replaced ~~ connector placeholders with plain words; removed CONNECTORS.md pointers; rewrote descriptions to lead with when to use them.
+- change-request: CR-<n> IDs, impact on scope/deliverables, RAID cross-references. vendor-review: euro amounts ex-VAT, citation of vendor figures, disclosure of alliance relationships. risk-assessment: Source field.

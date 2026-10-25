@@ -1,0 +1,10 @@
+{
+  "name": "kw-data",
+  "version": "1.0.1",
+  "description": "Data analysis skills for consulting engagements, adapted from Anthropic's knowledge-work-plugins: profile a dataset, write and port SQL across warehouse dialects (incl. Oracle 19c and Microsoft Fabric), QA an analysis before it is shared, and build a client data-context skill from a live database or from exported DDL, dictionaries and model files. No bundled MCP servers.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "license": "Apache-2.0"
+}

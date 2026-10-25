@@ -1,0 +1,10 @@
+{
+  "name": "kw-ops",
+  "version": "1.0.0",
+  "description": "Operations skills adapted to engagement-os conventions, from Anthropic's knowledge-work-plugins: change requests with impact analysis and rollback, process documentation (RACI, SOP, flowchart), likelihood x impact risk assessment, and vendor reviews — written into the engagement repo's own RAID, decision and change registers with its citation style. No bundled MCP servers.",
+  "author": {
+    "name": "Forest Deng",
+    "email": "forest.jinying.denghk@outlook.com"
+  },
+  "license": "Apache-2.0"
+}
