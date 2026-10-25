@@ -1,0 +1,8 @@
+kw-data
+Copyright 2026 Forest Deng
+
+Contains material from anthropics/knowledge-work-plugins (commit 33d3dea), licensed under Apache-2.0. Modified:
+- Taken from data/skills: validate-data, explore-data, sql-queries, data-context-extractor. The other data skills, the .mcp.json and CONNECTORS.md are not included.
+- sql-queries: added Oracle Database 19c, Microsoft Fabric and "Porting Oracle to Fabric" sections; replaced the description; added references/dialect-sources.md.
+- data-context-extractor: added Files mode (bootstrap from DDL exports, data dictionaries, column lists, CSVs and Power BI model exports when no database is connected); added Oracle, Fabric and SQL Server to discovery; the generated skill is written to the engagement repo's .claude/skills/<client>-data-context/ instead of being packaged as a zip; renamed the generated skill from <company>-data-analyst to <company>-data-context; replaced ~~ tool placeholders with plain words; pointed references/sql-dialects.md at the new sql-queries sections; updated the packaging script's usage examples.
+- validate-data, explore-data: removed CONNECTORS.md pointers; rewrote descriptions to lead with when to use them.

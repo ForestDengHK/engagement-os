@@ -1,6 +1,6 @@
 {
   "name": "engagement-os",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "description": "Engagement OS — a composable operating system for document-heavy consulting engagements: research-only, bid-only, delivery-only, or both",
   "owner": {
     "name": "Forest Deng",
@@ -24,6 +24,24 @@
       "name": "consulting-suite",
       "description": "Install-everything bundle for document-heavy consulting work: the engagement operating system, the panel review gate, deck and figure craft, and the Office document skills. Ships no components of its own — installing it resolves and installs the four plugins it depends on, and skips any you already have.",
       "source": "./consulting-suite",
+      "category": "productivity"
+    },
+    {
+      "name": "kw-data",
+      "description": "Data analysis skills adapted from Anthropic's knowledge-work-plugins: profile a dataset, write and port SQL across dialects (incl. Oracle 19c and Microsoft Fabric), QA an analysis before it is shared, and build a client data-context skill from a live database or from exported DDL, dictionaries and model files. No bundled MCP servers.",
+      "source": "./kw-data",
+      "category": "productivity"
+    },
+    {
+      "name": "kw-legal",
+      "description": "First-pass legal triage for a supplier-side consulting practice, adapted from Anthropic's knowledge-work-plugins: NDA triage, contract review against a playbook, compliance checks. Ships a DRAFT Irish-practice playbook — the firm's Risk & Legal / OGC function decides. No bundled MCP servers.",
+      "source": "./kw-legal",
+      "category": "productivity"
+    },
+    {
+      "name": "kw-ops",
+      "description": "Change requests, process docs (RACI / SOP / flowchart), risk assessment and vendor reviews, adapted from Anthropic's knowledge-work-plugins to engagement-os conventions: written into the engagement repo's own RAID, decision and change registers, cited in its style. No bundled MCP servers.",
+      "source": "./kw-ops",
       "category": "productivity"
     }
   ]
