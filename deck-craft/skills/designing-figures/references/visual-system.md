@@ -49,7 +49,7 @@ Never below ~13px on a slide-scale canvas. Use the brand font with a system fall
      -webkit-mask: url(icons/lucide-database.svg) center/contain no-repeat;
      mask: url(icons/lucide-database.svg) center/contain no-repeat; }
 ```
-(Mask uses the icon's alpha; `background` becomes its colour. Works for any single-colour SVG; renders in headless Chrome PNG. Note: masks don't survive HTML→editable-PPTX, so for pptx output render the exhibit to PNG and place the PNG — see render-pipeline.)
+(Mask uses the icon's alpha; `background` becomes its colour. Works for any single-colour SVG; renders in headless Chrome PNG. Note: masks don't survive HTML→editable-PPTX, so when `destination: document` render the exhibit to PNG and place the PNG; when `destination: deck` draw the exhibit natively (render-pipeline §7) and place no PNG — see render-pipeline.)
 
 ## 6. Line / connector semantics
 

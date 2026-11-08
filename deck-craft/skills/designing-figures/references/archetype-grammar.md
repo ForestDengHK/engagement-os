@@ -14,6 +14,7 @@ Picking the archetype is the single biggest lever on whether an exhibit reads as
 | **Relationships / dependencies** | Network / dependency graph | Nodes + typed edges; cluster by group; legend for edge meaning | Integrations, lineage, org/system maps |
 | **Composition / share** | Stacked bar / treemap / waterfall | Proportional segments; one accent for the focus segment | Cost breakdown, portfolio mix, bridge |
 | **Over time / sequencing** | Roadmap / Gantt / timeline | Linear time axis; bars ∝ duration aligned to axis; phase gridlines | Implementation plans, waves |
+| **A choice between options** | Option comparison | Two or three columns, one header per option; 3–5 aligned facts per column (same rows, same order); one highlighted recommendation if there is one (accent fill/border on that column only; others neutral); real table or aligned cards, never prose | Option appraisal, build-vs-buy shortlist, 'choose between' decisions |
 | **One number that matters** | KPI hero / callout | One huge figure + tiny label + one supporting stat | Executive takeaway, section opener |
 
 ## Decision shortcuts
@@ -22,6 +23,7 @@ Picking the archetype is the single biggest lever on whether an exhibit reads as
 - "Data landscape / estate" → **Capability map / 2-D grid**, or **Maturity heatmap** if the point is gaps.
 - "How does X flow / where does it go" → **Swimlane** (steps) or **Sankey** (if volume/concentration is the point).
 - "Which should we pick / prioritise" → **2×2 matrix**.
+- "Choose between these two or three options" → **Option comparison**.
 - "How do these connect" → **Network**.
 
 ## The same content, three archetypes

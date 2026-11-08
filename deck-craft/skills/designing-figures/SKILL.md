@@ -28,16 +28,15 @@ This is the rendering-tool-agnostic *thinking + system* for figures. It pairs wi
 2. **Pick the archetype** from the grammar — 80% of whether it looks expert. See `references/archetype-grammar.md`. Match message → figure type; don't default to a flow.
 3. **Structure content MECE** into that archetype: the exact rows / columns / layers / lanes / series and what's in each.
 4. **Lock the visual system**: brand tokens, grid, palette, type, icon strategy, legend, line semantics. See `references/visual-system.md`. (Applies to charts too.)
-5. **Write the spec and get sign-off.** Fill `assets/spec-template.md`. Iterate *on the spec*, not pixels. (In `presentation-builder` batch mode this is one combined review of all specs.) If no user is available to sign off (autonomous run), self-review the spec against the squint-test criteria, note open questions in the output, and proceed.
-6. **Render** on a strict grid with real assets. See `references/render-pipeline.md`.
+5. **Write the spec and get sign-off.** Fill `assets/spec-template.md`, including its REQUIRED `destination: document | deck`. Iterate *on the spec*, not pixels. (In `presentation-builder` batch mode this is one combined review of all specs.) If no user is available to sign off (autonomous run), self-review the spec against the squint-test criteria, note open questions in the output, and proceed.
+6. **Render** on a strict grid with real assets, by the route the spec's `destination` names. See `references/render-pipeline.md`.
 7. **Critique — the squint test** (below). Iterate at the *structure* layer.
 8. **Output** per `references/render-pipeline.md` §5.
 
 ## Output & editing — read this
 
-- The figure's **editable master is the HTML source**, not the image. You never edit the PNG (same as you never edit a draw.io `.png` — you edit the `.drawio`). Change text/numbers/colour in the HTML, re-render.
-- **Default output is a PNG** (headless-Chrome screenshot). It drops into ANY deck/report tool — a pptxgenjs/python-pptx build, the built-in `pptx` skill, your own deck script, Google Slides. **No dependency on baoyu.**
-- **Need to edit inside PowerPoint** (native shapes/text)? Use the optional `baoyu-design` HTML→editable-pptx export. Caveat: masked icons / CSS `::before` don't convert — for icon-heavy figures, place the PNG instead.
+- **`destination: deck` → the figure IS native PowerPoint**: shapes, chevrons, lanes, connectors and native tables drawn with python-pptx from the spec, grouped so the figure moves as one (`references/render-pipeline.md` §7). The HTML, if you draw one, is the design reference. A raster goes on a slide only for a photograph or a screenshot.
+- **`destination: document` → the figure is a PNG** (headless-Chrome screenshot) of the HTML source. The HTML is the editable master; you never edit the PNG (same as you never edit a draw.io `.png`). Change the HTML, re-render.
 - Full decision table in `references/render-pipeline.md` §5.
 
 ## The squint test (mandatory critique)

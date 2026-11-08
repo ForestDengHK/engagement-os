@@ -6,7 +6,8 @@
 ```
 Action title (the ONE message):   <the sentence the exhibit must make true>
 Audience / decision:              <who reads it / what they decide from it>
-Archetype:                        <layered | swimlane | capability-grid | maturity-heatmap |
+Destination (REQUIRED):           <document | deck>   deck → native pptx shapes · document → PNG
+Archetype:                        <layered | swimlane | option-comparison | capability-grid | maturity-heatmap |
                                    sankey | matrix | network | composition | roadmap | kpi-hero>
                                    (why this one: ____)
 
@@ -33,6 +34,7 @@ Open questions / facts to confirm: <numbers or labels you are unsure of>
 Action title:   A single ageing Oracle 19c warehouse underpins the entire estate;
                 demand is shifting to self-service BI faster than governance can follow.
 Audience:       Client data lead + steering committee / decide modernisation priorities & risk.
+Destination:    deck  (native pptx shapes; the HTML render is the design reference).
 Archetype:      Layered landscape + cross-cutting band  (warehouse made the visual spine).
 Layers:         Sources → Ingestion → Oracle 19c warehouse → Semantic/Consumption → Consumers
 Emphasis:       Stage 3 warehouse = spine (single point of failure = the message).
