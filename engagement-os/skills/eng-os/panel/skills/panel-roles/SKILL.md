@@ -136,11 +136,11 @@ resolution.
 
 ## Our Side
 - Forest Deng — Engagement Partner → panel-engagement-partner ✓ (plugin)
-- Person — Data Platform Lead → panel-data-architect ✓ (project override)
+- Alex Morgan — Data Platform Lead → panel-data-architect ✓ (project override)
 - ...
 
 ## Client Side
-- Person — Primary reporting contact → panel-client-project-manager ✓ (plugin)
+- Sam Taylor — Primary reporting contact → panel-client-project-manager ✓ (plugin)
 - ... → ⚠ panel-some-role (agent MISSING — create via /panel-new-role)
 
 ## External

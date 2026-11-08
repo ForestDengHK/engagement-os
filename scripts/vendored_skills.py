@@ -17,11 +17,17 @@ into engagement repos by the scaffolder) are copies of panel-framework, synced t
 Edit the skill in its source repo, never here; then --sync and commit both repos.
 Source roots: $FOREST_SKILLS (default ~/working/forest-skills/skills),
 $PANEL_FRAMEWORK (default ~/working/panel-framework).
-Exit 0 no drift (a missing source root is skipped, not passed) · 1 drift found.
+
+Private skills carry client cases, so every source is first scanned by forest-skills'
+public_guard.py ($PUBLIC_GUARD_SCRIPT, default ~/working/forest-skills/scripts/public_guard.py;
+its name list stays in forest-skills and never comes here). A source with a hit is reported as
+LEAK and --sync refuses to copy it. No guard → skipped with a message.
+Exit 0 no drift (a missing source root is skipped, not passed) · 1 drift or leak found.
 """
 import filecmp
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,6 +44,28 @@ VENDORED = [                                    # (copy in this repo, source rep
 ] + [(f"{PANEL}/skills/{n}", "panel-framework", f"skills/{n}") for n in
      ("panel-discuss", "panel-edit-role", "panel-init", "panel-new-role", "panel-refresh", "panel-review", "panel-roles")]
 IGNORE = ["__pycache__", "*.pyc", ".DS_Store"]
+GUARD = Path(os.environ.get("PUBLIC_GUARD_SCRIPT")
+             or Path.home() / "working" / "forest-skills" / "scripts" / "public_guard.py")
+
+
+def leaks(roots):
+    """{(source root, name): ["file:line: term", ...]} for sources holding a name; None when the guard is absent."""
+    if not GUARD.is_file():
+        return None
+    out = {}
+    for root in roots:
+        names = [n for _, r, n in VENDORED if r == root]
+        r = subprocess.run([sys.executable, str(GUARD), "scan", "--repo", str(SOURCES[root]), "--files", *names],
+                           capture_output=True, text=True)
+        if r.returncode > 1:
+            sys.exit(f"public guard failed: {r.stderr.strip()}")
+        for ln in r.stdout.splitlines():
+            name = next((n for n in names if ln.startswith(f"{n}/")), None)
+            if name:
+                out.setdefault((root, name), []).append(ln[len(name) + 1:])
+            else:
+                print(ln)                                       # "public guard: no list, nothing checked"
+    return out
 
 
 def drift(a, b, rel=""):
@@ -56,14 +84,24 @@ def drift(a, b, rel=""):
 
 def main():
     sync = "--sync" in sys.argv[1:]
-    found = 0
+    found = leaked = 0
     for root in sorted({r for _, r, _ in VENDORED if not SOURCES[r].is_dir()}):
         print(f"SKIPPED: {root} not found at {SOURCES[root]} — its copies were not checked")
+    bad = leaks(sorted({r for _, r, _ in VENDORED if SOURCES[r].is_dir()}))
+    if bad is None:
+        print(f"SKIPPED: public guard not found at {GUARD} — sources were not checked for names")
     for copy, root, name in VENDORED:
         if not SOURCES[root].is_dir():
             continue
         src, dst = SOURCES[root] / name, REPO / copy
         diffs = drift(src, dst)
+        hits = (bad or {}).get((root, name))
+        if hits:
+            leaked += 1
+            print(f"LEAK    {src} has names a public repo must not carry"
+                  + (" — not synced" if sync else "") + ":\n" + "\n".join(f"          {h}" for h in hits))
+        if diffs and sync and hits:
+            continue
         if diffs and sync:
             shutil.rmtree(dst, ignore_errors=True)
             shutil.copytree(src, dst, ignore=shutil.ignore_patterns(*IGNORE))
@@ -71,11 +109,14 @@ def main():
         elif diffs:
             found += 1
             print(f"DRIFT   {copy} vs {src}:\n" + "\n".join(f"          {d}" for d in diffs))
-        else:
+        elif not hits:
             print(f"same    {copy}")
     if found:
         print(f"\n{found} vendored skill(s) differ from their source — run with --sync, then commit.")
-    return 1 if found else 0
+    if leaked:
+        print(f"\n{leaked} source skill(s) carry client, colleague or personal names — remove them in the source repo "
+              "(or allowlist a false hit in forest-skills/config/public-guard.txt), then --sync.")
+    return 1 if found or leaked else 0
 
 
 if __name__ == "__main__":
