@@ -210,7 +210,7 @@ the RFT; R2 is judgement and cannot.
 ## Use the buyer's own response form — do not design your own
 
 Before a word is written, read what the buyer supplied. A real tender carries most of the answer
-scaffolding already, and on the pack's own worked example (Client 26-000) that meant **51 Yes / No /
+scaffolding already, and on the pack's own worked example (ACME 26-000) that meant **51 Yes / No /
 N-A answer boxes, four "TENDERER'S RESPONSE (identify document attached)" boxes and five appendix
 forms** — none of which the first draft reproduced, because nothing told it to look.
 

@@ -13,7 +13,11 @@ Before any other work, run the shared root resolver to learn both
 `project_root` and `plugin_root`:
 
 ```bash
-bash "${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh"
+PF_CACHE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/panel-framework/panel-framework"
+for d in "${CLAUDE_PLUGIN_ROOT:-}" "$(ls -d "$PF_CACHE"/[0-9]* 2>/dev/null | sort -V | tail -1)" "${CLAUDE_SKILL_DIR}/../.."; do
+  [ -n "$d" ] && [ -f "$d/framework-scripts/resolve-roots.sh" ] &&
+    { bash "$d/framework-scripts/resolve-roots.sh" || echo "resolver failed: $d" >&2; break; }
+done
 ```
 
 The resolver prints `project_root=<abs>` (the nearest ancestor of `$PWD`
@@ -175,6 +179,27 @@ If `<project_root>/.gitignore` doesn't exist, create it.
 
 In automation mode, do this without asking.
 
+### Step 6b: Framework scripts beside project-local skills
+
+Project-local copies of the panel skills (`<project_root>/.claude/skills/panel-*/`)
+locate the resolver at `${CLAUDE_SKILL_DIR}/../../framework-scripts/`, i.e.
+`<project_root>/.claude/framework-scripts/`. If any such skill copy exists,
+copy the scripts there (overwrite — they are ours):
+
+```bash
+if ls -d "$project_root/.claude/skills/"panel-*/ >/dev/null 2>&1; then
+  mkdir -p "$project_root/.claude/framework-scripts"
+  cp -f "$plugin_root/framework-scripts/"*.sh "$plugin_root/framework-scripts/root-conventions.md" \
+    "$project_root/.claude/framework-scripts/"
+  chmod +x "$project_root/.claude/framework-scripts/"*.sh
+fi
+```
+
+The copied `resolve-roots.sh` finds the plugin through the installed plugin
+cache, so it works without `CLAUDE_PLUGIN_ROOT`. Verify with
+`(cd "$project_root" && bash .claude/framework-scripts/resolve-roots.sh)` —
+two lines, exit 0. In automation mode, do this without asking.
+
 ### Step 7: Summarize
 
 ```
@@ -184,6 +209,7 @@ Files created:
 - .claude/project-context.md
 - .claude/panel-config.yaml
 - .mcp.json (if context7 enabled)
+- .claude/framework-scripts/ (if project-local panel skills exist)
 
 Next step: run /panel-discuss "<your first topic>" to test the installation.
 ```
@@ -194,6 +220,7 @@ Next step: run /panel-discuss "<your first topic>" to test the installation.
 - [ ] `.claude/panel-config.yaml` exists and matches v2 schema (tests/test-config-schema.sh would pass)
 - [ ] If context7 opted in, `.mcp.json` exists with context7 entry
 - [ ] `.gitignore` has the required entries
+- [ ] If `.claude/skills/panel-*/` exists, `.claude/framework-scripts/resolve-roots.sh` exists and runs clean from `<project_root>`
 - [ ] User was told to run `/panel-discuss` next
 
 If any item fails, fix before finishing.

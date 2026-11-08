@@ -107,7 +107,7 @@ class ImageCollector:
       content diagram a deck legitimately shows twice, so the FIRST copy survives for triage
       and only the duplicate files are removed (identical bytes — no information lost).
       Deleting a unique image is a judgment call, and the collector only makes calls bytes can
-      make. Found on the real Client deck: a 93KB architecture diagram shown on two consecutive
+      make. Found on the real BankCo deck: a 93KB architecture diagram shown on two consecutive
       slides was auto-deleted as "template furniture" before triage ever saw it.
     * **Size.** Under a few KB, or narrower than ~120px, it is an icon or a rule.
 
@@ -281,7 +281,7 @@ def img_section(collector, total_units=None):
     # The count is the other half of the audit: after triage the surviving figures are whatever
     # the ledger says they are, and without a record of how many arrived, a document whose
     # figures were all deleted reads exactly like a document that never had any. That is how
-    # the Client deck lost 13 diagrams in silence. `eng_lint.rule_images_accounted` reconciles it.
+    # the BankCo deck lost 13 diagrams in silence. `eng_lint.rule_images_accounted` reconciles it.
     consolidation_note = (
         f"\n{fc.CONSOLIDATED_LINE} {consolidated} embedded raster component(s); each complete "
         "page is retained once at readable resolution, so its circles, arrows and fragments "
@@ -340,7 +340,7 @@ def number_headings(md, label="Section"):
     becomes `## §2.1 Timetable`. Only headings without a native number get the synthetic
     fallback (`## Section 12: Minimum Requirements`). The outline hierarchy is never flattened.
 
-    Three things the first version got wrong, all visible on the real Client RFT:
+    Three things the first version got wrong, all visible on the real ACME RFT:
     * the synthetic counter counted the `§`-numbered headings too, so the fallback sequence
       arrived full of holes (`Section 50` → `§4.5` → `Section 53`) and read like data loss;
     * an empty styled paragraph became a bare `#` — a heading with no text and no anchor;
@@ -411,7 +411,7 @@ def _pptx_diagram_slides(prs):
     """Slides whose figure is COMPOSED of drawn shapes (org chart, SmartArt, flow diagram)
     rather than placed as a picture. python-pptx reads each shape's text but cannot draw the
     composition, so without a rendered snapshot the figure — usually the slide's whole point —
-    leaves no image behind. Found on the real Client_Team_Structure deck: 61 auto shapes per
+    leaves no image behind. Found on the real Team_Structure deck: 61 auto shapes per
     slide, zero pictures extracted, the reporting lines gone.
     """
     needed = []
@@ -513,11 +513,11 @@ def convert_pdf(src, images_dir, link_base=None):
                 continue
         # A diagram drawn in vector shapes is no embedded raster at all — get_images() cannot
         # see it, and the page's text is only its scattered labels. Render the page itself so
-        # the figure survives. Found on the real Client deck: the roadmap and architecture pages
+        # the figure survives. Found on the real BankCo deck: the roadmap and architecture pages
         # (68–229 vector drawings each) produced zero images and no hint a figure was there.
         # A second case the vector rule misses: the page's figures WERE extracted, but every
         # one is a thumbnail whose own labels are unreadable at that size. Extraction
-        # "succeeded" and the reader still cannot see what the diagram says — on the Client deck
+        # "succeeded" and the reader still cannot see what the diagram says — on the BankCo deck
         # a triage pass had to caption one such figure "read the full-size figure in the
         # source PDF", which is exactly the trip back to the binary the md-first rule exists
         # to avoid. The page itself carries them at readable size, so render it.
@@ -579,7 +579,7 @@ def convert_pptx(src, images_dir, link_base=None):
                         except Exception:
                             continue
             # markitdown emits `![alt](Picture65.jpg)` for pictures it names but never writes
-            # to disk — links that resolve nowhere (21 dead on the real Client deck). Rewrite
+            # to disk — links that resolve nowhere (21 dead on the real ACME deck). Rewrite
             # each to a placement token for the file we DID extract, keeping markitdown's alt
             # text: it is often the only written account of the figure. Unmatchable links are
             # reduced to their alt text — a dead link helps no one.
@@ -692,7 +692,7 @@ def convert_docx(src, images_dir, link_base=None):
             #
             # BOTH syntaxes, not just markdown. Pandoc emits raw HTML `<img src=... style=.../>`
             # whenever the Word image carries an explicit size — which is nearly always. The
-            # first version only rewrote `![](…)`, so on the real Client tender pack every single
+            # first version only rewrote `![](…)`, so on the real ACME tender pack every single
             # figure in every converted docx pointed into a temp directory that no longer
             # existed. The failure was invisible: the text conversion "succeeded".
             def _fix_md(m):
@@ -927,7 +927,7 @@ def scan(root):
         the bid.
       RE-INDEX — assets whose markdown changed AFTER their row was written. A row drafted from
         a conversion whose figures were still untriaged says what the prose said and nothing
-        the diagrams proved; on the real Client case study that was the difference between
+        the diagrams proved; on the real BankCo case study that was the difference between
         "discovery-phase method" and a Teradata→VantageCloud interim-state transition, a
         2024-2027 quarterly roadmap and a phased code-conversion approach. Nothing noticed,
         because a stale row looks exactly like a considered one. Same mtime comparison
@@ -960,7 +960,7 @@ def scan(root):
         # Keep the same boundary the lint uses when deciding which A-nnn ids are real assets.
         index_text = re.split(r"^#{1,3}\s+.*gap.*$", index_text,
                               flags=re.M | re.I)[0]
-        # A basename substring is not an identity. On the real Client asset tree,
+        # A basename substring is not an identity. On the real ACME asset tree,
         # `case_studies/others/Quals.pdf` disappeared because the index already contained
         # `case_studies/1_General_DataMod Quals.pdf`. Read exact, backticked paths instead.
         # The same mechanism lets the index mark editable companions and build helpers as
@@ -1057,7 +1057,7 @@ def manifest_aliases(md_dir):
     Same-stem matching covers `_md/<source>.md`; the manifest row covers the skill's own
     documented topic/slug convention (`_md/01_rft/rft_main.md` ← `26-000 - ....docx`).
     Without this the scan re-reports a converted document as waiting forever — the report
-    everyone trusts crying wolf. Found on the 2026-07-29 mini Client e2e.
+    everyone trusts crying wolf. Found on the 2026-07-29 mini ACME e2e.
     """
     aliases = set()
     readme = md_dir / "README.md"
@@ -1075,13 +1075,13 @@ def update_manifest(out_path, src):
     Only fires when the output lands under a `_md/` pack directory — anywhere else there is no
     manifest convention to maintain. eng_lint's manifest-complete rule errors on a converted
     MD with no row, so if the converter doesn't write the row, every conversion lands the
-    user in a lint error they can only clear by hand. Found on the real Client tender pack:
+    user in a lint error they can only clear by hand. Found on the real ACME tender pack:
     four documents converted, no manifest anywhere, and the error had no automated path out.
 
     The pack's `_md/` may be an ANCESTOR rather than the parent: the skill's documented
     convention is `_md/<NN_topic>/<slug>.md`, and requiring the parent to be `_md` itself
     meant the row was silently never written on the documented path — while stdout claimed
-    it was (mini Client e2e, 2026-07-29). Returns True when a row was written.
+    it was (mini ACME e2e, 2026-07-29). Returns True when a row was written.
 
     Row format matches what rule_manifest_complete greps for: the .md name in backticks.
     """

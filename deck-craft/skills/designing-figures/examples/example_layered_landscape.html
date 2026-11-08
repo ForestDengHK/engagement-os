@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Client current-state data landscape — v1</title>
+<title>ACME current-state data landscape — v1</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
   :root{
@@ -79,10 +79,10 @@
     <!-- 1 SOURCES -->
     <div class="stage">
       <div class="hd"><div class="num">1</div><div class="nm">Source systems</div><div class="role">Operational systems of record</div><div class="flow">→</div></div>
-      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-wrench.svg);mask-image:url(icons/lucide-wrench.svg)"></span><div><div class="nm">asset system</div><div class="sub">Asset management · drives 74% of BO report traffic</div></div><span class="sev s2">S2</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-wrench.svg);mask-image:url(icons/lucide-wrench.svg)"></span><div><div class="nm">Asset system</div><div class="sub">Asset management · drives 74% of BO report traffic</div></div><span class="sev s2">S2</span></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-database.svg);mask-image:url(icons/lucide-database.svg)"></span><div><div class="nm">Oracle EBS</div><div class="sub">Finance · 84 concurrent-program reports</div></div></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-map.svg);mask-image:url(icons/lucide-map.svg)"></span><div><div class="nm">GIS</div><div class="sub">Spatial / network data</div></div></div>
-      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">OT / SCADA</div><div class="sub">vendor · 67 reports, Excel-by-email · bypasses DWH</div></div><span class="sev s3">S3</span></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">OT / SCADA</div><div class="sub">67 reports, Excel-by-email · bypasses DWH</div></div><span class="sev s3">S3</span></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-plug.svg);mask-image:url(icons/lucide-plug.svg)"></span><div><div class="nm">Specialist gateways</div><div class="sub">Metering, CRM &amp; point feeds</div></div></div>
     </div>
 
@@ -98,7 +98,7 @@
     <!-- 3 WAREHOUSE — SPINE -->
     <div class="stage spine">
       <div class="hd"><div class="num">3</div><div class="nm">Oracle 19c warehouse</div><div class="role">Single enterprise instance</div><div class="flow">→</div></div>
-      <div class="card hero"><span class="ic" style="-webkit-mask-image:url(icons/lucide-server.svg);mask-image:url(icons/lucide-server.svg)"></span><div><div class="nm">Oracle 19c EE on RHEL 8</div><div class="sub">One instance · server · no DR / single point of failure</div></div><span class="sev s1">S1</span></div>
+      <div class="card hero"><span class="ic" style="-webkit-mask-image:url(icons/lucide-server.svg);mask-image:url(icons/lucide-server.svg)"></span><div><div class="nm">Oracle 19c EE on RHEL 8</div><div class="sub">One instance · no DR / single point of failure</div></div><span class="sev s1">S1</span></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-workflow.svg);mask-image:url(icons/lucide-workflow.svg)"></span><div><div class="nm">Three-tier load</div><div class="sub">Stage → detail → mart</div></div></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-table.svg);mask-image:url(icons/lucide-table.svg)"></span><div><div class="nm">28 data marts</div><div class="sub">+ materialised views</div></div></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-gauge.svg);mask-image:url(icons/lucide-gauge.svg)"></span><div><div class="nm">9 a.m. load SLA</div><div class="sub">Overnight batch + midday partial</div></div><span class="sev s2">S2</span></div>
@@ -111,7 +111,7 @@
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-file-spreadsheet.svg);mask-image:url(icons/lucide-file-spreadsheet.svg)"></span><div><div class="nm">SharePoint delivery</div><div class="sub">≥430 reports — the real delivery channel</div></div></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Power BI</div><div class="sub">65 governed · +582% incidents YoY · governance lagging</div></div><span class="sev s2">S2</span></div>
       <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-layout-dashboard.svg);mask-image:url(icons/lucide-layout-dashboard.svg)"></span><div><div class="nm">Microsoft Fabric</div><div class="sub">Emerging · shared semantic models in flight</div></div></div>
-      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">usage telemetry tool</div><div class="sub">Consumption telemetry</div></div></div>
+      <div class="card"><span class="ic" style="-webkit-mask-image:url(icons/lucide-chart-column.svg);mask-image:url(icons/lucide-chart-column.svg)"></span><div><div class="nm">Usage telemetry tool</div><div class="sub">Consumption telemetry</div></div></div>
     </div>
 
     <!-- 5 CONSUMERS -->
@@ -126,8 +126,8 @@
 
   <!-- cross-cutting -->
   <div class="xband">
-    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-shield-check.svg);mask-image:url(icons/lucide-shield-check.svg)"></span><div><div class="xh">Governance &amp; ownership</div><div class="xt">client data team owns DWH + BO · multi-vendor estate · lineage &amp; catalogue gaps</div></div></div>
-    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-lock.svg);mask-image:url(icons/lucide-lock.svg)"></span><div><div class="xh">Security &amp; regulatory</div><div class="xt">GDPR · MoU data-sharing · row-level security not yet on PBI models</div></div></div>
+    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-shield-check.svg);mask-image:url(icons/lucide-shield-check.svg)"></span><div><div class="xh">Governance &amp; ownership</div><div class="xt">Central data team owns DWH + BO · multi-vendor estate · lineage &amp; catalogue gaps</div></div></div>
+    <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-lock.svg);mask-image:url(icons/lucide-lock.svg)"></span><div><div class="xh">Security &amp; regulatory</div><div class="xt">GDPR · Data-sharing agreements · row-level security not yet on PBI models</div></div></div>
     <div class="xseg"><span class="xic" style="-webkit-mask-image:url(icons/lucide-fingerprint.svg);mask-image:url(icons/lucide-fingerprint.svg)"></span><div><div class="xh">Personal data</div><div class="xt">~430 PII columns identified across the reporting estate</div></div></div>
   </div>
 
@@ -138,7 +138,7 @@
       <div class="li"><span class="dot" style="background:var(--s3)"></span>S3 Medium</div>
       <div class="li"><span class="dot" style="background:var(--accent)"></span>→ data flow</div>
     </div>
-    <div class="src">Client 26-000 · Deliverable 1 — Current-State Assessment · figures per canonical inventory (illustrative; confirm in discovery)</div>
+    <div class="src">ACME 26-000 · Deliverable 1 — Current-State Assessment · figures per canonical inventory (illustrative; confirm in discovery)</div>
   </div>
 </div>
 </body>

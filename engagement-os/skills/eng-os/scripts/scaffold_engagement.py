@@ -78,7 +78,7 @@ PURSUIT_DIRS = [
     "01_pursuit/_shared/credentials",
     "01_pursuit/_shared/diagrams",
     "01_pursuit/_shared/finance",
-    # Found on the real Client pursuit: signed SoWs cited as delivery evidence are not case
+    # Found on the real ACME pursuit: signed SoWs cited as delivery evidence are not case
     # studies (they're confidential contracts), and the bid-specific org chart is not a
     # credential — without these two, exactly those assets landed at the _shared/ root.
     "01_pursuit/_shared/contracts_ref",
@@ -334,7 +334,7 @@ def plant_panel(root: str) -> int:
     The old pattern was "print a line telling the user to run /panel-init" and plant nothing —
     which worked only while a global panel-framework was installed. The framework now lives in
     `skills/eng-os/panel/` inside this plugin, and an engagement repo gets it at scaffold time:
-    the 33 roles, the config, and the four panel skills. Idempotent — existing files are kept,
+    the 33 roles, the config, the panel skills and the framework-scripts they resolve roots with. Idempotent — existing files are kept,
     so project overrides are not clobbered.
     """
     roles_src = os.path.join(PANEL_DIR, "roles")
@@ -364,6 +364,16 @@ def plant_panel(root: str) -> int:
             if not os.path.isdir(src):
                 continue
             shutil.copytree(src, os.path.join(skills_dest, name), dirs_exist_ok=True)
+    # The planted skills find their root resolver at ${CLAUDE_SKILL_DIR}/../../framework-scripts/,
+    # i.e. .claude/framework-scripts/ — the same copy /panel-init plants. Without it every panel
+    # skill's first step failed with "No such file or directory".
+    scripts_src = os.path.join(PANEL_DIR, "framework-scripts")
+    if os.path.isdir(scripts_src):
+        scripts_dest = os.path.join(root, ".claude", "framework-scripts")
+        shutil.copytree(scripts_src, scripts_dest, dirs_exist_ok=True)
+        for name in os.listdir(scripts_dest):
+            if name.endswith(".sh"):
+                os.chmod(os.path.join(scripts_dest, name), 0o755)
     print(f"  Panel framework: {planted} roles planted into .claude/agents/")
     return planted
 

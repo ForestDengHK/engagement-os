@@ -3,7 +3,7 @@
    Lift exact values from the client's deck/build script when one exists. */
 
 :root{
-  /* ---- Client / Deloitte-corporate set (used by the worked examples) ---- */
+  /* ---- ACME / Deloitte-corporate set (used by the worked examples) ---- */
   --ink:#06038D;        /* primary structure / dominant colour */
   --ink2:#2A2D9C;
   --accent:#0099FF;     /* sharp accent for the focus / flow */

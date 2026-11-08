@@ -6,7 +6,7 @@ source acquisition → ingest → canonicalize → analysis → validate → bui
 real assignment: *what does Deloitte argue an enterprise AI platform must be, what does Deloitte
 itself sell, and where do the two diverge.*
 
-**Why this matters:** every prior E2E in this pack has been on the **pursuit** side (Client 26-000,
+**Why this matters:** every prior E2E in this pack has been on the **pursuit** side (ACME 26-000,
 several waves). The research block had **never been run end to end**. It shipped on the strength of
 `verify_scenarios.py` asserting the tree scaffolds and lints clean — which it does, and which
 turned out to be nowhere near sufficient.

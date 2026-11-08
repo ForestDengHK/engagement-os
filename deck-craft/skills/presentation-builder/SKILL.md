@@ -84,4 +84,4 @@ HTML-first route: author at baoyu's 1920 × 1080 and export with `"slideWidthIn"
 - Different colours/fonts per slide → looks assembled, not authored. Lock one system (step 4).
 - Generating diagrams as AI images → garbled labels/icons. Figures = real assets + structure you lay out.
 - Pasting a figure PNG onto a slide → nobody can correct a label in PowerPoint. On a slide the figure is native shapes.
-- Re-reviewing the user's deck against the playbook and adding slides (Client 2026-10-13: purpose slide + cover, restoring a summary he had cut on 7 Oct) → "we keep cover page but remove slide 2". The user's structure wins; propose, don't add.
+- Re-reviewing the user's deck against the playbook and adding slides (a client deck, 2026-10-13: purpose slide + cover, restoring a summary he had cut on 7 Oct) → "we keep cover page but remove slide 2". The user's structure wins; propose, don't add.

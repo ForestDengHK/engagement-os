@@ -13,7 +13,11 @@ Before any other work, run the shared root resolver to learn both
 `project_root` and `plugin_root`:
 
 ```bash
-bash "${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh"
+PF_CACHE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/panel-framework/panel-framework"
+for d in "${CLAUDE_PLUGIN_ROOT:-}" "$(ls -d "$PF_CACHE"/[0-9]* 2>/dev/null | sort -V | tail -1)" "${CLAUDE_SKILL_DIR}/../.."; do
+  [ -n "$d" ] && [ -f "$d/framework-scripts/resolve-roots.sh" ] &&
+    { bash "$d/framework-scripts/resolve-roots.sh" || echo "resolver failed: $d" >&2; break; }
+done
 ```
 
 The resolver prints `project_root=<abs>` (the nearest ancestor of `$PWD`
@@ -26,7 +30,7 @@ output as authoritative; never guess.
 ## When to invoke
 
 - An existing panel discussion flagged a missing role in "Recommended Next Round"
-- User explicitly wants a new project-specific role (e.g., "regulator regulatory liaison" specialized beyond the generic `panel-regulator-perspective`)
+- User explicitly wants a new project-specific role (e.g., "energy-regulator liaison" specialized beyond the generic `panel-regulator-perspective`)
 - Cloning a plugin role to customize for this project (pre-fill from plugin, edit, save to project overrides)
 
 ## Inputs
@@ -116,7 +120,7 @@ cloned content and ask "Keep, edit, or replace?" for each.
 - `description:` — compose from Role Brief + Frameworks names + Red Lines + Priorities, matching the template used by the 33 plugin agents (should exceed 100 chars)
 - `disallowedTools: Bash, Edit, Write, NotebookEdit, Agent, Task`
 - `model:` — ask user: `sonnet` (default) or `opus` (for synthesis-heavy roles)
-- `maxTurns: 8` — standard bounded-runtime default for panel roles
+- `maxTurns: 20` — default for review/draft/debrief roles (8 for discussion-only roles)
 - `color:` — ask user: pick from red/blue/green/yellow/purple/orange/pink/cyan
 
 ### Step 6: Append Contribution Protocol

@@ -84,7 +84,7 @@ def caption_stub_block(rel):
     A figure with no caption is only half-ingested: the reader has the pixels but
     not what the document said they mean. The stub is deliberately visible and
     deliberately tagged, so an unexplained diagram cannot quietly reach an
-    analysis the way it did on the real Client pack.
+    analysis the way it did on the real ACME pack.
     """
     return placed_figure(
         rel, f"`{CAPTION_STUB}`: say what this shows, in the words of the "

@@ -5,9 +5,9 @@ A "designed" look comes from a consistent system applied with restraint, not fro
 ## 1. Brand tokens
 
 Pull the client/brand palette + fonts and use them as CSS variables. Never invent colours.
-Start from `assets/brand-tokens.css` (ships a Client set + a generic corporate set) and swap values.
+Start from `assets/brand-tokens.css` (ships a ACME set + a generic corporate set) and swap values.
 
-If you have a brand deck/build script, lift tokens from it (e.g. Client: ink `#06038D`, blue `#0099FF`, teal `#007A82`, green `#84BD00`, severity scale, Open Sans). A diagram that uses the deck's exact tokens looks like it belongs in the deck.
+If you have a brand deck/build script, lift tokens from it (e.g. ACME: ink `#06038D`, blue `#0099FF`, teal `#007A82`, green `#84BD00`, severity scale, Open Sans). A diagram that uses the deck's exact tokens looks like it belongs in the deck.
 
 ## 2. Restraint
 

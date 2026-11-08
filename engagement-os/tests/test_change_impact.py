@@ -491,7 +491,7 @@ def case_filled_buyer_forms_are_maintained_not_rendered():
     'rendered-output': editing one produced an error-severity 'reconcile the edit
     into its maintained source, then re-render' — there IS no maintained source,
     the form IS one — and the checkpoint was refused. Two gates deadlocked the
-    exact workflow one of them mandates (found on the real Client pack)."""
+    exact workflow one of them mandates (found on the real ACME pack)."""
     root = build()
     ci.checkpoint(root)
     (root / "01_pursuit/27-010/3_drafting/forms/appendix3.docx").write_bytes(b"PK-form-v2")

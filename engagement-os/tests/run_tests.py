@@ -617,37 +617,37 @@ CASES = [
                      "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
                      "## Anonymised until permission (machine-checked)\n\n"
                      "| Client name | Asset | State |\n|---|---|---|\n"
-                     "| Client | A-001 | owed |\n"),
+                     "| GridCo | A-001 | owed |\n"),
                 _sub(t, SEC, "We did the thing.",
-                     "We did the thing for Client, a network operator.")),
+                     "We did the thing for GridCo, a network operator.")),
      set(), {"anonymised-name-in-prose"}, set()),
     ("anonymised-name-not-printed-is-quiet",
      lambda t: _sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
                     "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
                     "## Anonymised until permission (machine-checked)\n\n"
                     "| Client name | Asset | State |\n|---|---|---|\n"
-                    "| Client | A-001 | owed |\n"),
+                    "| GridCo | A-001 | owed |\n"),
      set(), set(), {"anonymised-name-in-prose", "anonymised-name-in-form"}),
     ("granted-permission-lets-the-name-print",
      lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
                      "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
                      "## Anonymised until permission (machine-checked)\n\n"
                      "| Client name | Asset | State |\n|---|---|---|\n"
-                     "| Client | A-001 | granted |\n"),
+                     "| GridCo | A-001 | granted |\n"),
                 _sub(t, SEC, "We did the thing.",
-                     "We did the thing for Client, a network operator.")),
+                     "We did the thing for GridCo, a network operator.")),
      set(), set(), {"anonymised-name-in-prose"}),
     ("anonymised-name-inside-a-filled-form",
      lambda t: (_sub(t, ASSETS, "| A-001 | ACME data platform discovery | 2024-07 |",
                      "| A-001 | ACME data platform discovery | 2024-07 |\n\n"
                      "## Anonymised until permission (machine-checked)\n\n"
                      "| Client name | Asset | State |\n|---|---|---|\n"
-                     "| Client | A-001 | owed |\n"),
+                     "| GridCo | A-001 | owed |\n"),
                 _sub(t, SEC, "response_form: prose",
                      "response_form: buyer-form: Appendix 3 Reference Data Sheet (in the RFT)"),
                 t.__setitem__("01_pursuit/27-010/3_drafting/forms/appendix3.docx",
                               _zip_bytes({"word/document.xml":
-                                          "<w>delivered for Client in 2024</w>"}))),
+                                          "<w>delivered for GridCo in 2024</w>"}))),
      set(), {"anonymised-name-in-form"}, set()),
 
     # ── citations ────────────────────────────────────────────────────────────
@@ -769,7 +769,7 @@ CASES = [
      lambda t: t.__setitem__("_sources/public/_md/doc1/x.md", "# Doc\n"),
      {"manifest-missing"}, set(), set()),
     # Pandoc emits raw HTML <img> for any Word image with an explicit size, pointing at the
-    # --extract-media temp dir. On the real Client pack every converted docx figure was a dead
+    # --extract-media temp dir. On the real ACME pack every converted docx figure was a dead
     # link into a deleted directory and nothing noticed: the text conversion "succeeded".
     ("media link into a temp dir that no longer exists",
      lambda t: (t.__setitem__(
@@ -811,7 +811,7 @@ CASES = [
                 t.__setitem__("01_pursuit/_shared/_md/README.md",
                               "- `case-study.md` — converted from `case-study.pdf`\n")),
      set(), {"images-untriaged"}, set()),
-    # The failure the rule exists for: 13 images extracted from the Client deck, all deleted as
+    # The failure the rule exists for: 13 images extracted from the BankCo deck, all deleted as
     # `[decorative]`, `images-untriaged` cleared — the lint rewarded the one action that lost
     # the case study's evidence, because an emptied document reads exactly like one that never
     # had figures. Only the ledger tells the two apart.
@@ -1100,7 +1100,7 @@ def render_tests():
 def converter_tests():
     """convert_source.update_manifest: the lint manifest rule errors on a converted MD with
     no row, so the converter must write the row itself — else every conversion is a manual
-    lint fix. Found on the real Client pack: 4 MDs, no manifest, no automated path to green.
+    lint fix. Found on the real ACME pack: 4 MDs, no manifest, no automated path to green.
     """
     import importlib.util
     spec = importlib.util.spec_from_file_location(
@@ -1139,7 +1139,7 @@ def converter_tests():
 
     # 5. The documented convention is `_md/<NN_topic>/<slug>.md` — the topic subfolder is the
     # skill's own instruction, so the row must land in the pack's `_md/README.md`, not vanish
-    # because the parent is `01_rft` rather than `_md`. Mini Client e2e, 2026-07-29: the row was
+    # because the parent is `01_rft` rather than `_md`. Mini ACME e2e, 2026-07-29: the row was
     # never written on the documented path while stdout claimed it was.
     topic = pack / "01_rft"
     topic.mkdir()
@@ -1176,7 +1176,7 @@ def converter_tests():
     print("✓ converter manifest-writer passes" if manifest_ok
           else "✗ converter manifest-writer FAILING")
 
-    # Scanner identity must be the exact path, never a basename substring. The real Client
+    # Scanner identity must be the exact path, never a basename substring. The real ACME
     # tree contains both `1_General_DataMod Quals.pdf` and `others/Quals.pdf`; the latter
     # was silently treated as indexed by the former until this fixture existed.
     scan_root = pathlib.Path(tempfile.mkdtemp(prefix="engos-scan-"))
@@ -1186,15 +1186,15 @@ def converter_tests():
     (shared / "team_structure").mkdir()
     (shared / "case_studies/1_General_DataMod Quals.pdf").write_text("a", encoding="utf-8")
     (shared / "case_studies/others/Quals.pdf").write_text("b", encoding="utf-8")
-    (shared / "Client SoW.docx").write_text("c", encoding="utf-8")
-    (shared / "contracts_ref/Client SoW.docx").write_text("c", encoding="utf-8")
+    (shared / "LenderCo SoW.docx").write_text("c", encoding="utf-8")
+    (shared / "contracts_ref/LenderCo SoW.docx").write_text("c", encoding="utf-8")
     (shared / "team_structure/create_pptx.js").write_text("helper", encoding="utf-8")
     (shared / "case_studies/needed.pdf").write_text("gap", encoding="utf-8")
     (shared / "firm_assets.md").write_text(
         "# Firm assets\n\n"
         "| ID | Asset |\n|---|---|\n"
         "| A-001 | `case_studies/1_General_DataMod Quals.pdf` |\n"
-        "| A-002 | `Client SoW.docx` |\n\n"
+        "| A-002 | `LenderCo SoW.docx` |\n\n"
         "## 1b. Handled companion/support files\n\n"
         "| File | Disposition |\n|---|---|\n"
         "| `team_structure/create_pptx.js` | build helper |\n\n"
@@ -1208,7 +1208,7 @@ def converter_tests():
         ("exact path avoids substring collision",
          "case_studies/others/Quals.pdf" in waiting_rel),
         ("same basename in another folder remains visible",
-         "contracts_ref/Client SoW.docx" in waiting_rel),
+         "contracts_ref/LenderCo SoW.docx" in waiting_rel),
         ("indexed exact path is excluded",
          "case_studies/1_General_DataMod Quals.pdf" not in waiting_rel),
         ("handled helper is excluded",
@@ -1425,7 +1425,7 @@ def converter_tests():
           else "✗ batch conversion tests FAILING")
 
     # ── image collector: only bytes-provable decoration is dropped ────────────
-    # Found on the real Client deck: a 93KB architecture diagram shown on two consecutive
+    # Found on the real BankCo deck: a 93KB architecture diagram shown on two consecutive
     # slides was auto-deleted as "template furniture" because ANY repeat died. Now only a
     # raster on most units is furniture; a rarer repeat keeps its first copy for triage.
     def _blob(tag):
@@ -1497,7 +1497,7 @@ def converter_tests():
         ]
 
         # Extraction can "succeed" and still leave the reader unable to read the diagram:
-        # every figure on the page is a thumbnail whose own labels are too small. The Client
+        # every figure on the page is a thumbnail whose own labels are too small. The BankCo
         # deck produced a caption saying "read the full-size figure in the source PDF" —
         # the trip back to the binary that md-first exists to avoid.
         thumb_pdf = pathlib.Path(tempfile.mkdtemp(prefix="engos-thumb-")) / "deck.pdf"
@@ -1750,7 +1750,7 @@ def converter_tests():
     ]
 
     # `ocr-done` means the figure's words did NOT survive extraction. When they plainly did,
-    # transcribing them again buries the interpretation. Measured on the real Client deck: 14 of
+    # transcribing them again buries the interpretation. Measured on the real BankCo deck: 14 of
     # 18 OCR blocks were 95-100% words the markdown already had.
     dup_dir = pathlib.Path(tempfile.mkdtemp(prefix="engos-dup-")) / "_md"
     (dup_dir / "images").mkdir(parents=True)

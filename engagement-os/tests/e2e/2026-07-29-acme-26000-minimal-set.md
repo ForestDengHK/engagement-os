@@ -1,15 +1,15 @@
-# E2E — Client 26-000 minimal-set rerun against v1.48.x (2026-07-29)
+# E2E — ACME 26-000 minimal-set rerun against v1.48.x (2026-07-29)
 
-**What we did:** scaffolded a fresh pursuit repo (`~/working/Client-26-000-mini`, `--mode pursuit`),
+**What we did:** scaffolded a fresh pursuit repo (`~/working/acme-26000-mini`, `--mode pursuit`),
 copied a deliberately minimal 6-file set — the main RFT docx plus five `_shared/` assets chosen
-to trip specific gates (Client entity trap, Client xlsx, Forest CV with a 2022 project, and the
+to trip specific gates (LenderCo entity trap, GridCo xlsx, Forest CV with a 2022 project, and the
 `1_General_DataMod Quals.pdf` / `others/Quals.pdf` basename pair) — and ran the full flow on the
 installed plugin: scaffold → ingest → triage → analyze → estimate → index → draft → strict check
 → render gate. Purpose: verify the v1.48.0 catalog restructure broke nothing, with fewest files.
 
 **Why this set:** every file is a tripwire. The basename pair re-tests v1.27.0's exact-path
-matching; the CV re-tests the 3-year window; the Client proposal re-tests the performing-entity
-rule; the Client sheet is the one asset that should sail through.
+matching; the CV re-tests the 3-year window; the LenderCo proposal re-tests the performing-entity
+rule; the GridCo sheet is the one asset that should sail through.
 
 ## Pipeline verdict: green end-to-end
 
@@ -21,7 +21,7 @@ rule; the Client sheet is the one asset that should sail through.
 - Estimate workbook: 679 formulas, 0 errors via the xlsx skill's recalc.py; P50 170.8d;
   the engine's overlap arithmetic (8d) contradicted the seed's hand-computed 10d — the
   deterministic check was right.
-- firm_assets.md: 5 A-IDs; Client entity trap (Deloitte Technology S.A. Lisboa), CV 2022
+- firm_assets.md: 5 A-IDs; LenderCo entity trap (Deloitte Technology S.A. Lisboa), CV 2022
   out-of-window, quals pool UNKNOWN dates — all caught; basename pair did not collide.
 - §5.1.1 drafted (2 examples, buyer's four-angle order, descriptors not names) → blocked-r1
   (permission, referee, KPI evidence owed).
@@ -65,6 +65,6 @@ plausible CLI mistake.
 
 ## Artefacts
 
-- E2E repo: `~/working/Client-26-000-mini` (kept)
+- E2E repo: `~/working/acme-26000-mini` (kept)
 - Internal review copy: `01_pursuit/26-000/3_drafting/_render/e2e_internal_review.docx/`
 - Shipped fixes: v1.48.1, v1.48.2 (on top of v1.48.0 catalog restructure verified by this run)

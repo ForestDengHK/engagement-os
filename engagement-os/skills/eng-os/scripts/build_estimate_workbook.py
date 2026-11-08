@@ -169,7 +169,7 @@ def parse_tables(md):
     """Pull the model-bearing tables out of the estimation markdown, located by explicit markers.
 
     Each machine-read table is preceded by `<!--table:effort-->` and friends, planted by the
-    template. The first version sniffed header text instead, and on the real Client estimate it
+    template. The first version sniffed header text instead, and on the real ACME estimate it
     matched the §1 assumptions table as if it were the client-effort table — pulling "S-10, S-13
     (42 d)" out as `-10 sessions`. Nothing crashed; the client-hours total was simply wrong by a
     factor of seven. Guessing which table is which from its wording is not robust to an author

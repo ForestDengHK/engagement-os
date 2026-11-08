@@ -8,7 +8,7 @@ the method for doing it, shared by `eng-ingest-source` (sourced material) and `e
 ## Why this needs a method and not an instruction
 
 The instruction used to be one line — "triage every extracted image, OCR the uncertain ones".
-On the real Client case-study deck that line met 34 images at once, and the cheapest action that
+On the real BankCo case-study deck that line met 34 images at once, and the cheapest action that
 satisfied it was to call them all `[decorative]` and delete them. That is what happened: 13
 extracted, 13 deleted, including the as-is architecture diagram the whole case study rests on.
 Nothing in the pack noticed, because a document whose figures were all deleted looked exactly
@@ -50,7 +50,7 @@ do not have to guess — `--worklist` prints `text already in the md: NN%` for e
 | < 80% | `ocr-done` | The words exist only inside the image. Capture them verbatim or they are lost. |
 
 `--apply` enforces this: an `ocr-done` whose text is already ≥80% in the page's prose is refused.
-Measured on the Client deck before the rule existed — **14 of 18 OCR blocks were 95–100% words the
+Measured on the BankCo deck before the rule existed — **14 of 18 OCR blocks were 95–100% words the
 markdown already had, three of them word-for-word duplicates**, roughly 5,000 wasted words that
 pushed the real interpretation out of sight.
 
@@ -61,7 +61,7 @@ those errors before applying it. The point is faithful text in markdown, not raw
 
 ## The judgment: icon or diagram?
 
-Size does not decide this, and neither does OCR. The Client as-is architecture diagram is
+Size does not decide this, and neither does OCR. The BankCo as-is architecture diagram is
 **364×231 and 50KB** — smaller than several of the icons in the same deck — and `tesseract` read
 **zero words** off it, because the labels are 4px type. An OCR-only filter deletes it. Only
 looking at it works.
@@ -151,7 +151,7 @@ to look.
   stub means the pass did not finish.
 - `images-unaccounted` — the converter recorded how many images it extracted; if they are gone
   and no ledger says who decided that, this errors. This is the rule that would have caught the
-  Client deck.
+  BankCo deck.
 
 ## Anti-goals
 

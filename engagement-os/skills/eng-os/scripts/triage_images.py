@@ -5,7 +5,7 @@
 Deciding which of those carry information is a vision + judgment task, and the skills said so —
 but saying so was all they did. Facing 34 images in one deck (296 in another), the cheapest
 action that clears the lint is to call them all `[decorative]` and delete them, which is exactly
-what happened to the Client deck: 13 extracted, 13 deleted, including the architecture diagram the
+what happened to the BankCo deck: 13 extracted, 13 deleted, including the architecture diagram the
 whole case study rests on. This script removes that pressure from both ends.
 
     --worklist   one record per `[uncertain]` image: where it sits, how big it is, what OCR
@@ -18,7 +18,7 @@ whole case study rests on. This script removes that pressure from both ends.
 
 The judgment stays with the agent. This script does not classify: it has no view on whether a
 364x231 PNG is an icon or an architecture diagram, and neither does OCR — tesseract read ZERO
-words off the Client as-is architecture diagram, so an OCR-only filter would have deleted it too.
+words off the BankCo as-is architecture diagram, so an OCR-only filter would have deleted it too.
 Only vision decides, which is why `--worklist` exists to feed one and `--apply` to record it.
 
 Usage:
@@ -68,7 +68,7 @@ def _unit_prose(text, unit):
     and no one could previously answer: did this figure's text survive extraction? A slide's
     table renders as vector shapes, so it becomes a page snapshot — but pymupdf usually read
     that table's text perfectly well, and transcribing it again adds nothing. Measured on the
-    Client deck: 14 of 18 OCR blocks were 95-100% words the markdown already had, three of them
+    BankCo deck: 14 of 18 OCR blocks were 95-100% words the markdown already had, three of them
     word-for-word duplicates.
     """
     if not unit:

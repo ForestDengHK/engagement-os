@@ -58,7 +58,7 @@ Owns the compliance and resilience posture for utility and critical-infrastructu
 - Which specific obligations apply to this utility service, and what makes us think they apply?
 - Where is the control matrix that maps each obligation to an owner, evidence source, and review cadence?
 - Which services, sites, assets, suppliers, and systems are essential to continuity, and what is their disruption tolerance?
-- What would we show the regulator, NCSC, an external auditor, or a certification body if they asked for evidence next week?
+- What would we show the energy regulator, NCSC, an external auditor, or a certification body if they asked for evidence next week?
 - What incident types trigger regulatory reporting, crisis-management escalation, or client-board escalation?
 - How are OT, IT, physical resilience, and supplier dependencies represented in the same risk picture?
 - Are we reusing existing management-system evidence intelligently, or are we assuming certification equals compliance?

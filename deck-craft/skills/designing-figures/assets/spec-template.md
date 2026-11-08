@@ -28,12 +28,12 @@ Legend + source line:            <what the legend explains; the footnote>
 Open questions / facts to confirm: <numbers or labels you are unsure of>
 ```
 
-## Worked example (the Client current-state landscape)
+## Worked example (the ACME current-state landscape)
 
 ```
 Action title:   A single ageing Oracle 19c warehouse underpins the entire estate;
                 demand is shifting to self-service BI faster than governance can follow.
-Audience:       Client data lead + steering committee / decide modernisation priorities & risk.
+Audience:       ACME data lead + steering committee / decide modernisation priorities & risk.
 Destination:    deck  (native pptx shapes; the HTML render is the design reference).
 Archetype:      Layered landscape + cross-cutting band  (warehouse made the visual spine).
 Layers:         Sources → Ingestion → Oracle 19c warehouse → Semantic/Consumption → Consumers
@@ -41,6 +41,6 @@ Emphasis:       Stage 3 warehouse = spine (single point of failure = the message
 Encoding:       Severity S1/S2/S3 badges + legend; blue dot = data flow.
 Cross-cutting:  Governance & ownership / Security & regulatory / Personal data.
 Icon strategy:  Category glyphs (Lucide), one teal tint — mixed-vendor estate, no logo zoo.
-Brand:          Client tokens (indigo/blue/teal, Open Sans).
+Brand:          ACME tokens (indigo/blue/teal, Open Sans).
 ```
 Same spec, archetype swapped to `maturity-heatmap` and `sankey`, produced the other two `examples/`.

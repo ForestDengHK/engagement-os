@@ -1,8 +1,8 @@
 ---
 name: panel-review
-description: Multi-role review of a document. Each reviewer critiques from their priorities, red_lines, operating_principles, and reference_frameworks. Red_lines are auto-flagged against document content; Operating-Principle soft conflicts are surfaced too. `--focus=<area>` narrows the critique (quality / completeness / risk / compliance / all). Use when the user asks to "review", "critique", "challenge this draft", wants "X's take on my document", says "red-line check", "security review of <path>", or "what would the architect flag here".
+description: Multi-role review of a document. Each reviewer critiques from their priorities, red_lines, operating_principles, and reference_frameworks. Red_lines are auto-flagged against document content; Operating-Principle soft conflicts are surfaced too. `--focus=<area>` narrows the critique (quality / completeness / risk / compliance / all). Use when the user asks to "review", "critique", "challenge this draft", wants "X's take on my document", says "red-line check", "security review of <path>", "what would the architect flag here", or wants a draft "read as the buyer's evaluator" / scored against the published criteria.
 allowed-tools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash", "Task", "Agent", "Skill"]
-argument-hint: "<path|inline> [--roles=<role1,role2>] [--focus=<area>]"
+argument-hint: "<file|directory|inline> [--roles=<role1,role2>] [--focus=<area>] [--as-evaluator]"
 ---
 
 # /panel-review — Multi-role review (v2)
@@ -16,10 +16,16 @@ critique. Each reviewer is a native Claude Code subagent.
 ## Root conventions
 
 Before any other work, run the shared root resolver to learn both
-`project_root` and `plugin_root`:
+`project_root` and `plugin_root`. It is taken from the plugin first, then from
+the project-local copy (`<project>/.claude/framework-scripts/`, planted by
+`/panel-init` beside project-local skill copies):
 
 ```bash
-bash "${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh"
+PF_CACHE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/panel-framework/panel-framework"
+for d in "${CLAUDE_PLUGIN_ROOT:-}" "$(ls -d "$PF_CACHE"/[0-9]* 2>/dev/null | sort -V | tail -1)" "${CLAUDE_SKILL_DIR}/../.."; do
+  [ -n "$d" ] && [ -f "$d/framework-scripts/resolve-roots.sh" ] &&
+    { bash "$d/framework-scripts/resolve-roots.sh" || echo "resolver failed: $d" >&2; break; }
+done
 ```
 
 The resolver prints `project_root=<abs>` (the nearest ancestor of `$PWD`
@@ -39,12 +45,12 @@ output as authoritative; never guess.
 
 | Input | Required | Default |
 |-------|----------|---------|
-| document | yes | Ask — path or inline content |
+| document | yes | Ask — a file path, inline content, or **a directory of markdown files** |
 | roles | no | Propose 3–5 based on document content + project context |
 | focus | no | `all` — one of `quality | completeness | risk | compliance | all` |
 | continue (thread_id) | no | New thread |
 
-Flags: `--no-recon`, `--recon-only`, `--force-dig`, `--no-convergence`, `--max-bundle-tokens=<N>`, `--keywords=<list>`, `--context=<paths>`, `--no-log`.
+Flags: `--no-recon`, `--recon-only`, `--force-dig`, `--no-convergence`, `--max-bundle-tokens=<N>`, `--keywords=<list>`, `--context=<paths>`, `--no-log`, `--as-evaluator` (see Evaluator mode).
 
 ## Automation mode
 
@@ -65,11 +71,24 @@ missing-input checklist and stop.
 
 ### Step 2: Load document
 
-- If `document` is a path, read it fully. **Do NOT truncate.** For documents
-  ≥20K characters, either (a) ask which sections to review, or (b) review
-  section-by-section and aggregate findings. Truncating risks missing red-line
-  violations.
 - If inline, use the inline content.
+- If a file, read it fully. **Do NOT truncate.**
+- If a directory, build the **file index** — every `*.md` in it, sorted by name,
+  one row each: `name · title (first H1, else the filename) · size (KB)`.
+
+Then cut the **reading assignment** (a single file counts as a one-file set):
+
+- **Set ≤ 60 KB** → every reviewer gets the full set, one pass.
+- **Set > 60 KB** → pack the files in index order into chunks of ≤ 60 KB (a
+  single file > 60 KB is split at its H2 headings). Each reviewer gets **pass 1**
+  = one chunk and **pass 2** = one more chunk (Step 8). Give each reviewer
+  first the chunk closest to its priorities, and spread the chunks so every
+  chunk has at least one reviewer in pass 1.
+- Every file a reviewer did not get in either pass is listed by name under
+  its `_Consulted:` line as unread. Nothing is silently dropped.
+
+Chunk contents are passed **inline** in the dispatch prompt, each file headed
+`<!-- file: <name> -->`, so a reviewer spends its turns reviewing, not reading.
 
 ### Step 3: Load context
 
@@ -88,8 +107,16 @@ thread_id = if --continue=<id> given: that id
             else: "<document-basename-slug>-<YYYY-MM-DD>" (suffix on collision)
 ```
 
-Call
-`<plugin_root>/framework-scripts/resolve-output-path.sh --skill review --thread-id <id>`.
+Resolve output path:
+
+```bash
+bash <plugin_root>/framework-scripts/resolve-output-path.sh \
+  --project-root <project_root> \
+  --skill review \
+  --thread-id <thread_id>
+```
+
+For a directory, the document-basename-slug is the directory name.
 
 ### Step 5: Recon Index
 
@@ -135,23 +162,50 @@ each reviewer, compose a prompt by concatenating:
    - `<<<PROJECT_CONTEXT>>>` — `.claude/project-context.md` content
    - `<<<DOCUMENT_PATH>>>` — the path (or "(inline)")
    - `<<<FOCUS>>>` — focus value
-   - `<<<DOCUMENT_CONTENT>>>` — full document text
+   - `<<<FILE_INDEX>>>` — the Step 2 file index (or "(single document)")
+   - `<<<READING_ASSIGNMENT>>>` — this reviewer's pass-1 files, its pass-2
+     files, and the files it will not receive
+   - `<<<DOCUMENT_CONTENT>>>` — the pass-1 content: full document text, or
+     this reviewer's chunk
    - `<<<EVIDENCE_BUNDLE>>>` — bundle from Step 6 (or "(Recon skipped)")
    - `<<<REDLINE_VIOLATIONS>>>` — this reviewer's red-line pre-pass findings
    - `<<<PRINCIPLE_CONFLICTS>>>` — this reviewer's operating-principle findings
    - `<<<OTHER_ROLES>>>` — comma-separated other reviewers
-2. `<plugin_root>/skills/panel-review/prompts/review-output-format.md`
+2. `<plugin_root>/skills/panel-review/prompts/review-output-format.md` — the
+   "Review Output Format" section (in evaluator mode, the "Evaluator Output
+   Format" section instead)
 3. Role-specific suffix:
    ```
    **Your role:** panel-<role>
    **This is round 1** of the review.
    ```
 
-**Dispatch all reviewers in ONE assistant message** (parallel `Task` calls).
+**Dispatch all reviewers in ONE assistant message** (parallel `Task` calls,
+same form as `/panel-discuss` Step 6).
+
+**Turn budget.** `Task` takes no per-call turn limit, so the limit is the
+agent's `maxTurns` — 20 on every plugin agent (raised from 8 for this skill;
+see the agent files). Inline content keeps a review to a few turns. A
+project-local override in `<project_root>/.claude/agents/` keeps its own
+`maxTurns`; if it is below 20 for a multi-file review, say so in the
+Observability footer.
+
+**Pass 2** (set > 60 KB only). When a reviewer's pass-1 block arrives, resume
+that same agent with its pass-2 chunk inline and: "Pass 2: here are more files.
+Return your complete block again, updated with these files; list unread files
+under `_Consulted:`." If the harness cannot resume an agent, dispatch it afresh
+with its pass-1 block pasted above the pass-2 chunk. The pass-2 block replaces
+the pass-1 block.
+
+**Resume rule.** A reviewer that returns no block (no `**Reviewer:**` /
+`**Evaluator:**` line) is resumed **once** with: "Write your block now from
+what you have read; list unread files under `_Consulted:`." If it still returns
+nothing, continue without it and name it in the synthesis as failed.
 
 ### Step 9: Optional convergence round
 
-If `mode_b_convergence: true` AND `--no-convergence` NOT passed:
+If `mode_b_convergence: true` AND `--no-convergence` NOT passed AND not
+`--as-evaluator`:
 
 Dispatch each reviewer again with `<<<OTHER_ROLES_ROUND_1>>>` populated with
 all other reviewers' round-1 blocks. Suffix: "This is round 2. Any of your
@@ -210,19 +264,67 @@ Red-line violations always appear regardless of focus.
 - If minor-only: show top 3 inline fixes
 ```
 
-Observability footer + Recon Diagnostics required (same as panel-discuss).
+Observability footer + Recon Diagnostics required (same as panel-discuss). For a
+directory, the footer carries the file index with, per file, which reviewers
+read it.
+
+In evaluator mode, `## Reviewer-by-reviewer` holds the evaluator block(s) and
+`## Aggregate recommendations` is the five ranked moves (merged and re-ranked if
+more than one evaluator ran).
 
 ### Step 12: Log
 
 Write to resolved output path. Support `--continue=<thread_id>` for iterative
 review rounds on the same document.
 
+### Step 12b: Append to the score-gap register (evaluator mode only)
+
+Locate the register: `<project_root>/01_pursuit/*/2_analysis/score_gap_register.md`
+(first match).
+
+- **Present:** take the evaluator's `gap-register` block. Append the header row
+  under the first table and the gap rows under the second. Fill `Round` (one
+  more than the highest existing Round) and assign each gap row a `G-nn` ID
+  continuing from the highest existing ID. Skip a gap row whose Criterion + Gap
+  text already exists in the register with Status not `applied`. Print the
+  register path and the number of rows added.
+- **Absent:** print the block and tell the user the engagement-os template
+  plants the register at `01_pursuit/<ENG-ID>/2_analysis/score_gap_register.md`.
+
+## Evaluator mode (`--as-evaluator`)
+
+Reads the draft the way the buyer will score it.
+
+- **Roles:** only `panel-client-sponsor`, or the roles named with `--roles`.
+- **Weights:** the published evaluation criteria and weights, from
+  `<project_root>/.claude/project-context.md` or the RFP analysis (pass it with
+  `--context=<path>`). Quote them into the dispatch. If neither publishes
+  weights, write "weights not published — equal weights assumed" into the
+  dispatch.
+- **Prompt suffix** (after the role-specific suffix):
+  ```
+  Read as the buyer's evaluator. For each published criterion (weights from
+  the project context or the RFP analysis), score 0–10 with one line of
+  reasoning; give the weighted total; list the five changes that move the
+  score most, each marked 'needs information only the bidder has' or
+  'rewrite'; list what a top supplier would have included that is missing;
+  list what would make you doubt them at the clarification meeting.
+  ```
+- **Output:** the "Evaluator Output Format" block in
+  `prompts/review-output-format.md`.
+- **Dispatch input:** paste the document text, or give a pre-extracted
+  plain-text file path readable with the Read tool. Never give a shell command
+  (panel agents have no shell).
+- Steps 2–8 and 10–12 (including 12b) run as normal (reading assignment,
+  red-line pre-pass, resume rule, log to the review thread); Step 9 is skipped.
+
 ## Self-check before emitting
 
-- [ ] Document was NOT truncated
+- [ ] Every file in the index was read by ≥1 reviewer; every unread file is named in that reviewer's `_Consulted:`
+- [ ] No reviewer missing: each one returned a block, was resumed once, or is named as failed
 - [ ] Red-line pre-pass ran against every reviewer's Red Lines
 - [ ] Operating-Principle soft check ran against every reviewer's Operating Principles
-- [ ] Each reviewer produced Strengths + Issues + Recommendations + `_Consulted:`
+- [ ] Each reviewer produced Strengths + Issues + Recommendations + `_Consulted:` (evaluator mode: Scores + Weighted total + five tagged moves + Missing + Doubts + `_Consulted:`)
 - [ ] Per-reviewer issues ≤8 (overflow rolled into Additional observations)
 - [ ] Aggregate recommendations are concrete and severity-ordered
 - [ ] Grounding check: if bundle non-empty, >50% of reviewers cite ≥1 `[E-id]`

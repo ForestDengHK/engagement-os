@@ -6,7 +6,7 @@
     "name": "Forest Deng",
     "email": "forest.jinying.denghk@outlook.com"
   },
-  "allowCrossMarketplaceDependenciesOn": [],
+  "allowCrossMarketplaceDependenciesOn": ["panel-framework", "anthropic-agent-skills"],
   "plugins": [
     {
       "name": "engagement-os",

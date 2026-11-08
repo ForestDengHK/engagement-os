@@ -13,7 +13,11 @@ Before any other work, run the shared root resolver to learn both
 `project_root` and `plugin_root`:
 
 ```bash
-bash "${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh"
+PF_CACHE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/panel-framework/panel-framework"
+for d in "${CLAUDE_PLUGIN_ROOT:-}" "$(ls -d "$PF_CACHE"/[0-9]* 2>/dev/null | sort -V | tail -1)" "${CLAUDE_SKILL_DIR}/../.."; do
+  [ -n "$d" ] && [ -f "$d/framework-scripts/resolve-roots.sh" ] &&
+    { bash "$d/framework-scripts/resolve-roots.sh" || echo "resolver failed: $d" >&2; break; }
+done
 ```
 
 The resolver prints `project_root=<abs>` (the nearest ancestor of `$PWD`

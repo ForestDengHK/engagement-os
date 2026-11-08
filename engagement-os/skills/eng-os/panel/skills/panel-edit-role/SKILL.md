@@ -13,7 +13,11 @@ Before any other work, run the shared root resolver to learn both
 `project_root` and `plugin_root`:
 
 ```bash
-bash "${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh"
+PF_CACHE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/panel-framework/panel-framework"
+for d in "${CLAUDE_PLUGIN_ROOT:-}" "$(ls -d "$PF_CACHE"/[0-9]* 2>/dev/null | sort -V | tail -1)" "${CLAUDE_SKILL_DIR}/../.."; do
+  [ -n "$d" ] && [ -f "$d/framework-scripts/resolve-roots.sh" ] &&
+    { bash "$d/framework-scripts/resolve-roots.sh" || echo "resolver failed: $d" >&2; break; }
+done
 ```
 
 The resolver prints `project_root=<abs>` (the nearest ancestor of `$PWD`
@@ -60,7 +64,7 @@ Flags: `--diff` (show diff without saving), `--no-log`.
 **Frontmatter:**
 - `description`
 - `model` (sonnet | opus | haiku)
-- `maxTurns` (recommended default `8`)
+- `maxTurns` (recommended default `20` for review/draft/debrief roles; `8` for discussion-only roles)
 - `color` (red | blue | green | yellow | purple | orange | pink | cyan)
 - `disallowedTools` (standard default: `Bash, Edit, Write, NotebookEdit, Agent, Task`)
 
@@ -107,7 +111,7 @@ Edit panel-<role>. Pick a field:
 Frontmatter:
   1. description
   2. model (currently: sonnet)
-  3. maxTurns (currently: 8)
+  3. maxTurns (currently: 20)
   4. color (currently: blue)
   5. disallowedTools (currently: Bash, Edit, Write, NotebookEdit, Agent, Task)
 
@@ -142,7 +146,7 @@ For each selected field:
 
 For `description`: after edit, verify length ≥100 chars.
 For `model`: validate value.
-For `maxTurns`: validate integer ≥1 and keep it bounded (recommended 4–12).
+For `maxTurns`: validate integer ≥1 and keep it bounded (recommended 20 for review/draft/debrief roles, 8 for discussion-only roles).
 For `color`: validate value.
 For `disallowedTools`: keep `Bash, Edit, Write, NotebookEdit, Agent, Task`
 blocked unless the user explicitly understands they are changing the standard

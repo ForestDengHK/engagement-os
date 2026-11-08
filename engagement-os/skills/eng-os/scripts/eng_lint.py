@@ -1152,7 +1152,7 @@ def rule_conditional_analysis_artefacts(root, r):
     Two outputs in `2_analysis/` are conditional — the `estimation.xlsx` model plus its generated
     `estimation.md` snapshot when the tender is priced, and `bid_reuse_analysis.md` when a prior
     bid exists — and both failure modes cost real money.
-    Found on the real Client pursuit: a reuse analysis was generated with no check that a prior bid
+    Found on the real ACME pursuit: a reuse analysis was generated with no check that a prior bid
     existed, and no estimate was produced at all, so the price had nothing behind it.
 
     The condition is read off `rfp_analysis.md` itself, which is why this can be mechanical: the
@@ -1342,7 +1342,7 @@ def rule_images_accounted(root, r):
 def rule_media_links_resolve(root, r):
     """Every image a converted MD links to must exist on disk.
 
-    Found on the real Client tender pack: pandoc emits raw HTML `<img src=...>` for any Word image
+    Found on the real ACME tender pack: pandoc emits raw HTML `<img src=...>` for any Word image
     that carries an explicit size, the converter only repointed the Markdown `![](…)` form, and
     every figure in every converted docx pointed into a deleted temp directory. Nothing noticed
     — the text conversion succeeded, and a dead image link renders as nothing at all. Same class

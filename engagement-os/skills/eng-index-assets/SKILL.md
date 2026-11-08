@@ -70,7 +70,7 @@ that a redraft must preserve.
         Our own case studies are mostly decks, and a deck's argument is in its diagrams — the
         target architecture, the migration waves, the team shape. Those arrive as `[uncertain]`
         images and are worthless to a bid until someone has looked at them and written what
-        they show. Skipping this is how an Client case study reached the index proving nothing
+        they show. Skipping this is how a BankCo case study reached the index proving nothing
         but its own title.
         ```bash
         TRIAGE=${CLAUDE_PLUGIN_ROOT}/skills/eng-os/scripts/triage_images.py

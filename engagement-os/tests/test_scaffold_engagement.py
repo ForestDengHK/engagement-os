@@ -56,6 +56,17 @@ def test_scaffold_writes_memory_into_the_harness_directory(tmp_path):
     assert (tmp_path / "home/.claude/projects" / slug / "memory/MEMORY.md").exists()
 
 
+def test_planted_panel_skills_find_their_root_resolver(tmp_path):
+    # The planted skills call ${CLAUDE_SKILL_DIR}/../../framework-scripts/resolve-roots.sh; the
+    # scaffolder planted the skills but not the script, so that call could only fail.
+    root = tmp_path / "acme"
+    scaffold(root, tmp_path / "home")
+    skill_dir = root / ".claude/skills/panel-review"
+    resolver = skill_dir / "../../framework-scripts/resolve-roots.sh"
+    assert resolver.resolve() == (root / ".claude/framework-scripts/resolve-roots.sh").resolve()
+    assert resolver.is_file() and os.access(resolver, os.X_OK)
+
+
 # ── C1. .gitignore ────────────────────────────────────────────────────────────
 
 def git_ignored(root, rel):
